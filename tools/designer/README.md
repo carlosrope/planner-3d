@@ -28,7 +28,22 @@ dice de qué versión es.
    - Altura por planta, ventanas con repisa propia, escalera en 3D, cámaras y sombras a escala de la casa.
    - En el celular la barra se reduce a tres renglones; en pantallas grandes queda igual que el original.
 
-3. **Ruta** `/disenador/[casa]` (`src/app/disenador/[casa]/route.ts`): inyecta los datos antes del
-   primer `<script>` y regresa la página.
+3. **Páginas** (`src/lib/designer/page.ts`): inyectan antes del primer `<script>` los datos del lugar
+   (`window.__CASA__`), en salones el catálogo y los modelos de eventos (`src/designer/eventos/`), y en
+   diseños guardados el anfitrión (`src/designer/host.js`):
+   - `/disenador/[lugar]`: demostración sin cuenta (`chardonnay`, `salon-demo`); guarda en el navegador.
+   - `/eventos/[id]`: diseño del evento en la base de datos, distribuciones A/B/C y Compartir.
+   - `/v/[token]`: enlace de solo vista para el cliente; puede mover cosas para probar, no se guarda.
+
+## Salones
+
+- `salon_demo.py` genera `src/designer/salones/salon-demo.json` (salón ficticio de 28 × 44 m) con
+  `setup`: la zona para mesas y dónde van escenario, pista, DJ, barra, dulces, pastel y mesa principal.
+- `src/lib/designer/starter.ts` arma el montaje inicial según invitados y tipo de evento (boda: mesa de
+  novios; XV: mesa de honor y trono) con mesas redondas de 10 alrededor de la pista.
+- `src/designer/eventos/catalogo.json` es el catálogo de eventos (lo usan el diseñador y el montaje);
+  `modelos.js` los dibuja en 2D y 3D; `eventos.js` numera mesas, cuenta sillas y arma la lista de
+  mobiliario.
+- Un salón real se agrega igual que una casa: plano desde AutoCAD con `tools/cad-import`, más su `setup`.
 
 El 3D carga three.js desde jsDelivr, así que necesita internet.

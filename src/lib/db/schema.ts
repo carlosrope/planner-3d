@@ -11,7 +11,8 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import type { EventKind, EventStatus, MemberRole, OrgKind, ShareRole } from "../domain";
-import type { Layer, LayoutDoc, VenueSpec } from "../layout/types";
+import type { DesignDoc, DesignerPlan } from "../designer/types";
+import type { Layer, VenueSpec } from "../layout/types";
 
 const id = () =>
   text("id")
@@ -128,6 +129,8 @@ export const venue = pgTable("venue", {
   isPublic: boolean("is_public").notNull().default(false),
   modelUrl: text("model_url"),
   spec: jsonb("spec").$type<VenueSpec>().notNull(),
+  /** Plano para el diseñador (muros, puertas, cuartos en mm); sin él no se puede abrir el lugar. */
+  plan: jsonb("plan").$type<DesignerPlan>(),
   version: integer("version").notNull().default(1),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -182,7 +185,8 @@ export const layout = pgTable(
     note: text("note").notNull().default(""),
     recommended: boolean("recommended").notNull().default(false),
     position: integer("position").notNull().default(0),
-    doc: jsonb("doc").$type<LayoutDoc>().notNull(),
+    /** Estado del diseñador por planta (src/lib/designer/types.ts). */
+    doc: jsonb("doc").$type<DesignDoc>().notNull(),
     revision: integer("revision").notNull().default(1),
     updatedBy: text("updated_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),

@@ -22,6 +22,20 @@
       "when": 1791577144128,
       "tag": "0002_nombres-distribuciones",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791582198270,
+      "tag": "0003_plano-disenador",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791582198638,
+      "tag": "0004_distribuciones-disenador",
+      "breakpoints": true
     }
   ]
 }

@@ -1,10 +1,10 @@
 import "server-only";
-import { and, asc, desc, eq, exists, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { db } from "./db";
-import { event, layout, membership, organization, venue, venueAccess } from "./db/schema";
+import { event, layout, membership, organization, shareLink, venue, venueAccess } from "./db/schema";
 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
 
@@ -124,4 +124,22 @@ export async function canEditLayout(layoutId: string, userId: string) {
     .where(eq(layout.id, layoutId))
     .limit(1);
   return Boolean(row);
+}
+
+/** Evento abierto con un enlace para compartir (solo lectura; no pide sesión). */
+export async function getSharedEvent(token: string) {
+  const [row] = await db
+    .select({ event, venue, firstLayoutId: shareLink.layoutId })
+    .from(shareLink)
+    .innerJoin(event, eq(shareLink.eventId, event.id))
+    .innerJoin(venue, eq(event.venueId, venue.id))
+    .where(and(eq(shareLink.token, token), or(isNull(shareLink.expiresAt), gt(shareLink.expiresAt, new Date()))))
+    .limit(1);
+  if (!row) return null;
+  const layouts = await db
+    .select()
+    .from(layout)
+    .where(eq(layout.eventId, row.event.id))
+    .orderBy(asc(layout.position), asc(layout.createdAt));
+  return layouts.length ? { ...row, layouts } : null;
 }

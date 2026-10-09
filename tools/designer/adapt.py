@@ -403,6 +403,140 @@ sub(
 # Altura de cada planta en los textos de área de muros
 s = s.replace("perim(r.poly)*2.8", "perim(r.poly)*PLANTA.height")
 
+# ---------------------------------------------------------------------------
+# Extensiones: salones (catálogo y modelos de eventos) y guardado en el servidor
+#
+# window.__EXT__ (src/designer/eventos/eventos.js) solo se carga en salones: trae el
+# catálogo de eventos, sus dibujos 2D y 3D, el resumen de invitados y lugares, y los
+# campos extra del panel (sillas). window.__HOST__ (src/designer/host.js) existe cuando
+# el diseño vive en la base de datos: carga y guarda cada planta, y pinta las
+# distribuciones A/B/C y el botón de compartir.
+
+sub(
+    "const CASA = window.__CASA__;",
+    "const CASA = window.__CASA__;\n"
+    "const EXT = CASA.kind === 'salon' ? window.__EXT__ || null : null;   // catálogo y modelos de eventos\n"
+    "const HOST = window.__HOST__ || null;                                 // diseño guardado en el servidor",
+)
+sub("const LIB = [", "const LIB = EXT ? EXT.lib : [")
+sub(
+    "const typeColor = t => {",
+    "if (EXT) Object.assign(NAMES_EN, EXT.namesEn);\nconst typeColor = t => {",
+)
+sub(
+    "  return (PLANTA.furniture || []).map(([t, n, cx, cy, w, d, rot, color]) => F(t, n, cx, cy, w, d, rot || 0, color));",
+    "  return (PLANTA.furniture || []).map(([t, n, cx, cy, w, d, rot, color, extra]) => Object.assign(F(t, n, cx, cy, w, d, rot || 0, color), extra));",
+)
+sub(
+    "function load(){\n",
+    "function load(){\n"
+    "  if (HOST){ const s = HOST.loadState(PLANTA.id); return s && Array.isArray(s.furniture) ? fixState(s) : null; }\n",
+)
+sub(
+    "function save(){ try {",
+    "function save(){ if (HOST) return HOST.save(PLANTA.id, state); try {",
+)
+sub(
+    "const DASH = 'stroke-dasharray=\"4 3\"';",
+    "const DASH = 'stroke-dasharray=\"4 3\"';\nconst SVGK = {rc, ec, ln, pa, shade, DASH, ST};   // ayudantes de dibujo para EXT.svg",
+)
+sub(
+    "function furnSVG(t,w,d,c){\n",
+    "function furnSVG(t,w,d,c,f){\n  if (EXT?.svg[t]) return EXT.svg[t](w, d, c, f, SVGK);\n",
+)
+sub("${furnSVG(f.type,f.w,f.d,f.color)}", "${furnSVG(f.type,f.w,f.d,f.color,f)}")
+sub("${furnSVG(t,w,d,col)}", "${furnSVG(t,w,d,col,it[5])}")
+sub("${furnSVG(it[0],it[2],it[3],it[4])}", "${furnSVG(it[0],it[2],it[3],it[4],it[5])}")
+sub(
+    "const NOLABEL = ['plant','floorlamp','sidetable','barstool','beanbag'];",
+    "const NOLABEL = ['plant','floorlamp','sidetable','barstool','beanbag'];\nif (EXT) NOLABEL.push(...EXT.nolabel);",
+)
+sub(
+    "  return `\n  <section><h3>${tr('房间面积','Room Areas')}",
+    "  return `${EXT?.overview?.(state) ?? ''}\n  <section><h3>${tr('房间面积','Room Areas')}",
+)
+sub(
+    "  <section><h3>${tr('地面材料估算','Flooring Estimate')}",
+    "  <section ${EXT ? 'hidden' : ''}><h3>${tr('地面材料估算','Flooring Estimate')}",
+)
+sub(
+    "  $('#clearFurn').onclick = clearLayout;\n}",
+    "  $('#clearFurn').onclick = clearLayout;\n  EXT?.bindOverview?.();\n}",
+)
+sub(
+    '<input type="color" id="fC" value="${f.color}"></label>\n    </div>',
+    '<input type="color" id="fC" value="${f.color}"></label>${EXT?.panel?.(f) ?? \'\'}\n    </div>',
+)
+sub(
+    "  $('#fC').onchange = e => upd(g => g.color = e.target.value);\n",
+    "  $('#fC').onchange = e => upd(g => g.color = e.target.value);\n  EXT?.bindPanel?.(f, upd);\n",
+)
+sub(
+    "  pushOut(f);\n  ui.sel = {kind:'furn', id:f.id};",
+    "  EXT?.onAdd?.(f, it, state);\n  pushOut(f);\n  ui.sel = {kind:'furn', id:f.id};",
+)
+sub(
+    "  const f = getF(ui.sel.id), n = {...f, id:uid(), cx:f.cx+200, cy:f.cy+200};\n",
+    "  const f = getF(ui.sel.id), n = {...f, id:uid(), cx:f.cx+200, cy:f.cy+200};\n  EXT?.onAdd?.(n, null, state);\n",
+)
+sub(
+    '<div class="grp" id="levelSeg" role="group" aria-label="Planta"></div>',
+    '<div class="grp" id="levelSeg" role="group" aria-label="Planta"></div>\n'
+    '    <div class="grp" id="hostBar" hidden></div>',
+)
+sub(
+    ".narrow-only{display:none!important}",
+    "body.salon [data-tool=\"demolish\"],body.salon [data-layer=\"bearing\"],#hostBar[hidden]{display:none!important}\n"
+    ".narrow-only{display:none!important}",
+)
+sub(
+    "(function setupCasa(){\n  $('#casaTitle').textContent = CASA.title;\n",
+    "(function setupCasa(){\n  $('#casaTitle').textContent = CASA.title;\n"
+    "  document.body.classList.toggle('salon', CASA.kind === 'salon');\n"
+    "  // El anfitrión (diseño guardado) cambia de distribución sin recargar la página\n"
+    "  HOST?.mount?.({\n"
+    "    get state(){ return state; },\n"
+    "    replace(s){ state = s && Array.isArray(s.furniture) ? fixState(s) : defaultState(); ui.sel = null;\n"
+    "      undoStack.length = redoStack.length = 0; renderAll(); },\n"
+    "    rerender: renderAll, toast, tr, esc, PLANTA, CASA, viewMode: () => viewMode,\n"
+    "  });\n",
+)
+# 3D
+sub(
+    "import {CSS2DRenderer, CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';",
+    "import {CSS2DRenderer, CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';\n"
+    "import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';",
+)
+sub(
+    "function buildFurniture(f){\n"
+    "  const g = new THREE.Group(), w = M(f.w), d = M(f.d), c = f.color || '#ddd', bz = -d/2, R = rng(Math.round(f.w*7 + f.d*13 + f.cx + f.cy));\n"
+    "  switch (f.type){",
+    "// Ayudantes de modelado para EXT.build3d (muebles de eventos)\n"
+    "let KIT3D = null;\n"
+    "const kit3d = R => ({...(KIT3D ||= {THREE, M, H, mat, fabric, woodM, metal, chrome, hwMat, glowMat, darker, lighter, box, rbox, cyl,\n"
+    "  lathe, rod, tube, blob, ring, rrect, shell, mesh, sh, rot, legs, vase, plate, mergeGeometries}), R});\n"
+    "function buildFurniture(f){\n"
+    "  const g = new THREE.Group(), w = M(f.w), d = M(f.d), c = f.color || '#ddd', bz = -d/2, R = rng(Math.round(f.w*7 + f.d*13 + f.cx + f.cy));\n"
+    "  const ext = EXT?.build3d[f.type];\n"
+    "  if (ext) ext(g, f, kit3d(R));\n"
+    "  else switch (f.type){",
+)
+
+# Cambiar de planta: el anfitrión guarda lo pendiente antes de recargar
+sub(
+    "    location.href = u.toString();\n  });",
+    "    if (HOST?.navigate) HOST.navigate(u.toString()); else location.href = u.toString();\n  });",
+)
+
+# Al entrar al 3D la cámara sale del plano; el tope de distancia crece con el tamaño del lugar
+sub(
+    "  const d = THREE.MathUtils.clamp(P.p.y, 5, 30), dir",
+    "  const d = THREE.MathUtils.clamp(P.p.y, 5, 30*S3), dir",
+)
+
+# La pestaña del navegador lleva el nombre de la casa o del evento
+sub("  document.title = tr('户型装修设计', 'Floor Plan Designer');", "  document.title = CASA.title;")
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

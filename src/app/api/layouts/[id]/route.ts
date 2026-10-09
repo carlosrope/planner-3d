@@ -4,10 +4,10 @@ import { z } from "zod";
 import { canEditLayout, getCurrentUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { layout } from "@/lib/db/schema";
-import { layoutDocSchema } from "@/lib/layout/schema";
-import type { LayoutDoc } from "@/lib/layout/types";
+import { designDocSchema } from "@/lib/designer/schema";
+import type { DesignDoc } from "@/lib/designer/types";
 
-const saveBody = z.object({ doc: layoutDocSchema, revision: z.number().int().min(1) });
+const saveBody = z.object({ doc: designDocSchema, revision: z.number().int().min(1) });
 
 /** Guarda el montaje solo si nadie lo cambió desde la revisión que tiene el cliente. */
 export async function PUT(request: Request, ctx: RouteContext<"/api/layouts/[id]">) {
@@ -33,7 +33,7 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/layouts/[id]
   const [saved] = await db
     .update(layout)
     .set({
-      doc: parsed.data.doc as LayoutDoc,
+      doc: parsed.data.doc as DesignDoc,
       revision: sql`${layout.revision} + 1`,
       updatedBy: user.id,
     })

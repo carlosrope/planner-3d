@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageLink } from "@/components/PageLink";
 
 export default function Home() {
   return (
@@ -14,19 +15,18 @@ export default function Home() {
         </p>
       </div>
       <div className="flex flex-col gap-3">
-        <Link
-          href="/prototipo"
+        <PageLink
+          href="/disenador/salon-demo"
           className="flex h-12 items-center justify-center rounded-xl bg-stone-900 font-medium text-white active:bg-stone-700"
         >
-          Probar el editor de eventos
-        </Link>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- es una página HTML propia (route handler), no de React */}
-        <a
+          Probar el diseñador de eventos (salón)
+        </PageLink>
+        <PageLink
           href="/disenador/chardonnay"
           className="flex h-12 items-center justify-center rounded-xl border border-stone-900 bg-white font-medium active:bg-stone-100"
         >
           Diseñador de casas 2D y 3D (inmobiliaria)
-        </a>
+        </PageLink>
         <div className="grid grid-cols-2 gap-3">
           <Link
             href="/entrar"

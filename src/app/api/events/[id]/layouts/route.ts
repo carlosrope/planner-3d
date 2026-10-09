@@ -4,13 +4,13 @@ import { z } from "zod";
 import { canEditEvent, getCurrentUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { layout } from "@/lib/db/schema";
-import { layoutDocSchema } from "@/lib/layout/schema";
-import type { LayoutDoc } from "@/lib/layout/types";
+import { designDocSchema } from "@/lib/designer/schema";
+import type { DesignDoc } from "@/lib/designer/types";
 
 const createBody = z.object({
   name: z.string().trim().min(1).max(12),
   note: z.string().trim().max(60),
-  doc: layoutDocSchema,
+  doc: designDocSchema,
 });
 
 /** Nueva distribución del evento (normalmente, copia de la que se está viendo). */
@@ -34,7 +34,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/events/[id]
       name: parsed.data.name,
       note: parsed.data.note,
       position: Number(next),
-      doc: parsed.data.doc as LayoutDoc,
+      doc: parsed.data.doc as DesignDoc,
       updatedBy: user.id,
     })
     .returning({ id: layout.id, revision: layout.revision });

@@ -18,10 +18,10 @@ npm run db:seed                 # carga el Salón Demostración y la casa Chardo
 npm run dev
 ```
 
-- `http://localhost:3000/prototipo`: el editor de eventos sin cuenta; guarda en el navegador.
+- `http://localhost:3000/disenador/salon-demo`: el diseñador con el salón de demostración y una boda de 240 invitados (mesas, pista, escenario, lista de mobiliario, 3D con recorrido). Sin cuenta: guarda en el navegador.
 - `http://localhost:3000/disenador/chardonnay`: el diseñador de casas para inmobiliarias (Casa Chardonnay): plano 2D, catálogo de muebles, pisos con precio, quitar muros, medir, 3D con recorrido. `?planta=pa` abre la planta alta.
-- `http://localhost:3000/prototipo/casa`: la casa Chardonnay dentro del editor de eventos (distribuciones A/B/C).
-- `http://localhost:3000/registro`: crea una cuenta, después un evento, y se abre el editor con guardado en la base de datos.
+- `http://localhost:3000/registro`: crea una cuenta y después un evento (salón) o un proyecto de casa; se abre el diseñador con guardado en la base de datos, distribuciones A/B/C y el botón **Compartir** (enlace `/v/…` de solo vista para el cliente).
+- `http://localhost:3000/prototipo` y `/prototipo/casa`: el editor anterior (React), solo en el navegador.
 
 ### Probar en el iPhone
 
@@ -68,8 +68,13 @@ src/
     eventos/       Lista de eventos, crear evento y editor con guardado.
     api/layouts/   Guardar, renombrar o eliminar una distribución.
     api/events/[id]/layouts/ Crear una distribución nueva del evento.
-  app/disenador/[casa]/ Sirve el diseñador de casas con los datos de la casa.
-  designer/        disenador.html (generado) y casas/*.json (generados).
+  app/disenador/[casa]/ Diseñador de demostración (salón o casa) sin cuenta.
+  app/eventos/[id]/ Diseñador del evento con guardado en el servidor.
+  app/v/[token]/   Enlace de solo vista para el cliente.
+  designer/        disenador.html (generado), host.js (guardado, A/B/C, compartir),
+                   eventos/ (catálogo, modelos 2D/3D y lógica de salones),
+                   casas/ y salones/ (planos generados).
+  lib/designer/    Tipos, validación, montaje inicial de salones y armado de la página.
   lib/layout/houses/ Casas importadas de AutoCAD (JSON) y su amueblado de ejemplo.
 tools/cad-import/  Importador DWG/DXF → casa (ver su README).
 tools/designer/    Adaptación del diseñador floorplan-3d (ver su README).

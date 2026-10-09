@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
+import { PageLink } from "@/components/PageLink";
 import { listEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
 import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS } from "@/lib/domain";
 import { NewEventForm } from "./NewEventForm";
@@ -42,7 +42,7 @@ async function EventosContent() {
           </p>
         ) : (
           events.map((e) => (
-            <Link
+            <PageLink
               key={e.id}
               href={`/eventos/${e.id}`}
               className="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4 active:bg-stone-50"
@@ -58,7 +58,7 @@ async function EventosContent() {
                 <p className="font-medium">{e.eventDate ? fecha.format(new Date(e.eventDate)) : "Sin fecha"}</p>
                 <p className="text-stone-500">{EVENT_STATUS_LABELS[e.status]}</p>
               </div>
-            </Link>
+            </PageLink>
           ))
         )}
       </section>
