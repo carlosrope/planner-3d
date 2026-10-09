@@ -169,6 +169,16 @@ export function floorCenter(venue: VenueSpec): Pt {
   return { x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2 };
 }
 
+/** Paso libre mínimo entre muebles en una casa (el de salones es de 1.20 m). */
+export const HOUSE_MIN_AISLE = 0.6;
+
+/** Plano vacío para una casa. */
+export function emptyHouseLayout(): LayoutDoc {
+  const doc = emptyLayout();
+  doc.settings.minAisle = HOUSE_MIN_AISLE;
+  return doc;
+}
+
 /** Montaje inicial de un evento: pista, mesa principal y mesas para los invitados. */
 export function starterLayout(
   venue: VenueSpec,

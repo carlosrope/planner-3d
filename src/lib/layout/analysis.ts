@@ -8,7 +8,16 @@ import {
   seatCount,
   type Closest,
 } from "./geometry";
-import type { FixedElement, FixedKind, LayoutDoc, PlacedObject, Pt, VenueSpec } from "./types";
+import type {
+  FixedElement,
+  FixedKind,
+  LayoutDoc,
+  Level,
+  PlacedObject,
+  Pt,
+  VenueSpec,
+  WallKind,
+} from "./types";
 
 export type IssueLevel = "error" | "warning";
 export type Issue = { id: string; level: IssueLevel; objectIds: string[]; message: string };
@@ -17,6 +26,10 @@ export type Issue = { id: string; level: IssueLevel; objectIds: string[]; messag
 const BLOCKING: FixedKind[] = ["column", "stage", "bar", "wall", "kitchen", "restroom"];
 /** Espacio libre que se exige frente a puertas y salidas, en metros. */
 export const ACCESS_CLEARANCE = 1.5;
+/** Franja frente a una ventana que un mueble alto no debe tapar. */
+const WINDOW_DEPTH = 0.4;
+/** A partir de esta altura un mueble tapa la ventana. */
+const TALL = 1.0;
 /** Pista, escenario y área de banda pueden tocarse entre sí y con objetos sin sillas. */
 const PLATFORMS = new Set(["pista", "escenario", "area-banda"]);
 
@@ -30,6 +43,13 @@ const FIXED_LABELS: Record<FixedKind, string> = {
   bar: "la barra fija",
   wall: "un muro",
   window: "una ventana",
+};
+
+const WALL_LABELS: Record<WallKind, string> = {
+  muro: "un muro",
+  tablaroca: "un muro de tablaroca",
+  antepecho: "el muro de una ventana",
+  barda: "la barda",
 };
 
 export type Shape = {
@@ -56,6 +76,66 @@ export function accessZone(f: FixedElement): Pt[] {
   return rectPolygon(f.x, f.z, f.w + 0.4, ACCESS_CLEARANCE * 2, f.rotation);
 }
 
+export function levelOf(venue: VenueSpec, levelId?: string | null): Level | undefined {
+  if (!venue.levels?.length) return undefined;
+  return venue.levels.find((l) => l.id === levelId) ?? venue.levels[0];
+}
+
+/** El objeto está en esa planta (los salones tienen una sola). */
+export function onLevel(obj: PlacedObject, venue: VenueSpec, levelId?: string | null) {
+  if (!venue.levels?.length) return true;
+  const own = obj.level ?? venue.levels[0].id;
+  return own === (levelId ?? venue.levels[0].id);
+}
+
+/**
+ * Lo que no se mueve: columnas y escenario del salón, o muros, puertas y
+ * ventanas de la planta de una casa.
+ */
+export type Obstacle = {
+  id: string;
+  label: string;
+  poly: Pt[];
+  /** block: no se puede encimar; access: debe quedar libre; window: no taparla con algo alto. */
+  kind: "block" | "access" | "window";
+  level: IssueLevel;
+};
+
+export function obstaclesFor(venue: VenueSpec, levelId?: string | null): Obstacle[] {
+  const out: Obstacle[] = [];
+  for (const f of venue.fixed) {
+    if (BLOCKING.includes(f.kind)) {
+      out.push({ id: `fijo:${f.id}`, label: fixedLabel(f), poly: fixedPolygon(f), kind: "block", level: "error" });
+    }
+    if (f.kind === "door" || f.kind === "exit") {
+      out.push({
+        id: `acceso:${f.id}`,
+        label: fixedLabel(f),
+        poly: accessZone(f),
+        kind: "access",
+        level: f.kind === "exit" ? "error" : "warning",
+      });
+    }
+  }
+  const level = levelOf(venue, levelId);
+  if (level) {
+    for (const w of level.walls) {
+      out.push({ id: `muro:${w.id}`, label: WALL_LABELS[w.kind], poly: w.points, kind: "block", level: "error" });
+    }
+    for (const o of level.openings) {
+      if (o.kind === "puerta") {
+        out.push({ id: `puerta:${o.id}`, label: "una puerta", poly: rectPolygon(o.x, o.z, o.w, o.d, 0), kind: "access", level: "warning" });
+      } else {
+        const horizontal = o.w >= o.d;
+        const w = horizontal ? o.w : o.w + WINDOW_DEPTH * 2;
+        const d = horizontal ? o.d + WINDOW_DEPTH * 2 : o.d;
+        out.push({ id: `ventana:${o.id}`, label: "una ventana", poly: rectPolygon(o.x, o.z, w, d, 0), kind: "window", level: "warning" });
+      }
+    }
+  }
+  return out;
+}
+
 export function objectLabel(obj: PlacedObject, item = findItem(obj.catalogId)) {
   if (!item) return "Objeto";
   if (item.numbered && obj.label) return `Mesa ${obj.label}`;
@@ -75,15 +155,20 @@ function pairRules(a: Shape, b: Shape): PairVerdict | null {
   return { overlap: true, aisle: true };
 }
 
-export function analyzeLayout(
+function analyzeLevel(
   doc: LayoutDoc,
   venue: VenueSpec,
-  opts: { onlyId?: string } = {},
+  levelId: string | undefined,
+  onlyId: string | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
   const minAisle = doc.settings.minAisle;
-  const shapes = doc.objects.map(shapeOf).filter((s): s is Shape => s !== null);
-  const targets = opts.onlyId ? shapes.filter((s) => s.obj.id === opts.onlyId) : shapes;
+  const shapes = doc.objects
+    .filter((o) => onLevel(o, venue, levelId))
+    .map(shapeOf)
+    .filter((s): s is Shape => s !== null);
+  const targets = onlyId ? shapes.filter((s) => s.obj.id === onlyId) : shapes;
+  const obstacles = obstaclesFor(venue, levelId);
 
   for (const s of targets) {
     const name = objectLabel(s.obj, s.item);
@@ -92,26 +177,19 @@ export function analyzeLayout(
         id: `fuera:${s.obj.id}`,
         level: "error",
         objectIds: [s.obj.id],
-        message: `${name} queda fuera del área útil del salón`,
+        message: `${name} queda fuera del área útil`,
       });
     }
-    for (const f of venue.fixed) {
-      if (BLOCKING.includes(f.kind) && closestPoints(s.poly, fixedPolygon(f)).overlap) {
-        issues.push({
-          id: `fijo:${s.obj.id}:${f.id}`,
-          level: "error",
-          objectIds: [s.obj.id],
-          message: `${name} choca con ${fixedLabel(f)}`,
-        });
-      }
-      if ((f.kind === "door" || f.kind === "exit") && closestPoints(s.poly, accessZone(f)).overlap) {
-        issues.push({
-          id: `acceso:${s.obj.id}:${f.id}`,
-          level: f.kind === "exit" ? "error" : "warning",
-          objectIds: [s.obj.id],
-          message: `${name} bloquea ${fixedLabel(f)}`,
-        });
-      }
+    for (const o of obstacles) {
+      if (o.kind === "window" && (s.item.h ?? 0) <= TALL) continue;
+      if (!closestPoints(s.poly, o.poly).overlap) continue;
+      const verb = o.kind === "block" ? "choca con" : o.kind === "window" ? "tapa" : "bloquea";
+      issues.push({
+        id: `${o.kind}:${s.obj.id}:${o.id}`,
+        level: o.level,
+        objectIds: [s.obj.id],
+        message: `${name} ${verb} ${o.label}`,
+      });
     }
   }
 
@@ -119,7 +197,7 @@ export function analyzeLayout(
     for (const b of shapes) {
       if (a === b) continue;
       // Sin filtro, cada par se revisa una sola vez.
-      if (!opts.onlyId && a.obj.id > b.obj.id) continue;
+      if (!onlyId && a.obj.id > b.obj.id) continue;
       const rules = pairRules(a, b);
       if (!rules) continue;
       const gap = Math.hypot(a.obj.x - b.obj.x, a.obj.z - b.obj.z) - a.radius - b.radius;
@@ -143,6 +221,21 @@ export function analyzeLayout(
   return issues;
 }
 
+/** Revisa todo el plano, o una planta, o un solo objeto (mientras se arrastra). */
+export function analyzeLayout(
+  doc: LayoutDoc,
+  venue: VenueSpec,
+  opts: { onlyId?: string; level?: string | null } = {},
+): Issue[] {
+  if (!venue.levels?.length) return analyzeLevel(doc, venue, undefined, opts.onlyId);
+  if (opts.onlyId) {
+    const obj = doc.objects.find((o) => o.id === opts.onlyId);
+    return obj ? analyzeLevel(doc, venue, obj.level ?? venue.levels[0].id, opts.onlyId) : [];
+  }
+  const ids = opts.level ? [opts.level] : venue.levels.map((l) => l.id);
+  return ids.flatMap((id) => analyzeLevel(doc, venue, id, undefined));
+}
+
 /** Nivel más grave de aviso por objeto (para pintarlo en el plano). */
 export function issueLevels(issues: Issue[]) {
   const levels = new Map<string, IssueLevel>();
@@ -156,23 +249,24 @@ export function issueLevels(issues: Issue[]) {
 
 export type Neighbor = Closest & { id: string };
 
-/** Los vecinos más cercanos de un objeto, para mostrar medidas mientras se arrastra. */
+/** Lo más cercano a un objeto (muebles y muros), para mostrar medidas mientras se arrastra. */
 export function nearestNeighbors(doc: LayoutDoc, venue: VenueSpec, target: PlacedObject, count = 2): Neighbor[] {
   const own = shapeOf(target);
   if (!own) return [];
+  const levelId = target.level ?? venue.levels?.[0]?.id;
   const found: Neighbor[] = [];
   for (const obj of doc.objects) {
-    if (obj.id === target.id) continue;
+    if (obj.id === target.id || !onLevel(obj, venue, levelId)) continue;
     const s = shapeOf(obj);
     if (!s) continue;
     const gap = Math.hypot(obj.x - target.x, obj.z - target.z) - own.radius - s.radius;
     if (gap > 4) continue;
     found.push({ id: obj.id, ...closestPoints(own.poly, s.poly) });
   }
-  for (const f of venue.fixed) {
-    if (!BLOCKING.includes(f.kind)) continue;
-    const c = closestPoints(own.poly, fixedPolygon(f));
-    if (c.dist <= 4) found.push({ id: `fijo:${f.id}`, ...c });
+  for (const o of obstaclesFor(venue, levelId)) {
+    if (o.kind !== "block") continue;
+    const c = closestPoints(own.poly, o.poly);
+    if (c.dist <= 4) found.push({ id: o.id, ...c });
   }
   return found.sort((a, b) => a.dist - b.dist).slice(0, count);
 }

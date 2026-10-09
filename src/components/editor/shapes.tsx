@@ -1,10 +1,19 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import type { IssueLevel, Neighbor } from "@/lib/layout/analysis";
 import { findItem } from "@/lib/layout/catalog";
 import { bounds, CHAIR_SIZE, chairsLocal, dims, footprintLocal } from "@/lib/layout/geometry";
-import type { FixedElement, PlacedObject, Pt, VenueSpec } from "@/lib/layout/types";
+import type {
+  CadLineLayer,
+  FixedElement,
+  Level,
+  PlacedObject,
+  Pt,
+  SlabKind,
+  VenueSpec,
+  WallKind,
+} from "@/lib/layout/types";
 
 const INK = "#6b5f50";
 const SELECT = "#2563eb";
@@ -27,9 +36,12 @@ const FIXED_STYLE: Record<FixedElement["kind"], { fill: string; text?: string }>
 export const VenueLayer = memo(function VenueLayer({
   venue,
   showOutlets,
+  garden = false,
 }: {
   venue: VenueSpec;
   showOutlets: boolean;
+  /** Casas: el lote se pinta como jardín y la casa encima. */
+  garden?: boolean;
 }) {
   const b = bounds(venue.floor);
   const lines: { x1: number; z1: number; x2: number; z2: number; major: boolean }[] = [];
@@ -46,7 +58,7 @@ export const VenueLayer = memo(function VenueLayer({
           <polygon points={points(venue.floor)} />
         </clipPath>
       </defs>
-      <polygon points={points(venue.floor)} fill="#fbf8f3" />
+      <polygon points={points(venue.floor)} fill={garden ? "#e4ead9" : "#fbf8f3"} />
       <g clipPath="url(#floor-clip)">
         {lines.map((l, i) => (
           <line
@@ -133,10 +145,20 @@ export const ObjectNode = memo(function ObjectNode({
   }
 
   const chairs = chairsLocal(obj, item);
-  const label = item.numbered ? obj.label : obj.label || (Math.min(w, d) >= 0.8 || w >= 2 ? item.name : undefined);
+  const rug = item.model === "rug";
+  const homeItem = Boolean(item.short);
+  const label = rug
+    ? undefined
+    : item.numbered
+      ? obj.label
+      : obj.label || item.short || (Math.min(w, d) >= 0.8 || w >= 2 ? item.name : undefined);
   const fontSize = item.numbered
     ? Math.max(0.3, Math.min(0.6, Math.min(w, d) * 0.36))
-    : Math.max(0.24, Math.min(0.55, Math.min(w, d) * 0.22));
+    : homeItem
+      ? Math.max(0.13, Math.min(0.24, Math.min(w, d) * 0.2))
+      : Math.max(0.24, Math.min(0.55, Math.min(w, d) * 0.22));
+  // Medidas en cm debajo del nombre (muebles de casa), como en una ficha de catálogo.
+  const size = homeItem && Math.min(w, d) >= 0.7 ? `${Math.round(w * 100)}×${Math.round(d * 100)}` : null;
 
   return (
     <g data-obj={obj.id} transform={`translate(${obj.x} ${obj.z}) rotate(${obj.rotation})`}>
@@ -170,10 +192,12 @@ export const ObjectNode = memo(function ObjectNode({
           y={-d / 2}
           width={w}
           height={d}
-          rx={0.06}
+          rx={rug ? 0.02 : 0.06}
           fill={fill}
+          fillOpacity={rug ? 0.55 : 1}
           stroke={stroke}
           strokeWidth={strokeWidth}
+          strokeDasharray={rug && !selected ? "4 3" : undefined}
           vectorEffect="non-scaling-stroke"
         />
       )}
@@ -187,6 +211,11 @@ export const ObjectNode = memo(function ObjectNode({
           dominantBaseline="central"
         >
           {label}
+          {size && (
+            <tspan x={0} dy={fontSize * 1.15} fontSize={fontSize * 0.75} fontWeight={400} fill="#78716c">
+              {size}
+            </tspan>
+          )}
         </text>
       )}
       {obj.locked && (
@@ -194,6 +223,95 @@ export const ObjectNode = memo(function ObjectNode({
           🔒
         </text>
       )}
+    </g>
+  );
+});
+
+const SLAB_FILL: Record<SlabKind, string> = {
+  interior: "#fbf8f3",
+  terraza: "#efe6d6",
+  cochera: "#e7e5e4",
+  pasillo: "#eceae5",
+};
+const WALL_FILL: Record<WallKind, string> = {
+  muro: "#2b2724",
+  tablaroca: "#6b6560",
+  antepecho: "#8d867e",
+  barda: "#a8a29e",
+};
+const LINE_STYLE: Record<CadLineLayer, { stroke: string; width: number }> = {
+  exterior: { stroke: "#c4a676", width: 0.7 },
+  "mueble-fijo": { stroke: "#7c9a5a", width: 0.8 },
+  escalon: { stroke: "#7c3aed", width: 0.8 },
+  puerta: { stroke: "#b45309", width: 0.8 },
+  ventana: { stroke: "#0369a1", width: 1 },
+};
+const LINE_ORDER: CadLineLayer[] = ["exterior", "mueble-fijo", "escalon", "puerta", "ventana"];
+
+function linePath(pts: number[], closed?: boolean) {
+  let d = `M${pts[0]} ${pts[1]}`;
+  for (let i = 2; i < pts.length; i += 2) d += `L${pts[i]} ${pts[i + 1]}`;
+  return closed ? d + "Z" : d;
+}
+
+const polyPath = (poly: [number, number][] | Pt[]) =>
+  poly
+    .map((p, i) => {
+      const [x, z] = Array.isArray(p) ? p : [p.x, p.z];
+      return `${i ? "L" : "M"}${x} ${z}`;
+    })
+    .join("") + "Z";
+
+/** Planta de una casa importada de CAD: pisos, trazos, muros y nombres de cuartos. */
+export const LevelLayer = memo(function LevelLayer({ level }: { level: Level }) {
+  const paths = useMemo(() => {
+    const lines = new Map<CadLineLayer, string>();
+    for (const l of level.lines) lines.set(l.layer, (lines.get(l.layer) ?? "") + linePath(l.pts, l.closed));
+    const walls = new Map<WallKind, string>();
+    for (const w of level.walls) walls.set(w.kind, (walls.get(w.kind) ?? "") + polyPath(w.points));
+    return { lines, walls };
+  }, [level]);
+
+  return (
+    <g pointerEvents="none">
+      {level.slabs.map((s, i) => (
+        <path
+          key={i}
+          d={polyPath(s.points) + (s.holes ?? []).map((h) => polyPath(h)).join("")}
+          fill={SLAB_FILL[s.kind]}
+          fillRule="evenodd"
+        />
+      ))}
+      {LINE_ORDER.map((layer) =>
+        paths.lines.has(layer) ? (
+          <path
+            key={layer}
+            d={paths.lines.get(layer)}
+            fill="none"
+            stroke={LINE_STYLE[layer].stroke}
+            strokeWidth={LINE_STYLE[layer].width}
+            vectorEffect="non-scaling-stroke"
+          />
+        ) : null,
+      )}
+      {[...paths.walls].map(([kind, d]) => (
+        <path key={kind} d={d} fill={WALL_FILL[kind]} />
+      ))}
+      {level.rooms.map((r) => (
+        <text
+          key={r.name}
+          x={r.x}
+          y={r.z}
+          fontSize={0.3}
+          fill="#78716c"
+          fontWeight={600}
+          textAnchor="middle"
+          dominantBaseline="central"
+          letterSpacing={0.02}
+        >
+          {r.name.toUpperCase()}
+        </text>
+      ))}
     </g>
   );
 });

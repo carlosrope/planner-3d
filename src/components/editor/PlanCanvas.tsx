@@ -2,10 +2,11 @@
 
 import { useGesture } from "@use-gesture/react";
 import { type PointerEvent as ReactPointerEvent, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
-import { analyzeLayout, issueLevels, nearestNeighbors, type IssueLevel } from "@/lib/layout/analysis";
+import { analyzeLayout, issueLevels, levelOf, nearestNeighbors, onLevel, type IssueLevel } from "@/lib/layout/analysis";
+import { findItem } from "@/lib/layout/catalog";
 import { bounds, footprint, normalizeAngle, pointInPolygon, snap } from "@/lib/layout/geometry";
 import type { PlacedObject, Pt, VenueSpec } from "@/lib/layout/types";
-import { MeasureOverlay, ObjectNode, VenueLayer } from "./shapes";
+import { LevelLayer, MeasureOverlay, ObjectNode, VenueLayer } from "./shapes";
 import { useEditor, useEditorApi } from "./store";
 
 export type CanvasApi = {
@@ -55,6 +56,8 @@ export function PlanCanvas({
   const selectedId = useEditor((s) => s.selectedId);
   const drag = useEditor((s) => s.drag);
   const visible = useEditor((s) => s.visible);
+  const activeLevel = useEditor((s) => s.activeLevel);
+  const level = levelOf(venue, activeLevel);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const worldRef = useRef<SVGGElement>(null);
@@ -178,7 +181,7 @@ export function PlanCanvas({
     let bestX = tol;
     let bestZ = tol;
     for (const o of st.layout.objects) {
-      if (o.id === id) continue;
+      if (o.id === id || !onLevel(o, venue, st.activeLevel)) continue;
       const dx = Math.abs(o.x - x);
       const dz = Math.abs(o.z - z);
       if (dx < bestX) {
@@ -342,7 +345,10 @@ export function PlanCanvas({
     return { level, neighbors: nearestNeighbors(doc, venue, dragged) };
   }, [dragged, layout, venue]);
 
-  const shown = layout.objects.filter((o) => visible[o.layer]);
+  // Los tapetes van debajo de todo lo demás.
+  const shown = layout.objects
+    .filter((o) => visible[o.layer] && onLevel(o, venue, activeLevel))
+    .sort((a, b) => Number(findItem(b.catalogId)?.model === "rug") - Number(findItem(a.catalogId)?.model === "rug"));
   const top = shown.find((o) => o.id === (dragged?.id ?? selectedId));
 
   return (
@@ -356,7 +362,8 @@ export function PlanCanvas({
       style={{ WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
     >
       <g ref={worldRef}>
-        <VenueLayer venue={venue} showOutlets={visible.tecnica} />
+        <VenueLayer venue={venue} showOutlets={visible.tecnica} garden={Boolean(level)} />
+        {level && <LevelLayer level={level} />}
         {shown.map((o) =>
           o === top ? null : (
             <ObjectNode key={o.id} obj={o} selected={false} level={levels.get(o.id) ?? null} />

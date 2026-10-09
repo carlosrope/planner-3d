@@ -47,6 +47,8 @@ export type PlacedObject = {
   colors?: ObjectColors;
   locked?: boolean;
   layer: Layer;
+  /** Planta donde está (casas con varios niveles). */
+  level?: string;
 };
 
 export type Guest = {
@@ -210,12 +212,56 @@ export type VenueSpec = {
   floor: Pt[];
   fixed: FixedElement[];
   outlets: Outlet[];
+  /** Plantas importadas de CAD (casas). Un salón no las usa. */
+  levels?: Level[];
   notes?: string;
 };
+
+export type VenueKind = "salon" | "casa";
 
 export type VenueInfo = {
   id: string;
   name: string;
   city: string;
+  kind?: VenueKind;
   spec: VenueSpec;
+};
+
+// ---------------------------------------------------------------------------
+// Plantas de una casa, generadas por tools/cad-import a partir del DXF.
+
+/** "antepecho": muro bajo de ventana; "barda": límite del lote. */
+export type WallKind = "muro" | "tablaroca" | "antepecho" | "barda";
+export type Wall = { id: string; kind: WallKind; points: Pt[] };
+
+export type OpeningKind = "puerta" | "ventana" | "cancel";
+/** Caja del vano; en puertas incluye el barrido de la hoja. */
+export type Opening = { id: string; kind: OpeningKind; x: number; z: number; w: number; d: number };
+
+export type CadLineLayer = "puerta" | "ventana" | "escalon" | "mueble-fijo" | "exterior";
+/** Trazo del plano en formato compacto: [x0, z0, x1, z1, ...]. */
+export type CadLine = { layer: CadLineLayer; pts: number[]; closed?: boolean };
+
+export type SlabKind = "interior" | "terraza" | "cochera" | "pasillo";
+export type Slab = { kind: SlabKind; points: [number, number][]; holes?: [number, number][][] };
+
+/** `view`: punto de vista para "ver desde dentro" [cámaraX, cámaraZ, miraX, miraZ]. */
+export type Room = { name: string; x: number; z: number; view?: [number, number, number, number] };
+
+/** Escalones en orden de subida: [x0, z0, x1, z1]. */
+export type Stair = { to: string; steps: [number, number, number, number][] };
+
+export type Level = {
+  id: string;
+  name: string;
+  /** Nivel del piso terminado, en metros. */
+  elevation: number;
+  /** Altura de muros. */
+  height: number;
+  walls: Wall[];
+  openings: Opening[];
+  lines: CadLine[];
+  slabs: Slab[];
+  rooms: Room[];
+  stairs: Stair[];
 };

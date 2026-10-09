@@ -16,7 +16,10 @@ export type EditorState = {
   drag: DragState;
   visible: Record<Layer, boolean>;
   snapToGrid: boolean;
+  /** Planta que se está editando (casas); null en salones. */
+  activeLevel: string | null;
   select: (id: string | null) => void;
+  setActiveLevel: (level: string) => void;
   setDrag: (drag: DragState) => void;
   commitTransform: (id: string, t: Transform) => void;
   addObjects: (objects: PlacedObject[], selectId?: string) => void;
@@ -32,7 +35,7 @@ export type EditorState = {
 
 const allVisible = () => Object.fromEntries(LAYERS.map((l) => [l, true])) as Record<Layer, boolean>;
 
-export function createEditorStore(initial: LayoutDoc) {
+export function createEditorStore(initial: LayoutDoc, initialLevel: string | null = null) {
   const store = createStore<EditorState>()(
     temporal(
       (set, get) => {
@@ -44,7 +47,9 @@ export function createEditorStore(initial: LayoutDoc) {
           drag: null,
           visible: allVisible(),
           snapToGrid: true,
+          activeLevel: initialLevel,
           select: (id) => set({ selectedId: id }),
+          setActiveLevel: (activeLevel) => set({ activeLevel, selectedId: null, drag: null }),
           setDrag: (drag) => set({ drag }),
           commitTransform: (id, t) =>
             mapObjects((objects) => objects.map((o) => (o.id === id ? { ...o, ...t } : o))),
@@ -84,8 +89,16 @@ export type EditorStore = ReturnType<typeof createEditorStore>;
 
 const EditorContext = createContext<EditorStore | null>(null);
 
-export function EditorProvider({ initial, children }: { initial: LayoutDoc; children: ReactNode }) {
-  const [store] = useState(() => createEditorStore(initial));
+export function EditorProvider({
+  initial,
+  initialLevel = null,
+  children,
+}: {
+  initial: LayoutDoc;
+  initialLevel?: string | null;
+  children: ReactNode;
+}) {
+  const [store] = useState(() => createEditorStore(initial, initialLevel));
   return <EditorContext value={store}>{children}</EditorContext>;
 }
 

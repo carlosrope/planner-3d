@@ -46,7 +46,7 @@ describe("validaciones", () => {
     doc.objects = [table(-3, 10), table(1.6, 20)];
     const ids = analyzeLayout(doc, DEMO_VENUE_SPEC).map((i) => i.id.split(":")[0]);
     expect(ids).toContain("fuera");
-    expect(ids).toContain("acceso");
+    expect(ids).toContain("access");
   });
 });
 

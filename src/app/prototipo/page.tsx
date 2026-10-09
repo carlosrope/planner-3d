@@ -14,6 +14,7 @@ export default function PrototipoPage() {
       title="Prototipo del editor"
       subtitle={DEMO_VENUE.name}
       backHref="/"
+      demo="salon"
       persistence={{ mode: "local", key: "planner3d:prototipo:v1" }}
     />
   );

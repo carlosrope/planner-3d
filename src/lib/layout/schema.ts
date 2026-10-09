@@ -32,6 +32,7 @@ const placedObject = z.object({
     .optional(),
   locked: z.boolean().optional(),
   layer: z.enum(LAYERS),
+  level: id.optional(),
 });
 
 const guest = z.object({

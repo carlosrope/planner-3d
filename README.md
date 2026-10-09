@@ -14,11 +14,12 @@ npm install
 cp .env.example .env.local      # llena BETTER_AUTH_SECRET con: openssl rand -base64 32
 createdb planner3d
 npm run db:migrate              # crea las tablas
-npm run db:seed                 # carga el Salón Demostración
+npm run db:seed                 # carga el Salón Demostración y la casa Chardonnay
 npm run dev
 ```
 
-- `http://localhost:3000/prototipo`: el editor sin cuenta; guarda en el navegador.
+- `http://localhost:3000/prototipo`: el editor de eventos sin cuenta; guarda en el navegador.
+- `http://localhost:3000/prototipo/casa`: la casa Chardonnay en 2D y 3D, con planta baja y alta y muebles.
 - `http://localhost:3000/registro`: crea una cuenta, después un evento, y se abre el editor con guardado en la base de datos.
 
 ### Probar en el iPhone
@@ -58,16 +59,20 @@ src/
     shapes.tsx     Dibujo del salón, objetos y medidas.
     panels.tsx     Barras y hojas (catálogo, capas, avisos, inventario).
     persistence.ts Guardado automático (navegador o servidor con revisiones).
+    Scene3D.tsx    Vista 3D (React Three Fiber), se descarga solo al abrirla.
   app/
     prototipo/     Editor sin cuenta.
     eventos/       Lista de eventos, crear evento y editor con guardado.
     api/layouts/   Guardado del plano con control de revisión.
+  lib/layout/houses/ Casas importadas de AutoCAD (JSON) y su amueblado de ejemplo.
+tools/cad-import/  Importador DWG/DXF → casa (ver su README).
+docs/investigacion/ Notas de investigación (post de X, mercado inmobiliario).
 drizzle/           Migraciones SQL.
-scripts/seed.ts    Carga el salón de demostración.
+scripts/seed.ts    Carga el salón de demostración y la casa Chardonnay.
 ```
 
 ## Convenciones
 
 - Unidades en metros; `x` hacia la derecha, `z` hacia abajo; rotación en grados, sentido horario.
-- El documento `LayoutDoc` es la única fuente de verdad: el 2D lo dibuja y el 3D lo dibujará.
+- El documento `LayoutDoc` es la única fuente de verdad: el 2D y el 3D lo dibujan.
 - Código en inglés, interfaz en español.

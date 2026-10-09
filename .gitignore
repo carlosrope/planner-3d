@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Mac
 .DS_Store
+
+# Planos de clientes (no se suben a git)
+/planos/

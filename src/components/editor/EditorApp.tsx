@@ -1,8 +1,10 @@
 "use client";
 
+import { Box } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { analyzeLayout, issueLevels, layoutStats } from "@/lib/layout/analysis";
-import { demoLayout, stressLayout } from "@/lib/layout/demo";
+import { stressLayout } from "@/lib/layout/demo";
 import { normalizeAngle } from "@/lib/layout/geometry";
 import { autoNumber, createObject, duplicateObject, fillArea, floorCenter } from "@/lib/layout/tools";
 import type { LayoutDoc, Pt, VenueInfo } from "@/lib/layout/types";
@@ -22,6 +24,16 @@ import { usePersistence, type Persistence } from "./persistence";
 import { Sheet } from "./Sheet";
 import { EditorProvider, useEditor, useEditorApi, useHistory } from "./store";
 
+// El 3D (Three.js) se descarga solo cuando se abre: el editor 2D carga rápido con datos móviles.
+const Scene3D = dynamic(() => import("./Scene3D"), {
+  ssr: false,
+  loading: () => (
+    <div className="absolute inset-0 z-30 grid place-items-center bg-[#ece7df] text-sm text-stone-500">
+      Cargando el 3D…
+    </div>
+  ),
+});
+
 type SheetName = "catalogo" | "capas" | "mas" | "avisos" | "inventario";
 
 export type EditorAppProps = {
@@ -31,11 +43,21 @@ export type EditorAppProps = {
   subtitle?: string;
   backHref?: string;
   persistence: Persistence;
+  /** Montaje de demostración para "Restaurar" (prototipos). */
+  demo?: DemoId;
+};
+
+export type DemoId = "salon" | "casa-chardonnay";
+
+// Se cargan solo al pedir "Restaurar", para no sumar peso al editor.
+const DEMOS: Record<DemoId, () => Promise<LayoutDoc>> = {
+  salon: async () => (await import("@/lib/layout/demo")).demoLayout(),
+  "casa-chardonnay": async () => (await import("@/lib/layout/houses")).chardonnayDemoLayout(),
 };
 
 export function EditorApp(props: EditorAppProps) {
   return (
-    <EditorProvider initial={props.initial}>
+    <EditorProvider initial={props.initial} initialLevel={props.venue.spec.levels?.[0]?.id ?? null}>
       <EditorShell {...props} />
     </EditorProvider>
   );
@@ -47,10 +69,15 @@ const FILL_OPTIONS = [
   { catalogId: "mesa-imperial", label: "Imperiales de 2.40 m (8 lugares)" },
 ];
 
-function EditorShell({ venue, title, subtitle, backHref, persistence }: EditorAppProps) {
+function EditorShell({ venue, title, subtitle, backHref, persistence, demo }: EditorAppProps) {
   const store = useEditorApi();
   const layout = useEditor((s) => s.layout);
   const selectedId = useEditor((s) => s.selectedId);
+  const activeLevel = useEditor((s) => s.activeLevel);
+  const [show3d, setShow3d] = useState(false);
+  const kind = venue.kind ?? (venue.spec.levels?.length ? "casa" : "salon");
+  const house = kind === "casa";
+  const floors = venue.spec.levels ?? [];
   const { undo, redo } = useHistory();
   const canvas = useRef<CanvasApi>(null);
   const [sheet, setSheet] = useState<SheetName | null>(null);
@@ -72,8 +99,9 @@ function EditorShell({ venue, title, subtitle, backHref, persistence }: EditorAp
 
   const addFromCatalog = (catalogId: string) => {
     const at = addAt ?? canvas.current?.center() ?? floorCenter(venue.spec);
-    const obj = createObject(catalogId, at, store.getState().layout.objects);
-    store.getState().addObjects([obj], obj.id);
+    const st = store.getState();
+    const obj = { ...createObject(catalogId, at, st.layout.objects), ...(st.activeLevel ? { level: st.activeLevel } : {}) };
+    st.addObjects([obj], obj.id);
     close();
   };
 
@@ -137,7 +165,11 @@ function EditorShell({ venue, title, subtitle, backHref, persistence }: EditorAp
   }, [notice]);
 
   return (
-    <div className="fixed inset-0 flex flex-col overscroll-none bg-[#ece7df] text-stone-800">
+    // Sin selección de texto ni menú de "mantener presionado" de iOS: aquí todo toque es una acción.
+    <div
+      className="fixed inset-0 flex select-none flex-col overscroll-none bg-[#ece7df] text-stone-800"
+      style={{ WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
+    >
       <TopBar
         title={title}
         subtitle={subtitle}
@@ -147,6 +179,7 @@ function EditorShell({ venue, title, subtitle, backHref, persistence }: EditorAp
         status={status}
         local={local}
         onIssues={() => setSheet("avisos")}
+        summary={house ? `${floors.length} plantas · ${layout.objects.length} muebles` : undefined}
       />
       <main className="relative flex-1 overflow-hidden">
         <PlanCanvas
@@ -158,6 +191,31 @@ function EditorShell({ venue, title, subtitle, backHref, persistence }: EditorAp
             setSheet("catalogo");
           }}
         />
+        <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between gap-2">
+          {floors.length > 1 ? (
+            <div className="pointer-events-auto flex rounded-full bg-white/95 p-1 shadow-md">
+              {floors.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => store.getState().setActiveLevel(f.id)}
+                  className={`h-9 rounded-full px-3 text-sm font-medium ${
+                    activeLevel === f.id ? "bg-stone-900 text-white" : "text-stone-600"
+                  }`}
+                >
+                  {f.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span />
+          )}
+          <button
+            onClick={() => setShow3d(true)}
+            className="pointer-events-auto flex h-11 items-center gap-1.5 rounded-full bg-stone-900 px-4 text-sm font-semibold text-white shadow-md active:bg-stone-700"
+          >
+            <Box size={17} /> Ver en 3D
+          </button>
+        </div>
         {showFps && <FpsMeter />}
         {notice && (
           <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center">
@@ -169,6 +227,7 @@ function EditorShell({ venue, title, subtitle, backHref, persistence }: EditorAp
         <CatalogSheet
           open={sheet === "catalogo"}
           title={addAt ? "Agregar aquí" : "Agregar al plano"}
+          kind={kind}
           onClose={close}
           onPick={addFromCatalog}
         />
@@ -185,31 +244,37 @@ function EditorShell({ venue, title, subtitle, backHref, persistence }: EditorAp
         />
         <InventorySheet open={sheet === "inventario"} stats={stats} onClose={close} />
         <Sheet title="Más opciones" open={sheet === "mas"} onClose={close}>
-          <MenuButton onClick={() => (store.getState().setObjects(autoNumber(store.getState().layout.objects)), close())}>
-            Numerar mesas automáticamente
+          {!house && (
+            <>
+              <MenuButton onClick={() => (store.getState().setObjects(autoNumber(store.getState().layout.objects)), close())}>
+                Numerar mesas automáticamente
+              </MenuButton>
+              <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                Llenar el salón con mesas
+              </p>
+              {FILL_OPTIONS.map((o) => (
+                <MenuButton key={o.catalogId} onClick={() => fillWith(o.catalogId)}>
+                  {o.label}
+                </MenuButton>
+              ))}
+              <div className="my-2 border-t border-stone-100" />
+            </>
+          )}
+          <MenuButton onClick={() => setSheet("inventario")}>
+            {house ? "Lista de muebles" : "Inventario del montaje"}
           </MenuButton>
-          <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
-            Llenar el salón con mesas
-          </p>
-          {FILL_OPTIONS.map((o) => (
-            <MenuButton key={o.catalogId} onClick={() => fillWith(o.catalogId)}>
-              {o.label}
-            </MenuButton>
-          ))}
-          <div className="my-2 border-t border-stone-100" />
-          <MenuButton onClick={() => setSheet("inventario")}>Inventario del montaje</MenuButton>
           <MenuButton onClick={() => (setShowFps(!showFps), close())}>
             {showFps ? "Ocultar" : "Mostrar"} medidor de fluidez (FPS)
           </MenuButton>
-          {local && (
-            <>
-              <MenuButton onClick={() => replaceAll(stressLayout(), "¿Reemplazar el plano por la prueba de 60 mesas?")}>
-                Prueba de rendimiento: 60 mesas
-              </MenuButton>
-              <MenuButton onClick={() => replaceAll(demoLayout(), "¿Volver al montaje de demostración?")}>
-                Restaurar demostración
-              </MenuButton>
-            </>
+          {local && !house && (
+            <MenuButton onClick={() => replaceAll(stressLayout(), "¿Reemplazar el plano por la prueba de 60 mesas?")}>
+              Prueba de rendimiento: 60 mesas
+            </MenuButton>
+          )}
+          {local && demo && (
+            <MenuButton onClick={async () => replaceAll(await DEMOS[demo](), "¿Volver al montaje de demostración?")}>
+              Restaurar demostración
+            </MenuButton>
           )}
           <MenuButton
             tone="danger"
@@ -223,6 +288,7 @@ function EditorShell({ venue, title, subtitle, backHref, persistence }: EditorAp
             Vaciar plano
           </MenuButton>
         </Sheet>
+        {show3d && <Scene3D venue={venue} onClose={() => setShow3d(false)} />}
       </main>
       <BottomBar
         onAdd={() => setSheet("catalogo")}

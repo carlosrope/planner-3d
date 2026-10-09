@@ -6,7 +6,7 @@ import { getVenueForOrg, requireOrg, requireUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { event, layout } from "@/lib/db/schema";
 import { EVENT_KINDS } from "@/lib/domain";
-import { starterLayout } from "@/lib/layout/tools";
+import { emptyHouseLayout, starterLayout } from "@/lib/layout/tools";
 
 export type CreateEventState = { error?: string } | null;
 
@@ -36,7 +36,10 @@ export async function createEvent(_prev: CreateEventState, formData: FormData): 
   const found = await getVenueForOrg(org.id, data.venueId);
   if (!found) return { error: "Ese salón no está disponible para tu cuenta." };
 
-  const doc = starterLayout(found.spec, { kind: data.kind, guests: data.guestCount });
+  // Una casa (plantas importadas de CAD) arranca vacía para amueblarla; un salón, con mesas.
+  const doc = found.spec.levels?.length
+    ? emptyHouseLayout()
+    : starterLayout(found.spec, { kind: data.kind, guests: data.guestCount });
   const eventId = await db.transaction(async (tx) => {
     const [created] = await tx
       .insert(event)

@@ -25,9 +25,9 @@ import {
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { objectLabel, type Issue, type LayoutStats } from "@/lib/layout/analysis";
-import { CATALOG, CATEGORIES, findItem, type CatalogItem, type Category } from "@/lib/layout/catalog";
+import { CATALOG, categoriesFor, findItem, type CatalogItem } from "@/lib/layout/catalog";
 import { dims, normalizeAngle, seatCount } from "@/lib/layout/geometry";
-import { LAYER_LABELS, LAYERS, type PlacedObject } from "@/lib/layout/types";
+import { LAYER_LABELS, LAYERS, type PlacedObject, type VenueKind } from "@/lib/layout/types";
 import type { SaveStatus } from "./persistence";
 import { Sheet } from "./Sheet";
 import { useEditor, useEditorApi, useHistory } from "./store";
@@ -82,11 +82,14 @@ export function TopBar({
   status,
   local,
   onIssues,
+  summary,
 }: {
   title: string;
   subtitle?: string;
   backHref?: string;
   stats: LayoutStats;
+  /** Resumen a la derecha del subtítulo; por defecto mesas y lugares. */
+  summary?: string;
   issues: Issue[];
   status: SaveStatus;
   local: boolean;
@@ -108,7 +111,7 @@ export function TopBar({
         <h1 className="truncate text-[15px] font-semibold leading-tight">{title}</h1>
         <p className="truncate text-xs text-stone-500">
           {subtitle ? `${subtitle} · ` : ""}
-          {stats.tables} mesas · {stats.seats} lugares
+          {summary ?? `${stats.tables} mesas · ${stats.seats} lugares`}
         </p>
       </div>
       {issues.length > 0 && (
@@ -341,20 +344,24 @@ function ItemPreview({ item }: { item: CatalogItem }) {
 export function CatalogSheet({
   open,
   title,
+  kind,
   onClose,
   onPick,
 }: {
   open: boolean;
   title: string;
+  kind: VenueKind;
   onClose: () => void;
   onPick: (catalogId: string) => void;
 }) {
-  const [category, setCategory] = useState<Category>("mesas");
+  const categories = categoriesFor(kind);
+  const [picked, setCategory] = useState(categories[0].id);
+  const category = categories.some((c) => c.id === picked) ? picked : categories[0].id;
   const items = CATALOG.filter((i) => i.category === category);
   return (
     <Sheet title={title} open={open} onClose={onClose}>
       <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
-        {CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <button
             key={c.id}
             onClick={() => setCategory(c.id)}

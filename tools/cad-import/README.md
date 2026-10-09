@@ -1,0 +1,59 @@
+# Importar una casa desde AutoCAD
+
+Convierte el plano arquitectónico de una casa (DWG) en el JSON que usa el editor 2D/3D. Se hace **una vez por modelo de casa**; todas las unidades del mismo modelo la reutilizan.
+
+## Requisitos (solo en la Mac de desarrollo)
+
+- LibreDWG: `brew install libredwg` (convierte DWG → DXF). Es GPL: se usa como herramienta local y **no** se incluye en la app.
+- Python con ezdxf (licencia MIT):
+
+```bash
+python3 -m venv .venv-cad && .venv-cad/bin/pip install -r tools/cad-import/requirements.txt
+```
+
+## Pasos
+
+1. Copia los planos a `planos/` (está fuera de git) y conviértelos:
+
+   ```bash
+   cd planos && mkdir -p _dxf && for f in *.dwg; do dwg2dxf -y -o "_dxf/${f%.dwg}.dxf" "$f"; done
+   ```
+
+2. Elige la hoja correcta. En un juego de constructora:
+   - **ARQ** son los arquitectónicos;
+   - **AC** acabados;
+   - **AL** albañilería;
+   - **CA** puertas y ventanas;
+   - **EST** estructurales.
+
+   Usa la que tenga planta baja y planta alta con capas `A-MUROS`, `A-PUERTAS` y `A-VENTANAS`. Si un bloque sale vacío (pasa con DWG de AutoCAD 2018), busca las mismas plantas en otra hoja con formato más viejo.
+
+3. Copia `chardonnay.config.json` y ajusta:
+   - `window`: la zona del dibujo de cada planta, en coordenadas del DXF;
+   - `origin`: la esquina del lote (izquierda, fondo);
+   - `rooms`, `slabs` y `stairs`: lo que el CAD no trae limpio. `rooms[].view` es el punto de vista de "ver desde dentro".
+
+4. Corre el importador:
+
+   ```bash
+   .venv-cad/bin/python tools/cad-import/import_house.py tools/cad-import/chardonnay.config.json src/lib/layout/houses/chardonnay.json
+   ```
+
+5. Registra la casa en `src/lib/layout/houses/index.ts` y cárgala a la base con `npm run db:seed`.
+
+## Qué sale
+
+Por planta:
+- **Muros** como polígonos: `muro`, `tablaroca`, `antepecho` (bajo ventana) y `barda` (límite del lote).
+- **Vanos** de puertas y ventanas: la caja de cada uno; en las puertas incluye el barrido de la hoja.
+- **Trazos** del plano (muebles fijos, escalones, exteriores) en formato compacto.
+- **Losas, cuartos y escalera.**
+
+Con esto el editor valida choques con muros, puertas bloqueadas y ventanas tapadas, y el 3D levanta la casa.
+
+## Chardonnay (modelo de ejemplo)
+
+- **Fuente:** `ARQ-05 (CORTES)`. Trae planta baja y planta alta de la misma referencia, así que coinciden.
+- **Por qué no ARQ-01,02:** está en formato AutoCAD 2018, y LibreDWG pierde el bloque de la planta alta.
+- **Versión:** base de 172.17 m² (96.71 en planta baja + 75.46 en planta alta) en un lote de 10 × 20 m, la misma del folleto `CHARDONNAY.pdf`. Las versiones con ampliación (210.93 y 253.13 m²) están en las mismas hojas y se pueden importar igual.
+- **Ojo:** los estructurales `EST-2246-*` dicen "PROTOTIPO RHAPIS" por dentro. Conviene confirmar con la constructora que corresponden a Chardonnay.

@@ -1,12 +1,13 @@
 // Catálogos del negocio compartidos por la base de datos, el servidor y la interfaz.
 
-export const EVENT_KINDS = ["boda", "xv", "graduacion", "corporativo", "otro"] as const;
+export const EVENT_KINDS = ["boda", "xv", "graduacion", "corporativo", "casa", "otro"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 export const EVENT_KIND_LABELS: Record<EventKind, string> = {
   boda: "Boda",
   xv: "XV años",
   graduacion: "Graduación",
   corporativo: "Corporativo",
+  casa: "Casa / inmobiliaria",
   otro: "Otro",
 };
 

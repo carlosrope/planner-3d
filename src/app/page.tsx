@@ -18,7 +18,13 @@ export default function Home() {
           href="/prototipo"
           className="flex h-12 items-center justify-center rounded-xl bg-stone-900 font-medium text-white active:bg-stone-700"
         >
-          Probar el editor sin cuenta
+          Probar el editor de eventos
+        </Link>
+        <Link
+          href="/prototipo/casa"
+          className="flex h-12 items-center justify-center rounded-xl border border-stone-900 bg-white font-medium active:bg-stone-100"
+        >
+          Probar casa en 2D y 3D (inmobiliaria)
         </Link>
         <div className="grid grid-cols-2 gap-3">
           <Link
