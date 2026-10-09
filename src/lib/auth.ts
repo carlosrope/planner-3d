@@ -1,5 +1,6 @@
 import "server-only";
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
@@ -12,6 +13,16 @@ export const auth = betterAuth({
     schema: { user, session, account, verification },
   }),
   emailAndPassword: { enabled: true, minPasswordLength: 8 },
+  hooks: {
+    // Si SIGNUP_CODE está definido (dominio de prueba), crear cuenta pide ese código de invitación.
+    before: createAuthMiddleware(async (ctx) => {
+      const code = process.env.SIGNUP_CODE;
+      if (ctx.path !== "/sign-up/email" || !code) return;
+      if (ctx.headers?.get("x-invite-code")?.trim() !== code) {
+        throw new APIError("FORBIDDEN", { message: "Código de invitación inválido.", code: "INVALID_INVITE_CODE" });
+      }
+    }),
+  },
   // En desarrollo se permite entrar desde el iPhone por la red local.
   trustedOrigins: process.env.NODE_ENV === "production" ? [] : lanOrigins(),
   databaseHooks: {

@@ -8,7 +8,7 @@ import { authClient } from "@/lib/auth-client";
 const input =
   "h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base outline-none focus:border-stone-800";
 
-export function AuthForm({ mode }: { mode: "entrar" | "registro" }) {
+export function AuthForm({ mode, inviteRequired = false }: { mode: "entrar" | "registro"; inviteRequired?: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -22,7 +22,10 @@ export function AuthForm({ mode }: { mode: "entrar" | "registro" }) {
     setBusy(true);
     setError(null);
     const { error } = registering
-      ? await authClient.signUp.email({ name: String(form.get("name") ?? "").trim(), email, password })
+      ? await authClient.signUp.email(
+          { name: String(form.get("name") ?? "").trim(), email, password },
+          { headers: { "x-invite-code": String(form.get("invite") ?? "").trim() } },
+        )
       : await authClient.signIn.email({ email, password });
     setBusy(false);
     if (error) {
@@ -31,9 +34,11 @@ export function AuthForm({ mode }: { mode: "entrar" | "registro" }) {
           ? "Correo o contraseña incorrectos."
           : error.code === "USER_ALREADY_EXISTS" || error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
             ? "Ya existe una cuenta con ese correo."
-            : error.code === "PASSWORD_TOO_SHORT"
-              ? "La contraseña debe tener al menos 8 caracteres."
-              : "No se pudo completar. Intenta de nuevo.",
+            : error.code === "INVALID_INVITE_CODE"
+              ? "El código de invitación no es válido."
+              : error.code === "PASSWORD_TOO_SHORT"
+                ? "La contraseña debe tener al menos 8 caracteres."
+                : "No se pudo completar. Intenta de nuevo.",
       );
       return;
     }
@@ -58,6 +63,9 @@ export function AuthForm({ mode }: { mode: "entrar" | "registro" }) {
           placeholder="Contraseña (mínimo 8 caracteres)"
           className={input}
         />
+        {registering && inviteRequired && (
+          <input name="invite" required autoComplete="off" placeholder="Código de invitación" className={input} />
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           disabled={busy}
