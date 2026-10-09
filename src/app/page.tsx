@@ -20,12 +20,13 @@ export default function Home() {
         >
           Probar el editor de eventos
         </Link>
-        <Link
-          href="/prototipo/casa"
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- es una página HTML propia (route handler), no de React */}
+        <a
+          href="/disenador/chardonnay"
           className="flex h-12 items-center justify-center rounded-xl border border-stone-900 bg-white font-medium active:bg-stone-100"
         >
-          Probar casa en 2D y 3D (inmobiliaria)
-        </Link>
+          Diseñador de casas 2D y 3D (inmobiliaria)
+        </a>
         <div className="grid grid-cols-2 gap-3">
           <Link
             href="/entrar"

@@ -1,0 +1,38 @@
+[
+ [
+  "Net floor area ≈ ${fmt(tot)} m² · Units: mm · Original scale 1:60",
+  "Área neta ≈ ${fmt(tot)} m² · ${PLANTA.name} · medidas en mm"
+ ],
+ [
+  "<section><h3>Touch Controls</h3><div class=\"kbd\">\n    <kbd>1-finger drag</kbd><span>Pan on empty space</span><kbd>2 fingers</kbd><span>Pinch to zoom, drag to pan</span>\n    <kbd>Library</kbd><span>Tap to place at center, or hold and drag right to a spot</span>\n    <kbd>Tap item</kbd><span>Drag to move; top dot rotates, bottom-right square resizes</span>\n    <kbd>Toolbar</kbd><span>Bottom bar can rotate / duplicate / delete</span>\n    <kbd>Measure</kbd><span>Hold and drag a line, or tap two points</span>\n    <kbd>3D walk</kbd><span>Joystick moves, drag to look, tap doors to open</span>\n  </div></section>",
+  "<section><h3>Controles táctiles</h3><div class=\"kbd\">\n    <kbd>Arrastrar con un dedo</kbd><span>En un espacio vacío mueve el plano</span><kbd>Dos dedos</kbd><span>Pellizca para acercar, arrastra para mover</span>\n    <kbd>Catálogo</kbd><span>Toca para ponerlo al centro, o mantén y arrastra a la derecha hasta su lugar</span>\n    <kbd>Tocar un mueble</kbd><span>Arrástralo para moverlo; el punto de arriba lo gira y el cuadro de abajo a la derecha cambia su tamaño</span>\n    <kbd>Barra inferior</kbd><span>Girar, duplicar o eliminar</span>\n    <kbd>Medir</kbd><span>Mantén y arrastra una línea, o toca dos puntos</span>\n    <kbd>Recorrido 3D</kbd><span>El control de abajo a la izquierda te mueve; arrastra para mirar; toca las puertas para abrirlas</span>\n  </div></section>"
+ ],
+ [
+  "<section><h3>Keyboard Shortcuts</h3><div class=\"kbd\">\n    <kbd>Drag</kbd><span>Drag furniture onto the plan</span><kbd>V</kbd><span>Select / move</span><kbd>M</kbd><span>Measure (Shift: horizontal/vertical)</span>\n    <kbd>X</kbd><span>Demolish non-bearing walls (black = bearing)</span><kbd>R</kbd><span>Rotate 90° (Shift reverses)</span><kbd>Arrows</kbd><span>Nudge 10mm (Shift 100mm)</span>\n    <kbd>⌘/Ctrl D</kbd><span>Duplicate</span><kbd>Delete</kbd><span>Delete</span><kbd>⌘/Ctrl Z</kbd><span>Undo</span><kbd>T</kbd><span>Toggle 2D / 3D</span><kbd>F</kbd><span>Fit to window</span><kbd>Esc</kbd><span>Deselect</span>\n  </div></section>",
+  "<section><h3>Atajos de teclado</h3><div class=\"kbd\">\n    <kbd>Arrastrar</kbd><span>Lleva muebles del catálogo al plano</span><kbd>V</kbd><span>Seleccionar / mover</span><kbd>M</kbd><span>Medir (Shift: horizontal/vertical)</span>\n    <kbd>X</kbd><span>Quitar muros no estructurales (negro = de carga)</span><kbd>R</kbd><span>Girar 90° (Shift al revés)</span><kbd>Flechas</kbd><span>Mover 10 mm (Shift 100 mm)</span>\n    <kbd>⌘/Ctrl D</kbd><span>Duplicar</span><kbd>Supr</kbd><span>Eliminar</span><kbd>⌘/Ctrl Z</kbd><span>Deshacer</span><kbd>T</kbd><span>Cambiar 2D / 3D</span><kbd>F</kbd><span>Encuadrar</span><kbd>Esc</kbd><span>Quitar selección</span>\n  </div></section>"
+ ],
+ [
+  "Remove all ${n} furniture / appliance items?\\nWalls, flooring and measurements are kept. You can Undo this.",
+  "¿Quitar los ${n} muebles y electrodomésticos?\\nLos muros, pisos y medidas se conservan. Puedes deshacerlo."
+ ],
+ [
+  "Wall area (2.8m ceiling, openings not deducted) ≈ ${fmt(perim(r.poly)*2.8,1)} m²",
+  "Área de muros (altura ${PLANTA.height} m, sin descontar vanos) ≈ ${fmt(perim(r.poly)*PLANTA.height,1)} m²"
+ ],
+ [
+  "${inside.length} items",
+  "${inside.length} piezas"
+ ],
+ [
+  "Added \"${nm(name)}\" ${w}×${d}",
+  "Se agregó «${nm(name)}» ${w}×${d}"
+ ],
+ [
+  "Marked ${Math.max(w[2]-w[0], w[3]-w[1])} mm of wall for removal",
+  "Se marcó para demoler ${Math.max(w[2]-w[0], w[3]-w[1])} mm de muro"
+ ],
+ [
+  "Furniture is drawn at real size (mm). ${COARSE ? 'Tap to place at the center, or hold and drag right onto the plan / 3D floor (swipe up/down to scroll).' : 'Click to add at the center, or drag onto the plan / 3D floor.'} Edit size and color in the right panel afterwards.",
+  "Los muebles se dibujan a su tamaño real (mm). ${COARSE ? 'Toca para ponerlo al centro, o mantén y arrastra a la derecha hasta el plano / piso 3D (desliza arriba o abajo para recorrer la lista).' : 'Haz clic para ponerlo al centro, o arrástralo al plano / piso 3D.'} Después cambia medidas y color en el panel de la derecha."
+ ]
+]

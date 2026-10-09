@@ -19,7 +19,8 @@ npm run dev
 ```
 
 - `http://localhost:3000/prototipo`: el editor de eventos sin cuenta; guarda en el navegador.
-- `http://localhost:3000/prototipo/casa`: la casa Chardonnay en 2D y 3D, con planta baja y alta y muebles.
+- `http://localhost:3000/disenador/chardonnay`: el diseñador de casas para inmobiliarias (Casa Chardonnay): plano 2D, catálogo de muebles, pisos con precio, quitar muros, medir, 3D con recorrido. `?planta=pa` abre la planta alta.
+- `http://localhost:3000/prototipo/casa`: la casa Chardonnay dentro del editor de eventos (distribuciones A/B/C).
 - `http://localhost:3000/registro`: crea una cuenta, después un evento, y se abre el editor con guardado en la base de datos.
 
 ### Probar en el iPhone
@@ -67,8 +68,11 @@ src/
     eventos/       Lista de eventos, crear evento y editor con guardado.
     api/layouts/   Guardar, renombrar o eliminar una distribución.
     api/events/[id]/layouts/ Crear una distribución nueva del evento.
+  app/disenador/[casa]/ Sirve el diseñador de casas con los datos de la casa.
+  designer/        disenador.html (generado) y casas/*.json (generados).
   lib/layout/houses/ Casas importadas de AutoCAD (JSON) y su amueblado de ejemplo.
 tools/cad-import/  Importador DWG/DXF → casa (ver su README).
+tools/designer/    Adaptación del diseñador floorplan-3d (ver su README).
 docs/investigacion/ Notas de investigación (post de X, mercado inmobiliario).
 drizzle/           Migraciones SQL.
 scripts/seed.ts    Carga el salón de demostración y la casa Chardonnay.
@@ -79,3 +83,9 @@ scripts/seed.ts    Carga el salón de demostración y la casa Chardonnay.
 - Unidades en metros; `x` hacia la derecha, `z` hacia abajo; rotación en grados, sentido horario.
 - El documento `LayoutDoc` es la única fuente de verdad: el 2D y el 3D lo dibujan.
 - Código en inglés, interfaz en español.
+
+## Código de terceros
+
+El diseñador de casas (`src/designer/disenador.html`) es una adaptación de
+[floorplan-3d](https://github.com/wy51ai/floorplan-3d), © 2026 wuyi, licencia MIT.
+La copia original y su licencia están en `tools/designer/upstream/`.
