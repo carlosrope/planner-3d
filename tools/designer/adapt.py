@@ -565,6 +565,48 @@ sub(
 # La pestaña del navegador lleva el nombre de la casa o del evento
 sub("  document.title = tr('户型装修设计', 'Floor Plan Designer');", "  document.title = CASA.title;")
 
+# Vista completa: la distancia se calcula para que quepan todos los muros (con su altura)
+# en la pantalla, horizontal o vertical (teléfono). Al abrir el 3D desde un plano que ya
+# muestra casi toda la planta, se entra con esa vista completa.
+sub(
+    "const isoWhole = () => pose(new THREE.Vector3(0, 0, 0), new THREE.Vector3(5.5*S3, 19*S3, 8*S3));   // más alta: la casa es larga\n"
+    "const topWhole = () => pose(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 19*S3, 1e-4));",
+    """const WALL_BOX = (() => {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  WALLS.forEach(w => { x0 = Math.min(x0, w[0]); y0 = Math.min(y0, w[1]); x1 = Math.max(x1, w[2]); y1 = Math.max(y1, w[3]); });
+  return {x0, y0, x1, y1};
+})();
+function fitPose(dir, margin = .86){
+  const b = WALL_BOX, t = new THREE.Vector3(wx((b.x0 + b.x1)/2), 0, wz((b.y0 + b.y1)/2)), pts = [];
+  for (const x of [b.x0, b.x1]) for (const y of [b.y0, b.y1]) for (const h of [0, H]) pts.push(new THREE.Vector3(wx(x), h, wz(y)));
+  const cam = camera.clone(), d = dir.clone().normalize(), v = new THREE.Vector3();
+  cam.aspect = SW()/SH(); cam.updateProjectionMatrix();
+  const fits = dist => {
+    cam.position.copy(t).addScaledVector(d, dist); cam.lookAt(t); cam.updateMatrixWorld();
+    return pts.every(p => { v.copy(p).project(cam); return Math.abs(v.x) <= margin && Math.abs(v.y) <= margin && v.z < 1; });
+  };
+  let lo = 2, hi = 400;
+  for (let i = 0; i < 24; i++){ const mid = (lo + hi)/2; if (fits(mid)) hi = mid; else lo = mid; }
+  return Object.assign(pose(t, t.clone().addScaledVector(d, hi)), {dist: hi});
+}
+const ISO_DIR = new THREE.Vector3(5.5, 19, 8), UP_Y = new THREE.Vector3(0, 1, 0);
+// En pantalla vertical (teléfono) se prueba girar la cámara hacia el lado largo del plano
+// y se queda con el giro que muestra la planta más grande.
+const isoWhole = () => SW() >= SH() ? fitPose(ISO_DIR)
+  : [0, -12, -22, 12, 22].map(g => fitPose(ISO_DIR.clone().applyAxisAngle(UP_Y, g*Math.PI/180)))
+      .reduce((best, p) => p.dist < best.dist*.92 ? p : best);
+const topWhole = () => fitPose(new THREE.Vector3(0, 1, 1e-4));
+// ¿El plano 2D muestra casi toda la planta? Entonces el 3D abre con la planta completa.
+const shownWhole = () => SW()/view.s >= (WALL_BOX.x1 - WALL_BOX.x0)*.75 && SH()/view.s >= (WALL_BOX.y1 - WALL_BOX.y0)*.75;""",
+)
+sub(
+    "  const A = planPose(), B = isoFrom(A);",
+    "  const A = planPose(), B = shownWhole() ? isoWhole() : isoFrom(A);",
+)
+
+# El alejamiento máximo de la cámara crece con el lugar (un salón de 44 m no cabe a 45 m)
+sub("orbit.maxDistance = 45;", "orbit.maxDistance = Math.max(45, 45*S3);")
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

@@ -1596,7 +1596,7 @@ function init(){
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(FOV, SW()/SH(), .05, 300);
   orbit = new OrbitControls(camera, renderer.domElement);
-  orbit.enableDamping = true; orbit.maxPolarAngle = Math.PI*.495; orbit.minDistance = 1.5; orbit.maxDistance = 45;
+  orbit.enableDamping = true; orbit.maxPolarAngle = Math.PI*.495; orbit.minDistance = 1.5; orbit.maxDistance = Math.max(45, 45*S3);
   walkCtl = new PointerLockControls(camera, document.body);
   walkCtl.addEventListener('lock', () => { $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'block'; });
   walkCtl.addEventListener('unlock', () => { if (opt.mode === 'walk'){ $('#walkOverlay').style.display = 'flex'; $('#cross').style.display = 'none'; } });
@@ -2483,8 +2483,33 @@ function isoFrom(P){
   const d = THREE.MathUtils.clamp(P.p.y, 5, 30*S3), dir = new THREE.Vector3(.3, .82, .49).normalize();
   return pose(P.t.clone(), P.t.clone().addScaledVector(dir, d));
 }
-const isoWhole = () => pose(new THREE.Vector3(0, 0, 0), new THREE.Vector3(5.5*S3, 19*S3, 8*S3));   // más alta: la casa es larga
-const topWhole = () => pose(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 19*S3, 1e-4));
+const WALL_BOX = (() => {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  WALLS.forEach(w => { x0 = Math.min(x0, w[0]); y0 = Math.min(y0, w[1]); x1 = Math.max(x1, w[2]); y1 = Math.max(y1, w[3]); });
+  return {x0, y0, x1, y1};
+})();
+function fitPose(dir, margin = .86){
+  const b = WALL_BOX, t = new THREE.Vector3(wx((b.x0 + b.x1)/2), 0, wz((b.y0 + b.y1)/2)), pts = [];
+  for (const x of [b.x0, b.x1]) for (const y of [b.y0, b.y1]) for (const h of [0, H]) pts.push(new THREE.Vector3(wx(x), h, wz(y)));
+  const cam = camera.clone(), d = dir.clone().normalize(), v = new THREE.Vector3();
+  cam.aspect = SW()/SH(); cam.updateProjectionMatrix();
+  const fits = dist => {
+    cam.position.copy(t).addScaledVector(d, dist); cam.lookAt(t); cam.updateMatrixWorld();
+    return pts.every(p => { v.copy(p).project(cam); return Math.abs(v.x) <= margin && Math.abs(v.y) <= margin && v.z < 1; });
+  };
+  let lo = 2, hi = 400;
+  for (let i = 0; i < 24; i++){ const mid = (lo + hi)/2; if (fits(mid)) hi = mid; else lo = mid; }
+  return Object.assign(pose(t, t.clone().addScaledVector(d, hi)), {dist: hi});
+}
+const ISO_DIR = new THREE.Vector3(5.5, 19, 8), UP_Y = new THREE.Vector3(0, 1, 0);
+// En pantalla vertical (teléfono) se prueba girar la cámara hacia el lado largo del plano
+// y se queda con el giro que muestra la planta más grande.
+const isoWhole = () => SW() >= SH() ? fitPose(ISO_DIR)
+  : [0, -12, -22, 12, 22].map(g => fitPose(ISO_DIR.clone().applyAxisAngle(UP_Y, g*Math.PI/180)))
+      .reduce((best, p) => p.dist < best.dist*.92 ? p : best);
+const topWhole = () => fitPose(new THREE.Vector3(0, 1, 1e-4));
+// ¿El plano 2D muestra casi toda la planta? Entonces el 3D abre con la planta completa.
+const shownWhole = () => SW()/view.s >= (WALL_BOX.x1 - WALL_BOX.x0)*.75 && SH()/view.s >= (WALL_BOX.y1 - WALL_BOX.y0)*.75;
 const curPose = () => pose(orbit.target.clone(), camera.position.clone());
 // 以目标点为中心做球坐标插值：镜头沿弧线倾斜环绕，而不是直线穿越
 function camTween(A, B, e){
@@ -2513,7 +2538,7 @@ async function enter(){
   renderer.setSize(SW(), SH()); labelRenderer.setSize(SW(), SH()); camera.aspect = SW()/SH(); camera.updateProjectionMatrix();
   sync(true);
   opt.mode = 'orbit'; orbit.enabled = false; showLabels(false);
-  const A = planPose(), B = isoFrom(A);
+  const A = planPose(), B = shownWhole() ? isoWhole() : isoFrom(A);
   grow = 0; furnGrow = 0; applyGrow(); setPose(A);
   stage.classList.add('animating');
   startLoop(); renderer.render(scene, camera);
