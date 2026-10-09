@@ -8,6 +8,20 @@
       "when": 1791568175769,
       "tag": "0000_supreme_squadron_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791576773638,
+      "tag": "0001_stale_zodiak",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791577144128,
+      "tag": "0002_nombres-distribuciones",
+      "breakpoints": true
     }
   ]
 }

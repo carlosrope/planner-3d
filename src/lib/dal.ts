@@ -85,7 +85,7 @@ export async function listEvents(orgId: string) {
     .orderBy(sql`${event.eventDate} asc nulls last`, desc(event.createdAt));
 }
 
-/** Evento, salón y primer montaje, solo si el usuario es miembro del negocio dueño. */
+/** Evento, salón y sus distribuciones, solo si el usuario es miembro del negocio dueño. */
 export async function getEditableEvent(eventId: string, userId: string) {
   const [row] = await db
     .select({ event, venue })
@@ -95,13 +95,23 @@ export async function getEditableEvent(eventId: string, userId: string) {
     .where(eq(event.id, eventId))
     .limit(1);
   if (!row) return null;
-  const [first] = await db
+  const layouts = await db
     .select()
     .from(layout)
     .where(eq(layout.eventId, eventId))
-    .orderBy(asc(layout.createdAt))
+    .orderBy(asc(layout.position), asc(layout.createdAt));
+  return layouts.length ? { ...row, layouts } : null;
+}
+
+/** El usuario puede editar el evento (y crear distribuciones en él). */
+export async function canEditEvent(eventId: string, userId: string) {
+  const [row] = await db
+    .select({ id: event.id })
+    .from(event)
+    .innerJoin(membership, and(eq(membership.orgId, event.orgId), eq(membership.userId, userId)))
+    .where(eq(event.id, eventId))
     .limit(1);
-  return first ? { ...row, layout: first } : null;
+  return Boolean(row);
 }
 
 /** El montaje existe y el usuario puede editarlo. */

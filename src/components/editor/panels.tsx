@@ -28,7 +28,7 @@ import { objectLabel, type Issue, type LayoutStats } from "@/lib/layout/analysis
 import { CATALOG, categoriesFor, findItem, type CatalogItem } from "@/lib/layout/catalog";
 import { dims, normalizeAngle, seatCount } from "@/lib/layout/geometry";
 import { LAYER_LABELS, LAYERS, type PlacedObject, type VenueKind } from "@/lib/layout/types";
-import type { SaveStatus } from "./persistence";
+import type { SaveStatus } from "./distributions";
 import { Sheet } from "./Sheet";
 import { useEditor, useEditorApi, useHistory } from "./store";
 
@@ -270,7 +270,7 @@ export function ContextBar({ obj, onDuplicate }: { obj: PlacedObject; onDuplicat
         </div>
       )}
       {panel === "medidas" && (
-        <div className="grid grid-cols-2 gap-2 border-t border-stone-100 px-3 py-2 text-sm">
+        <div className="grid grid-cols-1 gap-2 border-t border-stone-100 px-3 py-2 text-sm sm:grid-cols-2">
           <Stepper label="Largo" value={w} onChange={(v) => update({ w: v })} />
           {item.shape === "rect" && <Stepper label="Ancho" value={d} onChange={(v) => update({ d: v })} />}
         </div>

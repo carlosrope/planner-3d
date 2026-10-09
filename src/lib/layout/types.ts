@@ -162,6 +162,15 @@ export type LayoutDoc = {
 
 export const DEFAULT_MIN_AISLE = 1.2;
 
+/** Una distribución (A, B, C…) del mismo lugar: nombre, descripción y su plano. */
+export type DistributionSeed = {
+  id: string;
+  name: string;
+  note: string;
+  recommended: boolean;
+  doc: LayoutDoc;
+};
+
 export function emptyLayout(): LayoutDoc {
   return {
     version: 1,

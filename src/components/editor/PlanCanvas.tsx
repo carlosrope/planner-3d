@@ -65,6 +65,8 @@ export function PlanCanvas({
   const [scale, setScale] = useState(10);
   const downTarget = useRef<string | null>(null);
   const press = useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
+  /** Si ya movió o acercó el plano a mano; mientras no, el plano se re-encuadra al cambiar de tamaño. */
+  const touched = useRef(false);
   const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
 
   // La vista se mueve tocando el DOM directamente: así el plano va a 60 fps sin re-renderizar React.
@@ -83,7 +85,8 @@ export function PlanCanvas({
     const el = svgRef.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
-    if (!width || !height) return;
+    // Aún sin su tamaño final (la página se está acomodando): se espera al ResizeObserver.
+    if (width < 120 || height < 120) return;
     const b = bounds(venue.floor);
     const pad = 20;
     const s = Math.min((width - pad * 2) / (b.maxX - b.minX), (height - pad * 2) / (b.maxZ - b.minZ));
@@ -110,6 +113,7 @@ export function PlanCanvas({
         if (!o || !el) return;
         const { width, height } = el.getBoundingClientRect();
         const s = Math.max(view.current.s, 28);
+        touched.current = true;
         view.current = { s, tx: width / 2 - o.x * s, ty: height / 2 - o.z * s };
         apply();
         setScale(s);
@@ -122,13 +126,18 @@ export function PlanCanvas({
     fit();
   }, [fit]);
 
-  // Al cambiar el tamaño (girar el iPad, abrir paneles) se conserva el punto del centro.
+  // Al cambiar el tamaño: si no se ha tocado el plano se re-encuadra; si no, se conserva el centro.
   useEffect(() => {
     const el = svgRef.current;
     if (!el) return;
     let last = el.getBoundingClientRect();
     const ro = new ResizeObserver(() => {
       const now = el.getBoundingClientRect();
+      if (!touched.current) {
+        last = now;
+        fit();
+        return;
+      }
       view.current.tx += (now.width - last.width) / 2;
       view.current.ty += (now.height - last.height) / 2;
       last = now;
@@ -136,7 +145,7 @@ export function PlanCanvas({
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [apply]);
+  }, [apply, fit]);
 
   // Safari en iPhone/iPad: evita que el pellizco haga zoom a toda la página.
   useEffect(() => {
@@ -262,6 +271,7 @@ export function PlanCanvas({
           return m;
         }
         if (m.mode === "pan") {
+          touched.current = true;
           view.current.tx += dx;
           view.current.ty += dy;
           apply();
@@ -305,6 +315,7 @@ export function PlanCanvas({
           return m;
         }
         const r = svgRef.current!.getBoundingClientRect();
+        touched.current = true;
         view.current = { s, tx: ox - r.left - m.world.x * s, ty: oy - r.top - m.world.z * s };
         apply();
         if (last) setScale(s);
@@ -314,6 +325,7 @@ export function PlanCanvas({
         // Trackpad: dos dedos mueven el plano; pellizcar (ctrl) lo maneja onPinch.
         if (ctrlKey || pinching) return;
         event.preventDefault();
+        touched.current = true;
         view.current.tx -= dx;
         view.current.ty -= dy;
         apply();

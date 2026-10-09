@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { analyzeLayout, nearestNeighbors, obstaclesFor } from "./analysis";
-import { CHARDONNAY, chardonnayDemoLayout } from "./houses";
+import { CHARDONNAY, chardonnayDemoLayout, chardonnayDistributions } from "./houses";
 import { layoutDocSchema } from "./schema";
-import { createObject, emptyHouseLayout } from "./tools";
+import { createObject, emptyHouseLayout, nextDistributionName } from "./tools";
 
 const spec = CHARDONNAY.spec;
 
@@ -41,5 +41,25 @@ describe("casa Chardonnay", () => {
     const bed = doc.objects.find((o) => o.catalogId === "cama-king")!;
     const near = nearestNeighbors(doc, spec, bed);
     expect(near.some((n) => n.id.startsWith("muro:"))).toBe(true);
+  });
+});
+
+describe("distribuciones", () => {
+  it("las variantes A/B/C de Chardonnay no tienen choques", () => {
+    const dists = chardonnayDistributions();
+    expect(dists.map((d) => d.name)).toEqual(["A", "B", "C"]);
+    expect(dists.filter((d) => d.recommended)).toHaveLength(1);
+    for (const d of dists) {
+      expect(analyzeLayout(d.doc, spec).map((i) => `${d.name}: ${i.message}`)).toEqual([]);
+      expect(layoutDocSchema.safeParse(d.doc).success).toBe(true);
+    }
+  });
+
+  it("nombra la siguiente distribución con la primera letra libre", () => {
+    expect(nextDistributionName([])).toBe("A");
+    expect(nextDistributionName(["A", "B"])).toBe("C");
+    expect(nextDistributionName(["A", "c"])).toBe("B");
+    expect(nextDistributionName(["Opción A"])).toBe("B");
+    expect(nextDistributionName([..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"])).toBe("A2");
   });
 });

@@ -53,7 +53,7 @@ export async function createEvent(_prev: CreateEventState, formData: FormData): 
         guestCount: data.guestCount,
       })
       .returning({ id: event.id });
-    await tx.insert(layout).values({ eventId: created.id, doc, updatedBy: user.id });
+    await tx.insert(layout).values({ eventId: created.id, name: "A", recommended: true, doc, updatedBy: user.id });
     return created.id;
   });
   redirect(`/eventos/${eventId}`);

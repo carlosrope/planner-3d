@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { createStore, useStore } from "zustand";
 import { temporal } from "zundo";
 import { LAYERS, type Layer, type LayoutDoc, type PlacedObject } from "@/lib/layout/types";
@@ -89,16 +89,8 @@ export type EditorStore = ReturnType<typeof createEditorStore>;
 
 const EditorContext = createContext<EditorStore | null>(null);
 
-export function EditorProvider({
-  initial,
-  initialLevel = null,
-  children,
-}: {
-  initial: LayoutDoc;
-  initialLevel?: string | null;
-  children: ReactNode;
-}) {
-  const [store] = useState(() => createEditorStore(initial, initialLevel));
+/** Da a todo el editor la distribución activa; al cambiarla, la vista sigue montada. */
+export function EditorStoreProvider({ store, children }: { store: EditorStore; children: ReactNode }) {
   return <EditorContext value={store}>{children}</EditorContext>;
 }
 

@@ -58,12 +58,15 @@ src/
     PlanCanvas.tsx Plano SVG y gestos táctiles.
     shapes.tsx     Dibujo del salón, objetos y medidas.
     panels.tsx     Barras y hojas (catálogo, capas, avisos, inventario).
-    persistence.ts Guardado automático (navegador o servidor con revisiones).
+    distributions.ts Distribuciones A/B/C: un estado por distribución y guardado
+                   automático (navegador o servidor con revisiones).
+    DistributionBar.tsx Pestañas A/B/C y su hoja (nombre, descripción, recomendada).
     Scene3D.tsx    Vista 3D (React Three Fiber), se descarga solo al abrirla.
   app/
     prototipo/     Editor sin cuenta.
     eventos/       Lista de eventos, crear evento y editor con guardado.
-    api/layouts/   Guardado del plano con control de revisión.
+    api/layouts/   Guardar, renombrar o eliminar una distribución.
+    api/events/[id]/layouts/ Crear una distribución nueva del evento.
   lib/layout/houses/ Casas importadas de AutoCAD (JSON) y su amueblado de ejemplo.
 tools/cad-import/  Importador DWG/DXF → casa (ver su README).
 docs/investigacion/ Notas de investigación (post de X, mercado inmobiliario).

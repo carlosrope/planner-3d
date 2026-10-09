@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { EditorApp } from "@/components/editor/EditorApp";
-import { demoLayout, DEMO_VENUE } from "@/lib/layout/demo";
+import { demoDistributions, DEMO_VENUE } from "@/lib/layout/demo";
 import { editorViewport } from "../editor-viewport";
 
 export const metadata: Metadata = { title: "Prototipo del editor" };
@@ -10,12 +10,12 @@ export default function PrototipoPage() {
   return (
     <EditorApp
       venue={DEMO_VENUE}
-      initial={demoLayout()}
+      distributions={demoDistributions().map((d) => ({ ...d, revision: 1 }))}
       title="Prototipo del editor"
       subtitle={DEMO_VENUE.name}
       backHref="/"
       demo="salon"
-      persistence={{ mode: "local", key: "planner3d:prototipo:v1" }}
+      backend={{ mode: "local", key: "planner3d:prototipo:v2" }}
     />
   );
 }

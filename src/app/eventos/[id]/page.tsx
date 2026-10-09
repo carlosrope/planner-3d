@@ -21,15 +21,22 @@ async function EventoEditor({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const data = await getEditableEvent(id, user.id);
   if (!data) notFound();
-  const { event, venue, layout } = data;
+  const { event, venue, layouts } = data;
   return (
     <EditorApp
       venue={{ id: venue.id, name: venue.name, city: venue.city, spec: venue.spec }}
-      initial={layout.doc}
+      distributions={layouts.map((l) => ({
+        id: l.id,
+        name: l.name,
+        note: l.note,
+        recommended: l.recommended,
+        doc: l.doc,
+        revision: l.revision,
+      }))}
       title={event.title}
       subtitle={venue.name}
       backHref="/eventos"
-      persistence={{ mode: "server", layoutId: layout.id, revision: layout.revision }}
+      backend={{ mode: "server", eventId: event.id }}
     />
   );
 }

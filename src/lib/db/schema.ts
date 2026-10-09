@@ -170,7 +170,7 @@ export const event = pgTable(
   (t) => [index("event_org_idx").on(t.orgId)],
 );
 
-/** Un montaje del evento. Puede haber varios: "Opción A", "Opción B". */
+/** Una distribución del evento o de la casa: "A", "B", "C"… con su descripción. */
 export const layout = pgTable(
   "layout",
   {
@@ -178,7 +178,10 @@ export const layout = pgTable(
     eventId: text("event_id")
       .notNull()
       .references(() => event.id, { onDelete: "cascade" }),
-    name: text("name").notNull().default("Opción A"),
+    name: text("name").notNull().default("A"),
+    note: text("note").notNull().default(""),
+    recommended: boolean("recommended").notNull().default(false),
+    position: integer("position").notNull().default(0),
     doc: jsonb("doc").$type<LayoutDoc>().notNull(),
     revision: integer("revision").notNull().default(1),
     updatedBy: text("updated_by").references(() => user.id, { onDelete: "set null" }),

@@ -16,3 +16,11 @@ button {
   cursor: pointer;
   touch-action: manipulation;
 }
+
+/* Filas de pestañas que se deslizan con el dedo, sin barra visible. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

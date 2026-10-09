@@ -1,5 +1,5 @@
 import { createObject, fillArea, sequentialIds, starterLayout, uid } from "./tools";
-import { emptyLayout, type LayoutDoc, type VenueInfo, type VenueSpec } from "./types";
+import { emptyLayout, type DistributionSeed, type LayoutDoc, type VenueInfo, type VenueSpec } from "./types";
 
 /**
  * Salón ficticio de 30 × 45 m para desarrollo y demostraciones, hasta tener
@@ -63,6 +63,20 @@ export function demoLayout(): LayoutDoc {
   add("staff-mesero", 26.5, 36.8);
   add("staff-coordinador", 13.5, 41.5);
   return doc;
+}
+
+/** Distribuciones de demostración del salón: banquete con redondas o con imperiales. */
+export function demoDistributions(): DistributionSeed[] {
+  const imperial = starterLayout(DEMO_VENUE_SPEC, {
+    kind: "boda",
+    guests: 240,
+    id: sequentialIds("i"),
+    table: "mesa-imperial",
+  });
+  return [
+    { id: "dist-a", name: "A", note: "Banquete con redondas", recommended: true, doc: demoLayout() },
+    { id: "dist-b", name: "B", note: "Mesas imperiales", recommended: false, doc: imperial },
+  ];
 }
 
 /** Prueba de rendimiento: unas 60 mesas de 10 (≈600 sillas) en el salón de demostración. */

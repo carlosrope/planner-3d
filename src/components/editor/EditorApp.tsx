@@ -2,12 +2,14 @@
 
 import { Box } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { analyzeLayout, issueLevels, layoutStats } from "@/lib/layout/analysis";
 import { stressLayout } from "@/lib/layout/demo";
 import { normalizeAngle } from "@/lib/layout/geometry";
 import { autoNumber, createObject, duplicateObject, fillArea, floorCenter } from "@/lib/layout/tools";
-import type { LayoutDoc, Pt, VenueInfo } from "@/lib/layout/types";
+import type { DistributionSeed, LayoutDoc, Pt, VenueInfo } from "@/lib/layout/types";
+import { DistributionBar, DistributionSheet } from "./DistributionBar";
+import { useDistributions, type Backend, type Distribution, type DistributionsApi } from "./distributions";
 import { FpsMeter } from "./FpsMeter";
 import { PlanCanvas, type CanvasApi } from "./PlanCanvas";
 import {
@@ -20,9 +22,8 @@ import {
   MenuButton,
   TopBar,
 } from "./panels";
-import { usePersistence, type Persistence } from "./persistence";
 import { Sheet } from "./Sheet";
-import { EditorProvider, useEditor, useEditorApi, useHistory } from "./store";
+import { EditorStoreProvider, useEditor, useEditorApi, useHistory } from "./store";
 
 // El 3D (Three.js) se descarga solo cuando se abre: el editor 2D carga rápido con datos móviles.
 const Scene3D = dynamic(() => import("./Scene3D"), {
@@ -34,32 +35,47 @@ const Scene3D = dynamic(() => import("./Scene3D"), {
   ),
 });
 
-type SheetName = "catalogo" | "capas" | "mas" | "avisos" | "inventario";
+type SheetName = "catalogo" | "capas" | "mas" | "avisos" | "inventario" | "distribucion";
 
 export type EditorAppProps = {
   venue: VenueInfo;
-  initial: LayoutDoc;
+  /** Distribuciones A/B/C; se muestra la recomendada (o la primera). */
+  distributions: Distribution[];
   title: string;
   subtitle?: string;
   backHref?: string;
-  persistence: Persistence;
-  /** Montaje de demostración para "Restaurar" (prototipos). */
+  backend: Backend;
+  /** Distribuciones de demostración para "Restaurar" (prototipos). */
   demo?: DemoId;
 };
 
 export type DemoId = "salon" | "casa-chardonnay";
 
 // Se cargan solo al pedir "Restaurar", para no sumar peso al editor.
-const DEMOS: Record<DemoId, () => Promise<LayoutDoc>> = {
-  salon: async () => (await import("@/lib/layout/demo")).demoLayout(),
-  "casa-chardonnay": async () => (await import("@/lib/layout/houses")).chardonnayDemoLayout(),
+const DEMOS: Record<DemoId, () => Promise<DistributionSeed[]>> = {
+  salon: async () => (await import("@/lib/layout/demo")).demoDistributions(),
+  "casa-chardonnay": async () => (await import("@/lib/layout/houses")).chardonnayDistributions(),
 };
 
+const subscribeNothing = () => () => {};
+
 export function EditorApp(props: EditorAppProps) {
+  // El prototipo guarda en este dispositivo: se monta solo en el navegador para leerlo desde el inicio.
+  const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  if (props.backend.mode === "local" && !isClient) {
+    return (
+      <div className="fixed inset-0 grid place-items-center bg-[#ece7df] text-sm text-stone-500">Abriendo el plano…</div>
+    );
+  }
+  return <EditorHost {...props} />;
+}
+
+function EditorHost(props: EditorAppProps) {
+  const dist = useDistributions(props.distributions, props.backend, props.venue.spec.levels?.[0]?.id ?? null);
   return (
-    <EditorProvider initial={props.initial} initialLevel={props.venue.spec.levels?.[0]?.id ?? null}>
-      <EditorShell {...props} />
-    </EditorProvider>
+    <EditorStoreProvider store={dist.store}>
+      <EditorShell {...props} dist={dist} />
+    </EditorStoreProvider>
   );
 }
 
@@ -69,7 +85,7 @@ const FILL_OPTIONS = [
   { catalogId: "mesa-imperial", label: "Imperiales de 2.40 m (8 lugares)" },
 ];
 
-function EditorShell({ venue, title, subtitle, backHref, persistence, demo }: EditorAppProps) {
+function EditorShell({ venue, title, subtitle, backHref, backend, demo, dist }: EditorAppProps & { dist: DistributionsApi }) {
   const store = useEditorApi();
   const layout = useEditor((s) => s.layout);
   const selectedId = useEditor((s) => s.selectedId);
@@ -84,8 +100,9 @@ function EditorShell({ venue, title, subtitle, backHref, persistence, demo }: Ed
   const [addAt, setAddAt] = useState<Pt | null>(null);
   const [showFps, setShowFps] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const status = usePersistence(store, persistence);
-  const local = persistence.mode === "local";
+  const status = dist.status;
+  const local = backend.mode === "local";
+  const activeMeta = dist.metas.find((m) => m.id === dist.activeId) ?? dist.metas[0];
 
   const issues = useMemo(() => analyzeLayout(layout, venue.spec), [layout, venue.spec]);
   const levels = useMemo(() => issueLevels(issues), [issues]);
@@ -126,6 +143,12 @@ function EditorShell({ venue, title, subtitle, backHref, persistence, demo }: Ed
     store.getState().replaceLayout(doc);
     close();
     requestAnimationFrame(() => canvas.current?.fit());
+  };
+
+  const newDistribution = async () => {
+    const id = await dist.create();
+    if (id) setSheet("distribucion");
+    else setNotice("No se pudo crear la distribución. Revisa la conexión.");
   };
 
   // Atajos de teclado para trabajar desde la Mac.
@@ -180,6 +203,13 @@ function EditorShell({ venue, title, subtitle, backHref, persistence, demo }: Ed
         local={local}
         onIssues={() => setSheet("avisos")}
         summary={house ? `${floors.length} plantas · ${layout.objects.length} muebles` : undefined}
+      />
+      <DistributionBar
+        metas={dist.metas}
+        activeId={dist.activeId}
+        onSelect={dist.select}
+        onCreate={newDistribution}
+        onEdit={() => setSheet("distribucion")}
       />
       <main className="relative flex-1 overflow-hidden">
         <PlanCanvas
@@ -272,7 +302,14 @@ function EditorShell({ venue, title, subtitle, backHref, persistence, demo }: Ed
             </MenuButton>
           )}
           {local && demo && (
-            <MenuButton onClick={async () => replaceAll(await DEMOS[demo](), "¿Volver al montaje de demostración?")}>
+            <MenuButton
+              onClick={async () => {
+                if (!window.confirm("¿Volver a las distribuciones de demostración? Se pierden los cambios.")) return;
+                dist.reset(await DEMOS[demo]());
+                close();
+                requestAnimationFrame(() => canvas.current?.fit());
+              }}
+            >
               Restaurar demostración
             </MenuButton>
           )}
@@ -288,6 +325,22 @@ function EditorShell({ venue, title, subtitle, backHref, persistence, demo }: Ed
             Vaciar plano
           </MenuButton>
         </Sheet>
+        <DistributionSheet
+          key={activeMeta.id}
+          open={sheet === "distribucion"}
+          meta={activeMeta}
+          canDelete={dist.metas.length > 1}
+          onClose={close}
+          onChange={(patch) => void dist.update(activeMeta.id, patch)}
+          onDuplicate={() => {
+            close();
+            void newDistribution();
+          }}
+          onDelete={() => {
+            void dist.remove(activeMeta.id);
+            close();
+          }}
+        />
         {show3d && <Scene3D venue={venue} onClose={() => setShow3d(false)} />}
       </main>
       <BottomBar

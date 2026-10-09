@@ -24,6 +24,20 @@ const round2 = (v: number) => Math.round(v * 100) / 100;
 /** Distancia mínima entre sillas y muros al llenar áreas automáticamente. */
 const WALL_CLEARANCE = 0.6;
 
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/** Siguiente letra libre para una distribución nueva: A, B, C… y luego A2, B2… */
+export function nextDistributionName(names: string[]) {
+  // Cuenta la última palabra: "Opción A" ocupa la A.
+  const taken = new Set(names.map((n) => (n.trim().split(/\s+/).pop() ?? "").toUpperCase()));
+  for (let round = 1; ; round++) {
+    for (const letter of LETTERS) {
+      const name = round === 1 ? letter : `${letter}${round}`;
+      if (!taken.has(name)) return name;
+    }
+  }
+}
+
 export function nextTableLabel(objects: PlacedObject[]) {
   let max = 0;
   for (const o of objects) {
@@ -182,7 +196,7 @@ export function emptyHouseLayout(): LayoutDoc {
 /** Montaje inicial de un evento: pista, mesa principal y mesas para los invitados. */
 export function starterLayout(
   venue: VenueSpec,
-  opts: { kind: EventKind; guests: number; id?: IdFn },
+  opts: { kind: EventKind; guests: number; id?: IdFn; table?: string },
 ): LayoutDoc {
   const id = opts.id ?? uid;
   const doc = emptyLayout();
@@ -197,9 +211,11 @@ export function starterLayout(
     doc.objects.push(createObject(head, { x: c.x, z: c.z - size / 2 - 2.2 }, doc.objects, id));
   }
 
-  const tables = Math.max(1, Math.ceil(opts.guests / 10));
+  const table = opts.table ?? "mesa-redonda-180";
+  const perTable = getItem(table).seats?.default ?? 10;
+  const tables = Math.max(1, Math.ceil(opts.guests / perTable));
   doc.objects.push(
-    ...fillArea(doc, venue, "mesa-redonda-180", {
+    ...fillArea(doc, venue, table, {
       aisle: doc.settings.minAisle,
       max: tables,
       prefer: c,
