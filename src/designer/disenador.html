@@ -195,6 +195,10 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
   font-size:13px;font-weight:600;cursor:pointer}
 .wh-seg button.on{background:var(--accent);color:#fff}
 .wh-side{position:absolute;right:16px;bottom:16px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.wh-row{display:flex;align-items:center;gap:6px}
+.wh-fold{width:36px;padding:0}
+#whCycle{min-width:54px;font-size:14px}
+.wh-side:not(.compact) #whCycle,.wh-side.compact #whEye,.wh-side.compact #whSpeed{display:none}
 #whMap{position:absolute;right:12px;top:12px;display:block;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.22);cursor:pointer}
 #whBig{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
   padding:12px;background:rgba(30,28,25,.72)}
@@ -210,7 +214,8 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
 #view3d.walking.touchwalk #hint3d{bottom:176px}
 /* Visita guiada: tarjeta con el lugar, pausa, siguiente y terminar */
 #walkOverlay .btn{margin-top:14px}
-#whTourBtn svg,.wt-btn svg{width:18px;height:18px;fill:currentColor}
+#whTourBtn svg,.wt-btn svg,#woTour svg,.wh-fold svg{width:18px;height:18px;fill:currentColor;flex:none}
+#woTour{display:inline-flex;align-items:center;gap:8px}
 #whTour{position:absolute;left:12px;right:12px;bottom:16px;max-width:480px;margin:0 auto;display:flex;align-items:center;gap:6px;padding:8px 8px 8px 14px;
   border-radius:14px;background:rgba(255,253,249,.96);box-shadow:0 6px 22px rgba(0,0,0,.22);transition:bottom .25s}
 #view3d.touchwalk:not(.touring) #whTour{bottom:172px}
@@ -2610,7 +2615,7 @@ async function enter(){
   stage.classList.remove('animating');
 }
 async function exit(){
-  if (opt.mode === 'walk'){ walkHud(false); walkCtl.unlock(); stopTouchWalk(); $('#hint3d').textContent = HINT_ORBIT(); $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'none';
+  if (opt.mode === 'walk'){ walkHud(false); freeMouse(); stopTouchWalk(); $('#hint3d').textContent = HINT_ORBIT(); $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'none';
     const dir = new THREE.Vector3(); camera.getWorldDirection(dir); orbit.target.copy(camera.position).addScaledVector(dir, 3).setY(0); opt.mode = 'orbit'; syncModeBtns(); }
   fly = null; orbit.enabled = false; showLabels(false); stage.classList.add('animating');
   const A = curPose(), B = planPose();
@@ -2686,7 +2691,9 @@ let touchWalk = false;
 const joy = {x:0, y:0, id:null}, eul = new THREE.Euler(0, 0, 0, 'YXZ');
 function lookBy(dx, dy){
   eul.setFromQuaternion(camera.quaternion);
-  if (tour && !tour.paused && tour.phase !== 'end') tourPause();   // tomar el control pausa la visita
+  if (tour && !tour.paused && tour.phase !== 'end'){   // arrastrar de verdad pausa la visita; el temblor de un toque, no
+    tourDrag += Math.hypot(dx, dy); if (tourDrag < 14) return; tourPause();
+  }
   const k = .005 * walk.look;   // la vista sigue al dedo, igual que el mouse con el puntero capturado
   eul.y -= dx * k; eul.x = THREE.MathUtils.clamp(eul.x - dy * k, -1.35, 1.35);
   camera.quaternion.setFromEuler(eul);
@@ -2725,7 +2732,7 @@ function setMode(m, keep){   // keep: el recorrido empieza donde está la cámar
     $('#walkOverlay').style.display = 'flex';
     walkHud(true); syncHint3d();
   } else {
-    walkHud(false); walkCtl.unlock(); stopTouchWalk(); orbit.enabled = true;
+    walkHud(false); freeMouse(); stopTouchWalk(); orbit.enabled = true;
     $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'none';
     syncHint3d();
     orbit.target.set(0, 0, 0); flyTo(isoWhole());
@@ -2770,9 +2777,9 @@ const walk = (() => {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(WALK_KEY)) || {}; } catch(e){}
   return {speed: [1, 2, 3].includes(s.speed) ? s.speed : 1, look: [.6, 1, 1.6].includes(s.look) ? s.look : 1,
-    map: s.map !== false, sit: false, sitAuto: false};
+    map: s.map !== false, compact: s.compact === true, sit: false, sitAuto: false};
 })();
-function saveWalk(){ try { localStorage.setItem(WALK_KEY, JSON.stringify({speed:walk.speed, look:walk.look, map:walk.map})); } catch(e){} }
+function saveWalk(){ try { localStorage.setItem(WALK_KEY, JSON.stringify({speed:walk.speed, look:walk.look, map:walk.map, compact:walk.compact})); } catch(e){} }
 const eyeH = () => walk.sit ? 1.2 : 1.6;                       // altura de los ojos de pie / sentado (m)
 const planXY = v => [v.x*1000 + OX, v.z*1000 + OY];           // posición 3D → plano (mm)
 const FLAT = ['rug', 'dancefloor', 'staff', 'vendor'];         // se puede pisar (los proveedores no se ven en 3D)
@@ -2781,6 +2788,9 @@ const TABLES = ['rtable', 'itable', 'headtable'];             // mesas de invita
 let glide = null, lastTap = null, spots = [], mapKey = '', bigOpen = false;
 
 function setSpeed(v){ walk.speed = v; saveWalk(); syncWalkHud(); }
+// Soltar el mouse capturado. En el iPhone no existe la captura (document.exitPointerLock) y unlock() truena:
+// eso dejaba sin arrancar la visita guiada y a medias «Salir del recorrido».
+function freeMouse(){ if (walkCtl.isLocked && document.exitPointerLock) walkCtl.unlock(); }
 function setSit(v, auto = false){ walk.sit = v; walk.sitAuto = v && auto; syncWalkHud(); }
 // Las indicaciones del recorrido se ven unos segundos y se quitan para no tapar la vista
 function flashHint(){
@@ -2858,6 +2868,7 @@ function stepGlide(){
 // Doble toque (o doble clic con el mouse capturado): en el piso, ir ahí sin atravesar muros;
 // en una mesa, sentarse en ella; en otro mueble, ir junto a él
 function walkTap(e){
+  tourDrag = 0;
   $('#whPop').hidden = true;
   const now = performance.now(), prev = lastTap;
   lastTap = {t:now, x:e.clientX, y:e.clientY};
@@ -2995,6 +3006,14 @@ function mapGo(cv, e){
 function syncWalkHud(){
   const on = (sel, f) => document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', f(b.dataset)));
   on('#whSpeed button', d => +d.sp === walk.speed);
+  const side = $('#whSide');
+  if (side){   // con las opciones ocultas queda un solo botón que cambia la velocidad con cada toque
+    side.classList.toggle('compact', walk.compact);
+    $('#whFold').innerHTML = walk.compact ? ICON.up : ICON.down;
+    $('#whFold').setAttribute('aria-label', walk.compact ? tr('显示选项', 'Show options', 'Mostrar opciones') : tr('隐藏选项', 'Hide options', 'Ocultar opciones'));
+    $('#whCycle').textContent = 'x' + walk.speed;
+    $('#whCycle').setAttribute('aria-label', tr('速度', `Speed x${walk.speed}: tap to change`, `Velocidad x${walk.speed}: toca para cambiarla`));
+  }
   on('#whEye button', d => (d.eye === 'sit') === walk.sit);
   on('#whLook button', d => +d.look === walk.look);
   on('#whMapOn button', d => (d.map === '1') === walk.map);
@@ -3016,9 +3035,13 @@ function renderWalkHud(){
       <div class="wh-seg" id="whMapOn">${seg([['map', 1, tr('显示', 'Show', 'Ver')], ['map', 0, tr('隐藏', 'Hide', 'Ocultar')]])}</div>
     </div>
     <canvas id="whMap" role="button" aria-label="${esc(tr('地图：点击选择去哪里', 'Map: tap to choose where to go', 'Mapa: tócalo para elegir a dónde ir'))}"></canvas>
-    <div class="wh-side">
+    <div class="wh-side" id="whSide">
       <div class="wh-seg" id="whEye">${seg([['eye', 'stand', tr('站立', 'Standing', 'De pie')], ['eye', 'sit', tr('坐下', 'Seated', 'Sentado')]])}</div>
-      <div class="wh-seg" id="whSpeed" role="group" aria-label="${esc(tr('速度', 'Speed', 'Velocidad'))}">${seg([['sp', 1, 'x1'], ['sp', 2, 'x2'], ['sp', 3, 'x3']])}</div>
+      <div class="wh-row">
+        <button class="wh-pill wh-fold" id="whFold"></button>
+        <div class="wh-seg" id="whSpeed" role="group" aria-label="${esc(tr('速度', 'Speed', 'Velocidad'))}">${seg([['sp', 1, 'x1'], ['sp', 2, 'x2'], ['sp', 3, 'x3']])}</div>
+        <button class="wh-pill" id="whCycle"></button>
+      </div>
     </div>
     <div id="whTour" hidden>
       <div class="wt-txt"><b id="wtName"></b><small id="wtStep"></small></div>
@@ -3042,6 +3065,8 @@ function bindWalkHud(){
     const b = e.target.closest('button,canvas'), d = b?.dataset || {};
     if (!b){ if (e.target.id === 'whBig') bigMap(false); return; }
     if (d.sp) setSpeed(+d.sp);
+    else if (b.id === 'whCycle') setSpeed(walk.speed % 3 + 1);          // x1 → x2 → x3 → x1
+    else if (b.id === 'whFold'){ walk.compact = !walk.compact; saveWalk(); syncWalkHud(); }
     else if (d.eye) setSit(d.eye === 'sit');
     else if (d.look){ walk.look = +d.look; saveWalk(); syncWalkHud(); }
     else if (d.map){ walk.map = d.map === '1'; saveWalk(); syncWalkHud(); walkMapTick(true); }
@@ -3069,7 +3094,7 @@ function bindWalkHud(){
 // «Ver desde esta mesa»: la cámara baja volando hasta el lugar y queda en el recorrido, sentada, para mirar alrededor
 async function sitAt(p, to){
   if (!active || anim) return;
-  if (opt.mode === 'walk'){ tourEnd(); if (!touchWalk){ walkCtl.unlock(); startTouchWalk(); } return walkTo(p, to, true, true); }
+  if (opt.mode === 'walk'){ tourEnd(); if (!touchWalk){ freeMouse(); startTouchWalk(); } return walkTo(p, to, true, true); }
   fly = null; orbit.enabled = false; showLabels(false);
   const A = curPose(), B = pose(new THREE.Vector3(wx(to[0]), 1, wz(to[1])), new THREE.Vector3(wx(p[0]), 1.2, wz(p[1])));
   await animate(1400, t => camTween(A, B, ease(t)));
@@ -3082,9 +3107,11 @@ const ICON = {
   pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
   next: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14l9-7zM16 5h2.5v14H16z"/></svg>',
   again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1.5L7 6l5 4.5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>',
+  down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12l-6 7z"/></svg>',
+  up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15h12l-6-7z"/></svg>',
 };
 const SHOW = ['bar', 'dessert', 'cake', 'booth', 'platform360'];   // en salones: lo que más se luce
-let tour = null, grids = {};
+let tour = null, grids = {}, tourDrag = 0;
 
 // Las paradas, en orden. Salón: entrada, el salón, barra / dulces / pastel, una mesa de atrás, una junto a la
 // pista, la mesa principal y la pista. Casa (con su área), como en una visita inmobiliaria: acceso, sala,
@@ -3203,14 +3230,14 @@ function findPath(a, b){
 function startTour(){
   if (!active || anim) return;
   if (opt.mode !== 'walk') setMode('walk');
-  if (!touchWalk){ walkCtl.unlock(); startTouchWalk(); }
+  if (!touchWalk){ freeMouse(); startTouchWalk(); }
   bigMap(false);
   doors.forEach(d => d.open = true);                       // en la visita las puertas están abiertas
   grids = {};
   tour = {stops: tourStops(), i: 0, phase: 'go', paused: false};
   tourCard();
 }
-function tourPause(){ if (tour && !tour.paused && tour.phase !== 'end'){ tour.paused = true; tourCard(); } }
+function tourPause(){ tourDrag = 0; if (tour && !tour.paused && tour.phase !== 'end'){ tour.paused = true; tourCard(); } }
 function tourResume(){
   if (!tour) return;
   tour.paused = false;
@@ -3335,7 +3362,7 @@ function syncWalkTexts(){
 function bindUI(){
   document.querySelectorAll('#modes3d .btn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
   // 触屏设备用摇杆漫游；桌面端锁定鼠标，锁定失败时也退回到摇杆
-  $('#walkOverlay').onclick = () => COARSE ? startTouchWalk() : walkCtl.lock();
+  $('#walkOverlay').onclick = () => COARSE || !document.body.requestPointerLock ? startTouchWalk() : walkCtl.lock();
   document.addEventListener('pointerlockerror', () => { if (active && opt.mode === 'walk') startTouchWalk(); });
   $('#walkExit').onclick = () => setMode('orbit');
   bindJoystick(); bindWalkHud();
