@@ -1,4 +1,4 @@
-"""Convierte una casa importada (src/lib/layout/houses/*.json, en metros) al formato
+"""Convierte una casa importada (tools/cad-import/houses/*.json, en metros) al formato
 del diseñador de casas (src/designer), en milímetros.
 
 Uso:

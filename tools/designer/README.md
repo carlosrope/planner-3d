@@ -7,7 +7,7 @@ dice de qué versión es.
 ## Cómo se arma
 
 1. **Datos de la casa** (`src/designer/casas/<casa>.json`): `tools/cad-import/to_designer.py`
-   convierte la casa importada de AutoCAD (`src/lib/layout/houses/<casa>.json`) al formato del
+   convierte la casa importada de AutoCAD (`tools/cad-import/houses/<casa>.json`) al formato del
    diseñador (milímetros, `y` hacia abajo): muros, ventanas, puertas, canceles, cuartos con su piso,
    cotas, flecha de entrada, escalera, inicio del recorrido y muebles. Los ajustes que no salen del
    CAD (nombres de puertas, pisos, muebles, aberturas que se ignoran) están en
@@ -15,7 +15,7 @@ dice de qué versión es.
 
    ```bash
    python3 -m venv .venv && .venv/bin/pip install ezdxf numpy contourpy
-   .venv/bin/python tools/cad-import/to_designer.py src/lib/layout/houses/chardonnay.json \
+   .venv/bin/python tools/cad-import/to_designer.py tools/cad-import/houses/chardonnay.json \
      tools/cad-import/chardonnay.designer.json src/designer/casas/chardonnay.json
    ```
 

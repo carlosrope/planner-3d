@@ -17,23 +17,16 @@
     "db:seed:prod": "tsx scripts/seed.ts"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.9",
-    "@react-three/fiber": "^9.8.1",
-    "@use-gesture/react": "^10.3.1",
     "better-auth": "^1.7.7",
     "drizzle-kit": "^0.31.11",
     "drizzle-orm": "^0.45.4",
-    "lucide-react": "^1.54.0",
     "next": "16.4.0",
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
-    "three": "^0.186.1",
     "tsx": "^4.23.15",
-    "zod": "^4.6.5",
-    "zundo": "^2.3.0",
-    "zustand": "^5.0.15"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
@@ -41,7 +34,6 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "railway": "^3.13.1",

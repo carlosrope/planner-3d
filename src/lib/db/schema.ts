@@ -10,9 +10,8 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { EventKind, EventStatus, MemberRole, OrgKind, ShareRole } from "../domain";
+import type { EventKind, EventStatus, Layer, MemberRole, OrgKind, ShareRole, VenueKind } from "../domain";
 import type { DesignDoc, DesignerPlan, PropertyDetails } from "../designer/types";
-import type { Layer, VenueKind, VenueSpec } from "../layout/types";
 
 const id = () =>
   text("id")
@@ -133,7 +132,8 @@ export const venue = pgTable("venue", {
   /** Disponible para todas las planners (catálogo local). */
   isPublic: boolean("is_public").notNull().default(false),
   modelUrl: text("model_url"),
-  spec: jsonb("spec").$type<VenueSpec>().notNull(),
+  /** Sin uso: era el plano del editor anterior (ya se quitó). Queda vacío ({}) porque la columna es obligatoria. */
+  spec: jsonb("spec").$type<Record<string, unknown>>().notNull(),
   /** Plano para el diseñador (muros, puertas, cuartos en mm); sin él no se puede abrir el lugar. */
   plan: jsonb("plan").$type<DesignerPlan>(),
   version: integer("version").notNull().default(1),

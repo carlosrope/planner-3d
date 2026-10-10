@@ -22,6 +22,13 @@ export const SECTIONS = {
 export type Section = keyof typeof SECTIONS;
 export const sectionOf = (venueKind: string): Section => (venueKind === "casa" ? "casas" : "salones");
 
+/** Tipo de lugar: salón de eventos o casa (inmobiliaria). */
+export type VenueKind = "salon" | "casa";
+
+/** Capas del plano que puede ver cada enlace compartido (según su rol). */
+export const LAYERS = ["mobiliario", "decoracion", "staff", "proveedores", "tecnica", "rutas", "zonas"] as const;
+export type Layer = (typeof LAYERS)[number];
+
 export const EVENT_STATUSES = ["borrador", "confirmado", "realizado", "cancelado"] as const;
 export type EventStatus = (typeof EVENT_STATUSES)[number];
 export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {

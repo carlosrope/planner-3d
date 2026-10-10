@@ -36,10 +36,11 @@ python3 -m venv .venv-cad && .venv-cad/bin/pip install -r tools/cad-import/requi
 4. Corre el importador:
 
    ```bash
-   .venv-cad/bin/python tools/cad-import/import_house.py tools/cad-import/chardonnay.config.json src/lib/layout/houses/chardonnay.json
+   .venv-cad/bin/python tools/cad-import/import_house.py tools/cad-import/chardonnay.config.json tools/cad-import/houses/chardonnay.json
    ```
 
-5. Registra la casa en `src/lib/layout/houses/index.ts` y cárgala a la base con `npm run db:seed`.
+5. Conviértela al formato del diseñador con `to_designer.py` (ver `tools/designer/README.md`), agrégala a la
+   lista de `scripts/seed.ts` y cárgala a la base con `npm run db:seed`.
 
 ## Qué sale
 
