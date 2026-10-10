@@ -703,6 +703,28 @@ sub(
   font:inherit;font-size:16px;cursor:pointer}
 #wtPlay{background:var(--accent);color:#fff}
 #view3d.touring #joy,#view3d.touring #walkExit,#view3d.touring #whEye,#view3d.tourcard #hint3d{visibility:hidden}
+/* Video de la visita: en pantalla se ve el video tal cual (vertical), con la tarjeta de la visita abajo */
+#whRecBtn svg,#recAsk .btn svg{width:18px;height:18px;flex:none}
+#recAsk{position:absolute;inset:0;z-index:3;display:grid;place-items:center;padding:16px;background:rgba(30,28,25,.55)}
+#recAsk .card{display:grid;gap:10px;max-width:340px;padding:18px;border-radius:14px;background:var(--panel);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+#recAsk h3{margin:0;font-size:16px}#recAsk p{margin:0;font-size:13px;color:var(--muted);line-height:1.4}
+#recAsk .wh-seg{justify-self:start;box-shadow:none;background:#f2ece2}
+#recAsk .row{display:flex;gap:8px}#recAsk .row .btn{flex:1;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid var(--line);background:#fff}
+#recAsk .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+#recView{position:absolute;z-index:1;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.45);background:#000}
+#view3d.recording{background:#1e1c19}
+#view3d.recording .wh-top,#view3d.recording #whMap,#view3d.recording #whPop,#view3d.recording #hint3d,#view3d.recording #joy,
+#view3d.recording #walkExit{display:none!important}
+#recBadge{position:absolute;padding:5px 10px;border-radius:14px;background:rgba(217,58,43,.92);
+  color:#fff;font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+#recDone{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:16px;background:rgba(30,28,25,.6)}
+#recDone .card{display:grid;gap:10px;width:min(360px,100%);max-height:calc(100dvh - 32px);padding:16px;border-radius:14px;background:var(--panel)}
+#recDone h3{margin:0;font-size:16px}#recDone p{margin:0}
+#recDone video{width:100%;max-height:55dvh;border-radius:10px;background:#000;object-fit:contain}
+#recDone .row{display:flex;gap:8px}#recDone .row .btn{flex:1;min-height:42px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);text-decoration:none;font:inherit}
+#recDone .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 @media (pointer:coarse){
   .wh-side{bottom:84px}
   #view3d.walking #hint3d{bottom:176px}
@@ -839,7 +861,7 @@ function flashHint(){
   flashHint.t = setTimeout(() => { if (opt.mode === 'walk') h.classList.add('gone'); }, 6000);
 }
 function walkHud(on){
-  tourEnd(); glide = null; lastTap = null; bigMap(false); clearTimeout(flashHint.t);
+  tourEnd(); recAsk(false); glide = null; lastTap = null; bigMap(false); clearTimeout(flashHint.t);
   $('#whFade').classList.remove('on'); $('#hint3d').classList.toggle('gone', on);
   $('#walkHud').hidden = !on; $('#view3d').classList.toggle('walking', on); walkFov(on);
   if ($('#whPop')) $('#whPop').hidden = true;
@@ -1046,7 +1068,7 @@ function mapGo(cv, e){
 
 function syncWalkHud(){
   const on = (sel, f) => document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', f(b.dataset)));
-  on('#whSpeed button', d => +d.sp === walk.speed);
+  on('#whSpeed button, #recAsk [data-sp]', d => +d.sp === walk.speed);
   const side = $('#whSide');
   if (side){   // con las opciones ocultas queda un solo botón que cambia la velocidad con cada toque
     side.classList.toggle('compact', walk.compact);
@@ -1067,6 +1089,7 @@ function renderWalkHud(){
     <div class="wh-top">
       <label class="wh-pill">${esc(tr('前往…', 'Go to…', 'Ir a…'))} ▾<select id="whGo" aria-label="${esc(tr('前往', 'Go to', 'Ir a'))}"></select></label>
       <button class="wh-pill" id="whTourBtn" aria-label="${esc(tr('导览', 'Guided tour', 'Visita guiada'))}">${ICON.play}</button>
+      ${recAllowed() ? `<button class="wh-pill" id="whRecBtn" aria-label="${esc(tr('录制视频', 'Record a video', 'Grabar video'))}">${ICON.rec}</button>` : ''}
       <button class="wh-pill" id="whCfg" aria-label="${esc(tr('设置', 'Settings', 'Ajustes'))}">⚙&#xFE0E;</button>
     </div>
     <div id="whPop" hidden>
@@ -1090,6 +1113,16 @@ function renderWalkHud(){
       <button class="wt-btn" id="wtNext" aria-label="${esc(tr('下一个', 'Next', 'Siguiente'))}">${ICON.next}</button>
       <button class="wt-btn" id="wtStop" aria-label="${esc(tr('结束', 'End tour', 'Terminar la visita'))}">✕</button>
     </div>
+    <div id="recBadge" hidden></div>
+    <div id="recAsk" hidden><div class="card">
+      <h3>${esc(tr('录制导览视频', 'Record the tour as a video', 'Grabar video de la visita'))}</h3>
+      <p>${esc(tr('竖屏视频，适合 WhatsApp 和 Instagram', 'A vertical video for WhatsApp and Instagram, with the name of each stop and your brand. Keep this screen open while it records.',
+        'Video vertical para WhatsApp e Instagram, con el nombre de cada parada y tu marca. Deja esta pantalla abierta mientras se graba.'))}</p>
+      <span class="muted">${esc(tr('速度', 'Speed (faster = shorter video)', 'Velocidad (más rápido = video más corto)'))}</span>
+      <div class="wh-seg">${seg([['sp', 1, 'x1'], ['sp', 2, 'x2'], ['sp', 3, 'x3']])}</div>
+      <div class="row"><button class="btn primary" data-rec="go">${ICON.rec} ${esc(tr('录制', 'Record', 'Grabar'))}</button>
+        <button class="btn" data-rec="no">${esc(tr('取消', 'Cancel', 'Cancelar'))}</button></div>
+    </div></div>
     <div id="whBig" hidden>
       <p>${esc(EXT ? tr('点击要去的位置 · 点餐桌坐下', 'Tap where you want to go · tap a table to sit there', 'Toca a dónde quieres ir · toca una mesa para sentarte')
         : tr('点击要去的位置', 'Tap where you want to go', 'Toca a dónde quieres ir'))}</p>
@@ -1115,6 +1148,8 @@ function bindWalkHud(){
     else if (b.id === 'whMap') bigMap(true);
     else if (b.id === 'whClose') bigMap(false);
     else if (b.id === 'whTourBtn') startTour();
+    else if (b.id === 'whRecBtn') recAsk(true);
+    else if (d.rec) d.rec === 'go' ? startRecording() : recAsk(false);
     else if (b.id === 'wtPlay') tour?.phase === 'end' ? startTour() : tour?.paused ? tourResume() : tourPause();
     else if (b.id === 'wtNext') tourNext();
     else if (b.id === 'wtStop') tourEnd();
@@ -1150,6 +1185,7 @@ const ICON = {
   again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1.5L7 6l5 4.5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>',
   down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12l-6 7z"/></svg>',
   up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15h12l-6-7z"/></svg>',
+  rec: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="#d93a2b"/></svg>',
 };
 const SHOW = ['bar', 'dessert', 'cake', 'booth', 'platform360'];   // en salones: lo que más se luce
 let tour = null, grids = {}, tourDrag = 0;
@@ -1278,10 +1314,11 @@ function startTour(){
   tour = {stops: tourStops(), i: 0, phase: 'go', paused: false};
   tourCard();
 }
-function tourPause(){ tourDrag = 0; if (tour && !tour.paused && tour.phase !== 'end'){ tour.paused = true; tourCard(); } }
+function tourPause(){ tourDrag = 0; if (tour && !tour.paused && tour.phase !== 'end'){ tour.paused = true; tourCard(); if (rec?.mr.state === 'recording') rec.mr.pause(); } }
 function tourResume(){
   if (!tour) return;
   tour.paused = false;
+  if (rec?.mr.state === 'paused') rec.mr.resume();
   if (tour.phase === 'hold') tour.i++;                     // ya estaba en esa parada: sigue a la siguiente
   if (tour.i >= tour.stops.length) return tourFinish();
   tour.phase = 'go'; tourCard();
@@ -1289,13 +1326,14 @@ function tourResume(){
 function tourNext(){
   if (!tour || tour.phase === 'end') return;
   tour.i++; tour.paused = false;
+  if (rec?.mr.state === 'paused') rec.mr.resume();
   if (tour.i >= tour.stops.length) return tourFinish();
   const s = tour.stops[tour.i];
   walkTo(s.p, s.to, s.sit, s.sit);
   Object.assign(tour, {phase: 'hold', held: 0, q1: null}); tourCard();
 }
 function tourFinish(){ Object.assign(tour, {phase: 'end', paused: false}); tourCard(); }
-function tourEnd(){ tour = null; tourCard(); }
+function tourEnd(){ tour = null; tourCard(); recStop(); }
 function tourCard(){
   const c = $('#whTour'), v = $('#view3d');
   v.classList.toggle('tourcard', !!tour); v.classList.toggle('touring', !!tour && !tour.paused && tour.phase !== 'end');
@@ -1371,6 +1409,142 @@ function tourTurn(){
   T.q1 = s.to ? new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(eye,
     new THREE.Vector3(wx(s.to[0]), s.sit ? 1 : 1.45, wz(s.to[1])), camera.up)) : T.q0.clone();
   Object.assign(T, {phase: 'turn', t0: performance.now()});
+}
+
+/* ---------- Video de la visita guiada: la visita grabada en vertical (9:16) con el nombre de cada parada y la marca ---------- */
+// Cada cuadro del 3D (dibujado a 720×1280) se copia a un lienzo con los letreros, y ese lienzo se graba con
+// MediaRecorder (MP4 en iPhone y Chrome; WebM si no hay MP4). Mientras se graba, en pantalla se ve el video tal cual.
+const REC_W = 720, REC_H = 1280, REC_FONT = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif';
+let rec = null;
+const recType = () => ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm']
+  .find(t => window.MediaRecorder?.isTypeSupported?.(t)) || '';
+const canRecord = () => !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream && recType());
+const recAllowed = () => (!HOST || HOST.editable) && canRecord();   // la planner (o la demostración), no el enlace del cliente
+
+function recAsk(on){
+  const a = $('#recAsk'); if (!a) return;
+  a.hidden = !on;
+  if (on){ $('#whPop').hidden = true; bigMap(false); syncWalkHud(); }
+}
+function startRecording(){
+  recAsk(false);
+  if (!canRecord()) return toast(tr('此浏览器无法录制视频', 'This browser cannot record video', 'Este navegador no puede grabar video'));
+  startTour();
+  if (!tour) return;
+  const cv = document.createElement('canvas'); cv.id = 'recView'; cv.width = REC_W; cv.height = REC_H;
+  $('#view3d').appendChild(cv);
+  const type = recType(), chunks = [], mr = new MediaRecorder(cv.captureStream(30), {mimeType: type, videoBitsPerSecond: 3_500_000});
+  const r = rec = {cv, g: cv.getContext('2d'), type, mr, t0: performance.now(), last: performance.now(), outro: 0,
+    ratio: renderer.getPixelRatio(), cap: '', capA: 0, logo: null, secs: -1};
+  if (HOST?.brand?.logo){ const im = new Image(); im.onload = () => { r.logo = im; }; im.src = HOST.brand.logo; }
+  mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  mr.onstop = () => recResult(new Blob(chunks, {type: type.split(';')[0]}), type);
+  $('#view3d').classList.add('recording'); $('#recBadge').hidden = false;
+  renderer.domElement.style.visibility = 'hidden';   // en pantalla se ve el lienzo del video
+  renderer.setPixelRatio(1); recLayout();
+  mr.start(1000);
+}
+// El 3D se dibuja a 720×1280 y el lienzo del video se acomoda en la vista, dejando lugar a la tarjeta de la visita
+function recLayout(){
+  renderer.setSize(REC_W, REC_H, false); camera.aspect = REC_W/REC_H; walkFov(true);
+  const v = $('#view3d'), avail = v.clientHeight - 96, h = Math.min(avail - 16, (v.clientWidth - 24)*16/9), w = h*9/16;
+  const left = (v.clientWidth - w)/2, top = Math.max(8, (avail - h)/2);
+  Object.assign(rec.cv.style, {width: w + 'px', height: h + 'px', left: left + 'px', top: top + 'px'});
+  Object.assign($('#recBadge').style, {top: top + 10 + 'px', right: v.clientWidth - left - w + 10 + 'px'});   // esquina del video, sin tapar la marca
+}
+function recStop(){
+  const r = rec; if (!r) return;
+  rec = null;
+  if (r.mr.state !== 'inactive') r.mr.stop();
+  r.cv.remove(); $('#view3d').classList.remove('recording'); $('#recBadge').hidden = true;
+  renderer.domElement.style.visibility = '';
+  renderer.setPixelRatio(r.ratio); renderer.setSize(SW(), SH()); camera.aspect = SW()/SH(); walkFov();
+}
+function wrapText(g, text, maxW){
+  const out = []; let line = '';
+  for (const w of String(text).split(' ')){ const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW && line){ out.push(line); line = w; } else line = t; }
+  if (line) out.push(line);
+  return out;
+}
+function centerText(g, lines, y, size, weight, alpha){
+  g.globalAlpha = alpha; g.font = `${weight} ${size}px ${REC_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+  lines.forEach((l, i) => g.fillText(l, REC_W/2, y + i*size*1.18));
+  g.globalAlpha = 1;
+  return y + lines.length*size*1.18;
+}
+// Un cuadro del video: el 3D, la marca arriba, el nombre de la parada abajo, la portada al inicio y el cierre al final
+function recFrame(now){
+  const r = rec, g = r.g, W = REC_W, H = REC_H, dt = Math.min(.1, (now - r.last)/1000), brand = HOST?.brand?.name || '';
+  r.last = now;
+  g.drawImage(renderer.domElement, 0, 0, W, H);
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  let grd = g.createLinearGradient(0, 0, 0, 190); grd.addColorStop(0, 'rgba(0,0,0,.5)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, W, 190);
+  let x = 40;
+  if (brand){
+    if (r.logo){ g.save(); g.beginPath(); g.roundRect(40, 40, 68, 68, 14); g.clip(); g.fillStyle = '#fff'; g.fillRect(40, 40, 68, 68);
+      const k = Math.min(60/r.logo.width, 60/r.logo.height); g.drawImage(r.logo, 74 - r.logo.width*k/2, 74 - r.logo.height*k/2, r.logo.width*k, r.logo.height*k); g.restore(); }
+    else { g.fillStyle = HOST.brand.color || '#b5653a'; g.beginPath(); g.roundRect(40, 40, 68, 68, 14); g.fill();
+      g.fillStyle = '#fff'; g.font = `700 36px ${REC_FONT}`; g.textAlign = 'center'; g.fillText(brand.trim().charAt(0).toUpperCase(), 74, 76); g.textAlign = 'left'; }
+    x = 126;
+  }
+  g.fillStyle = '#fff'; g.font = `700 30px ${REC_FONT}`; g.fillText((brand || CASA.title).slice(0, 34), x, 74);
+  // nombre de la parada al llegar (aparece y se va suave)
+  const here = tour && ['turn', 'hold'].includes(tour.phase) ? tour.stops[tour.i]?.name || '' : '';
+  if (here) r.cap = here;
+  r.capA += ((here ? 1 : 0) - r.capA)*Math.min(1, dt*5);
+  if (r.cap && r.capA > .02 && now - r.t0 > 2600){
+    grd = g.createLinearGradient(0, H - 330, 0, H); grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, `rgba(0,0,0,${.62*r.capA})`);
+    g.fillStyle = grd; g.fillRect(0, H - 330, W, 330);
+    g.font = `700 54px ${REC_FONT}`;
+    const lines = wrapText(g, r.cap, W - 100).slice(0, 2);
+    centerText(g, lines, H - 150 - (lines.length - 1)*64, 54, 700, r.capA);
+    centerText(g, [CASA.title.slice(0, 40)], H - 82, 28, 400, .85*r.capA);
+  }
+  // portada: los primeros segundos
+  const t = (now - r.t0)/1000;
+  if (t < 3){
+    const a = 1 - clamp01((t - 2.2)/.8);
+    g.fillStyle = `rgba(20,18,16,${.5*a})`; g.fillRect(0, 0, W, H);
+    g.font = `700 66px ${REC_FONT}`;
+    let y = centerText(g, wrapText(g, CASA.title, W - 120).slice(0, 3), H*.4, 66, 700, a);
+    y = centerText(g, [tr('3D 导览', 'Guided 3D tour', 'Visita guiada en 3D')], y + 30, 34, 400, a);
+    if (brand) centerText(g, [tr(`设计：${brand}`, `Design by ${brand}`, `Diseño de ${brand}`)], y + 10, 30, 600, a);
+  }
+  // cierre: al terminar la visita, unos segundos con el título y el contacto; luego se entrega el video
+  if (!r.outro && tour?.phase === 'end') r.outro = now;
+  if (r.outro){
+    const a = clamp01((now - r.outro)/600), wa = HOST?.brand?.whatsapp;
+    g.fillStyle = `rgba(20,18,16,${.65*a})`; g.fillRect(0, 0, W, H);
+    g.font = `700 60px ${REC_FONT}`;
+    let y = centerText(g, wrapText(g, CASA.title, W - 120).slice(0, 3), H*.4, 60, 700, a);
+    if (brand) y = centerText(g, [tr(`设计：${brand}`, `Design by ${brand}`, `Diseño de ${brand}`)], y + 30, 34, 600, a);
+    if (wa) centerText(g, [`WhatsApp ${wa.replace(/^52(\d{10})$/, '$1').replace(/(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3')}`], y + 16, 30, 400, a);
+    if (now - r.outro > 2800) recStop();
+  }
+  const secs = Math.floor(t);
+  if (secs !== r.secs){ r.secs = secs; $('#recBadge').textContent = `● ${Math.floor(secs/60)}:${String(secs % 60).padStart(2, '0')}`; }
+}
+// El video listo: verlo, compartirlo (WhatsApp, Instagram, guardar en Fotos) o descargarlo
+function recResult(blob, type){
+  const ext = type.includes('mp4') ? 'mp4' : 'webm', name = `${CASA.title} - visita guiada.${ext}`.replace(/[\\/:*?"<>|]/g, '');
+  const url = URL.createObjectURL(blob), file = new File([blob], name, {type: blob.type});
+  let share = false;
+  try { share = !!navigator.canShare?.({files: [file]}); } catch(e){}
+  const el = document.createElement('div');
+  el.id = 'recDone';
+  el.innerHTML = `<div class="card"><h3>${esc(tr('视频已就绪', 'Your video is ready', 'Tu video está listo'))}</h3>
+    <video src="${url}" controls playsinline muted></video>
+    <p class="muted">${(blob.size/1048576).toFixed(1)} MB · ${ext.toUpperCase()}</p>
+    <div class="row">${share ? `<button class="btn primary" data-r="share">${esc(tr('分享', 'Share', 'Compartir'))}</button>` : ''}
+      <a class="btn" href="${url}" download="${esc(name)}">${esc(tr('下载', 'Download', 'Descargar'))}</a></div>
+    <div class="row"><button class="btn" data-r="close">${esc(tr('关闭', 'Close', 'Cerrar'))}</button></div></div>`;
+  document.body.appendChild(el);
+  el.onclick = e => {
+    const a = e.target.closest('[data-r]')?.dataset.r;
+    if (a === 'share') navigator.share({files: [file], title: CASA.title}).catch(() => {});
+    if (a === 'close' || e.target === el){ URL.revokeObjectURL(url); el.remove(); }
+  };
 }""",
 )
 sub(
@@ -1407,9 +1581,11 @@ sub(
     "  $('#walkOverlay').onclick = () => COARSE || !document.body.requestPointerLock ? startTouchWalk() : walkCtl.lock();",
 )
 sub(
-    "    camera.aspect = SW()/SH(); camera.updateProjectionMatrix();\n  }).observe(stage);",
-    "    camera.aspect = SW()/SH(); walkFov();\n  }).observe(stage);",
+    "    renderer.setSize(SW(), SH()); labelRenderer.setSize(SW(), SH());\n    camera.aspect = SW()/SH(); camera.updateProjectionMatrix();\n  }).observe(stage);",
+    "    if (rec) return recLayout();   // grabando: el 3D sigue a 720×1280\n"
+    "    renderer.setSize(SW(), SH()); labelRenderer.setSize(SW(), SH());\n    camera.aspect = SW()/SH(); walkFov();\n  }).observe(stage);",
 )
+sub("  renderer.render(scene, camera);\n  labelRenderer.render(scene, camera);\n}", "  renderer.render(scene, camera);\n  if (rec) recFrame(now);\n  labelRenderer.render(scene, camera);\n}")
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")

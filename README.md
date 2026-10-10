@@ -48,6 +48,10 @@ npm run dev
   barra / dulces / pastel, una mesa de atrás, una junto a la pista, la mesa principal y la pista. Casa:
   acceso, sala, comedor, cocina, recámaras, baños y servicio, terraza y jardín, con el área de cada
   cuarto. Pausa, siguiente y terminar; mirar o caminar la pone en pausa; x1/x2/x3 también la acelera.
+- **Video de la visita** (● en el recorrido; solo la planner y la demostración, no el enlace del cliente): graba la
+  visita guiada en video vertical 720×1280 (MP4 en iPhone y Chrome) con la marca, el nombre de cada parada, una
+  portada y un cierre con el contacto. En pantalla se ve el video tal cual; pausar la visita pausa el video y ✕
+  entrega lo grabado. Al final: verlo, compartirlo (WhatsApp, Instagram, guardar) o descargarlo.
 - **Compartir:** enlace `/v/…` de solo vista; al compartir se elige si abre directo la **visita guiada**
   (`?visita=1`, se recuerda la elección) o la portada de la marca. Vista previa para WhatsApp con la
   huella de la imagen en el enlace y en la imagen (`?v=`), para que al volver a compartir no salga la
