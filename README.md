@@ -23,6 +23,21 @@ npm run dev
 - `http://localhost:3000/registro`: crea una cuenta y después un evento (salón) o un proyecto de casa; se abre el diseñador con guardado en la base de datos, distribuciones A/B/C y el botón **Compartir** (enlace `/v/…` de solo vista para el cliente).
 - `http://localhost:3000/prototipo` y `/prototipo/casa`: el editor anterior (React), solo en el navegador.
 
+### Qué hace el diseñador (salones y casas)
+
+- **Proyectos** en dos secciones: *Eventos en salón* y *Casas*. Una cuenta vacía ve la bienvenida y
+  puede cargar proyectos de ejemplo.
+- **Mi negocio** (`/negocio`): nombre, logo, color y WhatsApp que aparecen en el enlace del cliente.
+- **Salones:** plantillas de montaje (redondas, imperiales, cóctel), lista de invitados (pegar desde
+  WhatsApp o Excel, acomodo automático por familias), staff con secciones de meseros, dietas por
+  mesa, "Ver desde esta mesa" en 3D y hojas para imprimir o guardar en PDF (montaje, invitados por
+  mesa y A–Z, meseros, CSV).
+- **Casas:** ficha de la propiedad (precio, m², recámaras…) y botón amueblada / sin muebles en el
+  enlace del cliente.
+- **Compartir:** enlace `/v/…` de solo vista con portada de la marca, vista previa para WhatsApp,
+  WhatsApp del negocio y comentarios del cliente (💬 en el diseñador).
+- Borradores del aviso de privacidad y los términos en `docs/legal/` (pendientes de revisión legal).
+
 ### Probar en el iPhone
 
 1. La Mac y el iPhone deben estar en la misma red Wi-Fi.
