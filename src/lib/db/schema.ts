@@ -98,8 +98,11 @@ export const organization = pgTable("organization", {
   id: id(),
   name: text("name").notNull(),
   kind: text("kind").$type<OrgKind>().notNull().default("planner"),
+  /** Logo como data URL (imagen chica, se reduce en el navegador antes de subirla). */
   logoUrl: text("logo_url"),
   brandColor: text("brand_color"),
+  /** WhatsApp de contacto para los clientes, solo dígitos con lada de país (52…). */
+  whatsapp: text("whatsapp"),
   createdAt: createdAt(),
 });
 
@@ -212,6 +215,8 @@ export const shareLink = pgTable(
     layers: jsonb("layers").$type<Layer[]>().notNull(),
     canComment: boolean("can_comment").notNull().default(false),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /** Imagen de vista previa del enlace (JPEG en data URL) para WhatsApp. */
+    preview: text("preview"),
     createdAt: createdAt(),
   },
   (t) => [index("share_link_event_idx").on(t.eventId)],

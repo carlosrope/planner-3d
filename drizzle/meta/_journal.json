@@ -43,6 +43,13 @@
       "when": 1791590352765,
       "tag": "0005_tipo-de-lugar",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791648210761,
+      "tag": "0006_marca-y-vista-previa",
+      "breakpoints": true
     }
   ]
 }

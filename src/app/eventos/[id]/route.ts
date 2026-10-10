@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, getEditableEvent } from "@/lib/dal";
-import { designerResponse, hostFor } from "@/lib/designer/page";
+import { getCurrentUser, getEditableEvent, getOrgBrand } from "@/lib/dal";
+import { brandOf, designerResponse, hostFor } from "@/lib/designer/page";
 import { sectionOf } from "@/lib/domain";
 import { withStarter } from "@/lib/designer/starter";
 
@@ -18,5 +18,6 @@ export async function GET(request: Request, ctx: RouteContext<"/eventos/[id]">) 
   const plan = withStarter(venue.plan, { guests: event.guestCount ?? 0, kind: event.kind });
   const back =
     sectionOf(venue.kind) === "casas" ? { href: "/eventos?seccion=casas", label: "Casas" } : { href: "/eventos", label: "Eventos" };
-  return designerResponse({ ...plan, title: event.title }, hostFor("edit", event, layouts, wanted, back));
+  const brand = brandOf(await getOrgBrand(event.orgId));
+  return designerResponse({ ...plan, title: event.title }, hostFor("edit", event, layouts, wanted, brand, back));
 }

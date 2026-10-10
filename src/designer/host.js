@@ -185,7 +185,34 @@
   dialog.hostDlg .row .btn{border:1px solid var(--line);background:#fff;min-height:40px;flex:1}
   dialog.hostDlg .row .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
   dialog.hostDlg .row .btn.danger{color:#b3372a}
-  dialog.hostDlg .muted{color:var(--muted);font-size:12px;margin:8px 0 0}`;
+  dialog.hostDlg .muted{color:var(--muted);font-size:12px;margin:8px 0 0}
+  dialog.hostDlg .thumb{width:100%;aspect-ratio:1200/630;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#f2ede4;margin-bottom:10px}
+  #hostBar .brandChip{display:inline-flex;align-items:center;gap:6px;padding:0 8px 0 2px;font-weight:600;white-space:nowrap;max-width:14em}
+  #hostBar .brandChip span{overflow:hidden;text-overflow:ellipsis}
+  .brandMark{width:28px;height:28px;border-radius:8px;object-fit:contain;background:#fff;flex-shrink:0}
+  .brandMark.initial{display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px}
+  #clientWelcome{position:fixed;inset:0;z-index:150;display:grid;place-items:center;padding:20px;
+    background:rgba(40,32,24,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  #clientWelcome .card{width:min(400px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;
+    box-shadow:0 24px 70px rgba(40,30,20,.3);text-align:center}
+  #clientWelcome .who{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;text-align:left}
+  #clientWelcome .who .brandMark{width:48px;height:48px;border-radius:12px;font-size:20px}
+  #clientWelcome .who small{display:block;color:var(--muted);font-size:12px}
+  #clientWelcome h2{margin:0 0 6px;font-size:20px;line-height:1.25}
+  #clientWelcome .props{color:var(--muted);font-size:13px;margin:0 0 16px}
+  #clientWelcome .btn{display:flex;width:100%;justify-content:center;min-height:46px;margin-top:8px;border-radius:12px;font-size:15px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);text-decoration:none;align-items:center}
+  #clientWelcome .btn.go{border:0;color:#fff;font-weight:600}
+  #clientWelcome .btn.wa{border:0;background:#25d366;color:#fff;font-weight:600}
+  #clientWelcome .tiny{color:var(--muted);font-size:11px;margin:14px 0 0}`;
+
+  // ---------------------------------------------------------------- marca del negocio
+  const B = D.brand || { name: '' };
+  const brandColor = () => B.color || '#b5653a';
+  const brandMark = () => B.logo
+    ? `<img class="brandMark" src="${escape(B.logo)}" alt="">`
+    : `<span class="brandMark initial" style="background:${escape(brandColor())}">${escape((B.name || '?').trim().charAt(0).toUpperCase())}</span>`;
+  const waLink = text => B.whatsapp ? `https://wa.me/${B.whatsapp}?text=${encodeURIComponent(text)}` : '';
 
   function renderBar() {
     const bar = document.getElementById('hostBar');
@@ -197,7 +224,9 @@
       ? `${D.backHref ? `<a class="btn" href="${escape(D.backHref)}">← ${escape(D.backLabel || t('Projects', 'Proyectos'))}</a>` : ''}${tabs}
          <button class="btn" data-a="new" title="${t('New layout (copy of the current one)', 'Nueva distribución (copia de la actual)')}">＋</button>
          <button class="btn primary" data-a="share">${t('Share', 'Compartir')}</button><span id="hostStatus">${escape(statusText)}</span>`
-      : `${tabs}<span class="viewonly">${t('View only', 'Solo vista')}</span>`;
+      : `${B.name ? `<span class="brandChip">${brandMark()}<span>${escape(B.name)}</span></span>` : ''}${tabs}
+         ${B.whatsapp ? `<a class="btn primary" target="_blank" rel="noopener" href="${escape(waLink(t(`Hi, I saw the design of ${D.title}`, `Hola, vi el diseño de ${D.title}`)))}">WhatsApp</a>` : ''}
+         <span class="viewonly">${t('View only', 'Solo vista')}</span>`;
     bar.querySelectorAll('[data-dist]').forEach(b => b.onclick = () => {
       const d = dists.find(x => x.id === b.dataset.dist);
       if (d === active && EDIT) editDialog(d); else select(d.id);
@@ -239,13 +268,78 @@
     dlg.querySelector('[data-a="ok"]').onclick = () => { commit(); dlg.close(); };
   }
 
+  const loadImage = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
+
+  /** Imagen para la vista previa del enlace: el 3D si está abierto (o el plano 2D) y una franja con la marca. */
+  async function previewImage() {
+    const W = 1200, H = 630, band = 104;
+    let src;
+    if (typeof is3D === 'function' && is3D() && window.View3D?.snap) src = window.View3D.snap();
+    else {
+      const clone = document.getElementById('plan').cloneNode(true);
+      clone.setAttribute('viewBox', `${BOUNDS.x} ${BOUNDS.y} ${BOUNDS.w} ${BOUNDS.h}`);
+      clone.setAttribute('width', Math.round(BOUNDS.w / 8)); clone.setAttribute('height', Math.round(BOUNDS.h / 8));
+      clone.querySelector('#gSel').innerHTML = '';
+      clone.querySelector('#gGrid').innerHTML = '';
+      src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+    }
+    const img = await loadImage(src);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#f7f4ee'; g.fillRect(0, 0, W, H);
+    const areaH = H - band, tall = img.height > img.width * 1.2 && !src.startsWith('data:image/jpeg');
+    const iw = tall ? img.height : img.width, ih = tall ? img.width : img.height;
+    const k = src.startsWith('data:image/jpeg') ? Math.max(W / iw, areaH / ih) : Math.min((W - 40) / iw, (areaH - 30) / ih);
+    g.save(); g.translate(W / 2, areaH / 2); if (tall) g.rotate(-Math.PI / 2);
+    g.drawImage(img, -img.width * k / 2, -img.height * k / 2, img.width * k, img.height * k); g.restore();
+    g.fillStyle = brandColor(); g.fillRect(0, areaH, W, band);
+    let x = 34;
+    if (B.logo) {
+      try { const logo = await loadImage(B.logo); const s2 = band - 34; g.fillStyle = '#fff'; g.fillRect(x - 4, areaH + 13, s2 + 8, s2 + 8);
+        const lk = Math.min(s2 / logo.width, s2 / logo.height); g.drawImage(logo, x + (s2 - logo.width * lk) / 2, areaH + 17 + (s2 - logo.height * lk) / 2, logo.width * lk, logo.height * lk); x += s2 + 26; } catch { /* sin logo */ }
+    }
+    g.fillStyle = '#fff'; g.textBaseline = 'middle';
+    g.font = '700 38px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    g.fillText(D.title.slice(0, 48), x, areaH + band / 2 - (B.name ? 16 : 0));
+    if (B.name) { g.font = '400 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'; g.globalAlpha = .9; g.fillText(t(`Design by ${B.name}`, `Diseño de ${B.name}`).slice(0, 70), x, areaH + band / 2 + 24); g.globalAlpha = 1; }
+    return cv.toDataURL('image/jpeg', 0.84);
+  }
+
+  /** Portada del enlace del cliente: quién hizo el diseño y botones grandes para verlo. */
+  function clientWelcome() {
+    const props = dists.length > 1
+      ? t(`${dists.length} proposals: `, `${dists.length} propuestas: `) + dists.map(d => `${d.name}${d.recommended ? ' ★' : ''}${d.note ? ` (${d.note})` : ''}`).join(' · ')
+      : (active.note || '');
+    const el = document.createElement('div');
+    el.id = 'clientWelcome';
+    el.innerHTML = `<div class="card">
+      ${B.name ? `<div class="who">${brandMark()}<div><small>${t('Design by', 'Diseño de')}</small><b>${escape(B.name)}</b></div></div>` : ''}
+      <h2>${escape(D.title)}</h2>${props ? `<p class="props">${escape(props)}</p>` : ''}
+      <button class="btn go" data-go="3d" style="background:${escape(brandColor())}">${t('See it in 3D', 'Ver recorrido 3D')}</button>
+      <button class="btn" data-go="2d">${t('See the floor plan', 'Ver plano')}</button>
+      ${B.whatsapp ? `<a class="btn wa" target="_blank" rel="noopener" href="${escape(waLink(t(`Hi, I saw the design of ${D.title}`, `Hola, vi el diseño de ${D.title}`)))}">${t('Message', 'Escribir a')} ${escape(B.name || t('the planner', 'la planner'))}</a>` : ''}
+      <p class="tiny">${t('You can move things around to try ideas; nothing is saved.', 'Puedes mover cosas para probar ideas; no se guarda nada.')}</p></div>`;
+    document.body.appendChild(el);
+    el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+      el.remove();
+      if (b.dataset.go === '3d') { const go = (n = 0) => window.View3D ? setView('3d') : n < 100 && setTimeout(() => go(n + 1), 100); go(); }
+    });
+  }
+
   async function shareDialog() {
     await flush();
-    let url;
-    try { url = new URL((await request('POST', `/api/events/${D.eventId}/share`)).path, location.origin).toString(); }
-    catch (e) { return api.toast(e.message); }
+    const busy = dialog(`<h3>${t('Preparing the link…', 'Preparando el enlace…')}</h3><p class="muted">${t('Creating the preview image', 'Creando la imagen de vista previa')}</p>`);
+    let preview = null, url;
+    try { preview = await previewImage(); } catch { /* sin vista previa */ }
+    try { url = new URL((await request('POST', `/api/events/${D.eventId}/share`, preview ? { preview } : {})).path, location.origin).toString(); }
+    catch (e) { busy.close(); return api.toast(e.message); }
+    busy.close();
     const text = t(`Take a look at the design of ${D.title}: ${url}`, `Mira el diseño de ${D.title}: ${url}`);
     const dlg = dialog(`<h3>${t('Share with your client', 'Compartir con tu cliente')}</h3>
+      ${preview ? `<img class="thumb" src="${preview}" alt="">` : ''}
+      ${preview && !(typeof is3D === 'function' && is3D()) ? `<p class="muted" style="margin:-4px 0 10px">${t(
+        'Tip: share from the 3D view so the WhatsApp preview shows the 3D.',
+        'Consejo: comparte desde la Vista 3D para que la vista previa en WhatsApp salga en 3D.')}</p>` : ''}
       <label>${t('View link (2D, 3D and walk-through; nothing is saved)', 'Enlace de solo vista (2D, 3D y recorrido; no se guarda nada)')}<input readonly value="${escape(url)}"></label>
       <div class="row">${navigator.share ? `<button class="btn primary" data-a="native">${t('Share…', 'Compartir…')}</button>` : ''}
         <a class="btn wa" data-a="wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}">WhatsApp</a></div>
@@ -281,6 +375,7 @@
       document.head.appendChild(style);
       syncUrl();
       renderBar();
+      if (!EDIT) clientWelcome();
     },
   };
 })();

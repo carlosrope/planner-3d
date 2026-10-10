@@ -51,7 +51,15 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
           <p className="text-sm text-stone-500">{org.name}</p>
           <h1 className="text-2xl font-semibold">Proyectos</h1>
         </div>
-        <SignOutButton />
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/negocio"
+            className="flex h-10 items-center rounded-xl border border-stone-300 px-3 text-sm font-medium active:bg-stone-100"
+          >
+            Mi negocio
+          </Link>
+          <SignOutButton />
+        </div>
       </header>
 
       <nav className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-stone-200/70 p-1" aria-label="Secciones">

@@ -130,7 +130,7 @@ export async function canEditLayout(layoutId: string, userId: string) {
 /** Evento abierto con un enlace para compartir (solo lectura; no pide sesión). */
 export async function getSharedEvent(token: string) {
   const [row] = await db
-    .select({ event, venue, firstLayoutId: shareLink.layoutId })
+    .select({ event, venue, firstLayoutId: shareLink.layoutId, hasPreview: sql<boolean>`${shareLink.preview} is not null` })
     .from(shareLink)
     .innerJoin(event, eq(shareLink.eventId, event.id))
     .innerJoin(venue, eq(event.venueId, venue.id))
@@ -143,4 +143,30 @@ export async function getSharedEvent(token: string) {
     .where(eq(layout.eventId, row.event.id))
     .orderBy(asc(layout.position), asc(layout.createdAt));
   return layouts.length ? { ...row, layouts } : null;
+}
+
+/** Datos de marca del negocio (para su página, el diseñador y el enlace del cliente). */
+export async function getOrgBrand(orgId: string) {
+  const [row] = await db
+    .select({
+      id: organization.id,
+      name: organization.name,
+      logoUrl: organization.logoUrl,
+      brandColor: organization.brandColor,
+      whatsapp: organization.whatsapp,
+    })
+    .from(organization)
+    .where(eq(organization.id, orgId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Imagen de vista previa de un enlace compartido (JPEG en data URL), si existe. */
+export async function getSharePreview(token: string) {
+  const [row] = await db
+    .select({ preview: shareLink.preview })
+    .from(shareLink)
+    .where(and(eq(shareLink.token, token), or(isNull(shareLink.expiresAt), gt(shareLink.expiresAt, new Date()))))
+    .limit(1);
+  return row?.preview ?? null;
 }

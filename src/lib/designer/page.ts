@@ -39,7 +39,21 @@ export type HostData = {
   backLabel?: string;
   activeId: string;
   distributions: { id: string; name: string; note: string; recommended: boolean; revision: number; doc: unknown }[];
+  /** Marca del negocio que hizo el diseño (portada del enlace del cliente y vista previa). */
+  brand: Brand;
 };
+
+export type Brand = { name: string; logo: string | null; color: string | null; whatsapp: string | null };
+
+export const brandOf = (org: { name: string; logoUrl: string | null; brandColor: string | null; whatsapp: string | null } | null): Brand => ({
+  name: org?.name ?? "",
+  logo: org?.logoUrl ?? null,
+  color: org?.brandColor ?? null,
+  whatsapp: org?.whatsapp ?? null,
+});
+
+/** Origen público del sitio (para URLs absolutas en la vista previa de WhatsApp). */
+export const publicOrigin = (request: Request) => process.env.BETTER_AUTH_URL?.replace(/\/$/, "") || new URL(request.url).origin;
 
 type LayoutRow = { id: string; name: string; note: string; recommended: boolean; revision: number; doc: unknown };
 
@@ -49,6 +63,7 @@ export function hostFor(
   ev: { id: string; title: string; guestCount: number | null },
   layouts: LayoutRow[],
   wanted: string | null,
+  brand: Brand,
   back?: { href: string; label: string },
 ): HostData {
   const active = layouts.find((l) => l.id === wanted) ?? layouts.find((l) => l.recommended) ?? layouts[0];
@@ -60,6 +75,7 @@ export function hostFor(
     backHref: back?.href,
     backLabel: back?.label,
     activeId: active.id,
+    brand,
     distributions: layouts.map(({ id, name, note, recommended, revision, doc }) => ({ id, name, note, recommended, revision, doc })),
   };
 }
@@ -68,7 +84,7 @@ const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "
 const json = (v: unknown) => JSON.stringify(v).replace(/</g, "\\u003c");
 const inline = (code: string) => `<script>\n${code}\n</script>\n`;
 
-export async function designerResponse(plan: DesignerPlan, host?: HostData) {
+export async function designerResponse(plan: DesignerPlan, host?: HostData, meta?: { image?: string; description?: string }) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
   if (plan.kind === "salon") {
@@ -79,10 +95,16 @@ export async function designerResponse(plan: DesignerPlan, host?: HostData) {
   if (host) head += inline(`window.__HOST_DATA__ = ${json(host)};\n${await file("host.js")}`);
   // Título y vista previa del enlace (WhatsApp, iMessage).
   const title = escapeHtml(plan.title);
-  const description = escapeHtml(plan.kind === "salon" ? "Plano 2D y recorrido 3D del evento" : "Plano 2D y recorrido 3D de la casa");
+  const description = escapeHtml(
+    meta?.description ?? (plan.kind === "salon" ? "Plano 2D y recorrido 3D del evento" : "Plano 2D y recorrido 3D de la casa"),
+  );
+  const image = meta?.image
+    ? `\n<meta property="og:image" content="${escapeHtml(meta.image)}">\n<meta property="og:image:width" content="1200">` +
+      `\n<meta property="og:image:height" content="630">\n<meta name="twitter:card" content="summary_large_image">`
+    : "";
   const page = html.replace(
     /<title>[^<]*<\/title>/,
-    `<title>${title}</title>\n<meta property="og:title" content="${title}">\n<meta property="og:description" content="${description}">`,
+    `<title>${title}</title>\n<meta property="og:title" content="${title}">\n<meta property="og:description" content="${description}">${image}`,
   );
   // Los datos van antes del primer <script> porque el diseñador los lee al cargar.
   const at = page.indexOf("<script");
