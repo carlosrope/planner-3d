@@ -1,7 +1,7 @@
 import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { DesignerPlan } from "./types";
+import type { DesignerPlan, PropertyDetails } from "./types";
 
 // Arma la página del diseñador (src/designer/disenador.html, adaptación de
 // wy51ai/floorplan-3d, MIT © 2026 wuyi) con los datos del lugar y, si aplica,
@@ -43,6 +43,8 @@ export type HostData = {
   brand: Brand;
   /** Comentarios del cliente (en el enlace del cliente solo se muestran sus textos, sin borrar). */
   comments: HostComment[];
+  /** Casas: ficha de la propiedad. */
+  details: PropertyDetails | null;
 };
 
 export type HostComment = {
@@ -72,7 +74,7 @@ type LayoutRow = { id: string; name: string; note: string; recommended: boolean;
 /** Datos del anfitrión para un evento: abre la distribución pedida, la recomendada o la primera. */
 export function hostFor(
   mode: HostData["mode"],
-  ev: { id: string; title: string; guestCount: number | null },
+  ev: { id: string; title: string; guestCount: number | null; details?: PropertyDetails | null },
   layouts: LayoutRow[],
   wanted: string | null,
   brand: Brand,
@@ -90,6 +92,7 @@ export function hostFor(
     activeId: active.id,
     brand,
     comments,
+    details: ev.details ?? null,
     distributions: layouts.map(({ id, name, note, recommended, revision, doc }) => ({ id, name, note, recommended, revision, doc })),
   };
 }

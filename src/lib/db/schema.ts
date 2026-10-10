@@ -11,7 +11,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import type { EventKind, EventStatus, MemberRole, OrgKind, ShareRole } from "../domain";
-import type { DesignDoc, DesignerPlan } from "../designer/types";
+import type { DesignDoc, DesignerPlan, PropertyDetails } from "../designer/types";
 import type { Layer, VenueKind, VenueSpec } from "../layout/types";
 
 const id = () =>
@@ -171,6 +171,8 @@ export const event = pgTable(
     clientNames: text("client_names"),
     eventDate: date("event_date"),
     guestCount: integer("guest_count"),
+    /** Casas: ficha de la propiedad que ve el cliente (precio, m², recámaras…). */
+    details: jsonb("details").$type<PropertyDetails>(),
     status: text("status").$type<EventStatus>().notNull().default("borrador"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

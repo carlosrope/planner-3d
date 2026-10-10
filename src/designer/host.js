@@ -219,6 +219,69 @@
   dialog.hostDlg .seg2 .btn{flex:1;min-height:38px;border:1px solid var(--line);background:#fff}
   dialog.hostDlg .seg2 .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}`;
 
+  // ---------------------------------------------------------------- ficha de la casa
+  const IS_CASA = window.__CASA__?.kind !== 'salon';
+  const details = D.details || {};
+  const money = n => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+  const num = n => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  function specs() {
+    const out = [];
+    if (details.builtM2) out.push(`${num(details.builtM2)} m² ${t('built', 'de construcción')}`);
+    if (details.landM2) out.push(`${num(details.landM2)} m² ${t('lot', 'de terreno')}`);
+    if (details.bedrooms) out.push(`${details.bedrooms} ${t(details.bedrooms === 1 ? 'bedroom' : 'bedrooms', details.bedrooms === 1 ? 'recámara' : 'recámaras')}`);
+    if (details.bathrooms) out.push(`${num(details.bathrooms)} ${t(details.bathrooms === 1 ? 'bath' : 'baths', details.bathrooms === 1 ? 'baño' : 'baños')}`);
+    if (details.parking) out.push(`${details.parking} ${t(details.parking === 1 ? 'parking spot' : 'parking spots', details.parking === 1 ? 'auto' : 'autos')}`);
+    return out;
+  }
+  const hasDetails = () => Object.values(details).some(v => v !== undefined && v !== '' && v !== 0);
+  const detailsHtml = () => `${details.price ? `<p style="font-size:22px;font-weight:700;margin:2px 0 6px">${money(details.price)}</p>` : ''}
+    ${specs().length ? `<p class="specs" style="margin:0 0 6px">${specs().map(escape).join(' · ')}</p>` : ''}
+    ${details.location ? `<p class="muted" style="margin:0 0 6px">📍 ${escape(details.location)}</p>` : ''}
+    ${details.description ? `<p style="margin:0 0 6px;white-space:pre-wrap;text-align:left">${escape(details.description)}</p>` : ''}`;
+
+  /** Muestra u oculta los muebles en 2D y 3D (la casa amueblada o vacía). */
+  function toggleFurniture() {
+    document.querySelector('[data-layer="furn"]')?.click();
+    document.querySelector('[data-t="furn"]')?.click();
+    renderBar();
+  }
+  const furnitureShown = () => document.querySelector('[data-layer="furn"]')?.classList.contains('on') !== false;
+
+  function detailsDialog() {
+    if (!EDIT) {
+      const dlg = dialog(`<h3>${escape(D.title)}</h3>${detailsHtml() || `<p class="muted">${t('No details yet.', 'Todavía sin ficha.')}</p>`}
+        <div class="row"><button class="btn" data-a="close">${t('Close', 'Cerrar')}</button></div>`);
+      dlg.querySelector('[data-a="close"]').onclick = () => dlg.close();
+      return;
+    }
+    const field = (k, label, type = 'number', step = '1') => `<label>${label}<input data-k="${k}" type="${type}" ${type === 'number' ? `inputmode="decimal" step="${step}" min="0"` : 'maxlength="120"'} value="${escape(details[k] ?? '')}"></label>`;
+    const dlg = dialog(`<h3>${t('Property details', 'Ficha de la casa')}</h3>
+      <p class="muted" style="margin:-6px 0 10px">${t('Your client sees it when opening the link.', 'Tu cliente la ve al abrir el enlace.')}</p>
+      ${field('price', t('Price (MXN)', 'Precio (MXN)'), 'number', '1000')}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px">
+        ${field('builtM2', t('Built m²', 'm² de construcción'), 'number', '0.1')}${field('landM2', t('Lot m²', 'm² de terreno'), 'number', '0.1')}
+        ${field('bedrooms', t('Bedrooms', 'Recámaras'))}${field('bathrooms', t('Bathrooms', 'Baños'), 'number', '0.5')}
+        ${field('parking', t('Parking', 'Estacionamientos'))}</div>
+      ${field('location', t('Location', 'Ubicación'), 'text')}
+      <label>${t('Description', 'Descripción')}<textarea data-k="description" maxlength="600">${escape(details.description ?? '')}</textarea></label>
+      <div class="row"><button class="btn primary" data-a="save">${t('Save', 'Guardar')}</button><button class="btn" data-a="close">${t('Cancel', 'Cancelar')}</button></div>`);
+    dlg.querySelector('[data-a="close"]').onclick = () => dlg.close();
+    dlg.querySelector('[data-a="save"]').onclick = async () => {
+      const next = {};
+      dlg.querySelectorAll('[data-k]').forEach(el => {
+        const k = el.dataset.k, v = el.value.trim();
+        if (!v) return;
+        next[k] = el.type === 'number' ? (['bedrooms', 'parking', 'price'].includes(k) ? Math.round(+v) : +v) : v;
+      });
+      try { await request('PATCH', `/api/events/${D.eventId}`, { details: next }); }
+      catch (e) { return api.toast(e.message); }
+      Object.keys(details).forEach(k => delete details[k]);
+      Object.assign(details, next);
+      dlg.close();
+      api.toast(t('Details saved', 'Ficha guardada'));
+    };
+  }
+
   // ---------------------------------------------------------------- comentarios del cliente
   const comments = D.comments || [];
   const pendingComments = () => comments.filter(c => !c.resolved).length;
@@ -313,11 +376,14 @@
     bar.innerHTML = EDIT
       ? `${D.backHref ? `<a class="btn" href="${escape(D.backHref)}">← ${escape(D.backLabel || t('Projects', 'Proyectos'))}</a>` : ''}${tabs}
          <button class="btn" data-a="new" title="${t('New layout (copy of the current one)', 'Nueva distribución (copia de la actual)')}">＋</button>
+         ${IS_CASA ? `<button class="btn" data-a="details">${t('Details', 'Ficha')}</button>` : ''}
          <button class="btn primary" data-a="share">${t('Share', 'Compartir')}</button>
          <button class="btn" data-a="comments" title="${t('Client comments', 'Comentarios del cliente')}">💬${pendingComments() ? `<span class="badge">${pendingComments()}</span>` : ''}</button>
          <span id="hostStatus">${escape(statusText)}</span>`
       : `${B.name ? `<span class="brandChip">${brandMark()}<span>${escape(B.name)}</span></span>` : ''}${tabs}
          ${B.whatsapp ? `<a class="btn primary" target="_blank" rel="noopener" href="${escape(waLink(t(`Hi, I saw the design of ${D.title}`, `Hola, vi el diseño de ${D.title}`)))}">WhatsApp</a>` : ''}
+         ${IS_CASA && hasDetails() ? `<button class="btn" data-a="details">${t('Details', 'Ficha')}</button>` : ''}
+         ${IS_CASA ? `<button class="btn" data-a="furn">${furnitureShown() ? t('Unfurnished', 'Sin muebles') : t('Furnished', 'Amueblada')}</button>` : ''}
          <button class="btn" data-a="comment">💬 ${t('Comment', 'Comentar')}</button>
          <span class="viewonly">${t('View only', 'Solo vista')}</span>`;
     bar.querySelectorAll('[data-dist]').forEach(b => b.onclick = () => {
@@ -328,6 +394,8 @@
     bar.querySelector('[data-a="share"]')?.addEventListener('click', shareDialog);
     bar.querySelector('[data-a="comments"]')?.addEventListener('click', commentsDialog);
     bar.querySelector('[data-a="comment"]')?.addEventListener('click', commentDialog);
+    bar.querySelector('[data-a="details"]')?.addEventListener('click', detailsDialog);
+    bar.querySelector('[data-a="furn"]')?.addEventListener('click', toggleFurniture);
   }
 
   function dialog(html) {
@@ -409,7 +477,7 @@
     el.id = 'clientWelcome';
     el.innerHTML = `<div class="card">
       ${B.name ? `<div class="who">${brandMark()}<div><small>${t('Design by', 'Diseño de')}</small><b>${escape(B.name)}</b></div></div>` : ''}
-      <h2>${escape(D.title)}</h2>${props ? `<p class="props">${escape(props)}</p>` : ''}
+      <h2>${escape(D.title)}</h2>${IS_CASA && hasDetails() ? detailsHtml() : ''}${props ? `<p class="props">${escape(props)}</p>` : ''}
       <button class="btn go" data-go="3d" style="background:${escape(brandColor())}">${t('See it in 3D', 'Ver recorrido 3D')}</button>
       <button class="btn" data-go="2d">${t('See the floor plan', 'Ver plano')}</button>
       ${B.whatsapp ? `<a class="btn wa" target="_blank" rel="noopener" href="${escape(waLink(t(`Hi, I saw the design of ${D.title}`, `Hola, vi el diseño de ${D.title}`)))}">${t('Message', 'Escribir a')} ${escape(B.name || t('the planner', 'la planner'))}</a>` : ''}

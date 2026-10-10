@@ -46,3 +46,14 @@ export const designDocSchema = z.object({
   v: z.literal(1),
   levels: z.record(id, levelState).refine((l) => Object.keys(l).length <= 10),
 });
+
+export const propertyDetailsSchema = z.object({
+  price: z.number().int().min(0).max(1_000_000_000).optional(),
+  landM2: z.number().min(0).max(100_000).optional(),
+  builtM2: z.number().min(0).max(100_000).optional(),
+  bedrooms: z.number().int().min(0).max(50).optional(),
+  bathrooms: z.number().min(0).max(50).optional(),
+  parking: z.number().int().min(0).max(50).optional(),
+  location: z.string().trim().max(120).optional(),
+  description: z.string().trim().max(600).optional(),
+});

@@ -97,3 +97,15 @@ export type LevelState = {
 export type DesignDoc = { v: 1; levels: Record<string, LevelState> };
 
 export const emptyDesign = (): DesignDoc => ({ v: 1, levels: {} });
+
+/** Ficha de una casa en venta (proyecto de la sección Casas). Precio en pesos. */
+export type PropertyDetails = {
+  price?: number;
+  landM2?: number;
+  builtM2?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  parking?: number;
+  location?: string;
+  description?: string;
+};
