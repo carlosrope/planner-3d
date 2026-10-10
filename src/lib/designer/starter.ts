@@ -16,6 +16,7 @@ export type CatalogItem = {
   color: string;
   seats?: number;
   table?: number;
+  role?: string;
 };
 export const EVENT_CATALOG = catalog as { cat: string; catEn: string; items: CatalogItem[] }[];
 const ITEMS = EVENT_CATALOG.flatMap((c) => c.items);

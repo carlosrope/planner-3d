@@ -9,11 +9,16 @@
   const CHAIR = '#c9a24a';   // silla Tiffany dorada
   const SEATED = ['rtable', 'itable', 'headtable'];
   const NUMBERED = ['rtable', 'itable'];
+  // Staff: los meseros (y capitanes) atienden mesas; cada uno con un color para su sección.
+  const SECTIONED = ['mesero', 'capitan'];
+  const SECTION_COLORS = ['#2f6fb0', '#2e8b57', '#d9822b', '#8e44ad', '#c0392b', '#16a085', '#b7950b', '#d35400', '#2c3e50', '#a93226'];
+  const ROLE_LETTER = { coordinador: 'Co', capitan: 'Ca', mesero: 'M', barman: 'B', hostess: 'H', seguridad: 'S', valet: 'V' };
 
   // Formato del catálogo del diseñador: [tipo, nombre, ancho, fondo, color, extra]
   const lib = CAT.map(c => ({
     cat: c.cat,
-    items: c.items.map(i => [i.type, i.name, i.w, i.d, i.color, i.seats ? { seats: i.seats, table: i.table } : undefined]),
+    items: c.items.map(i => [i.type, i.name, i.w, i.d, i.color,
+      i.seats ? { seats: i.seats, table: i.table } : i.role ? { role: i.role } : undefined]),
   }));
   const namesEn = {};
   CAT.forEach(c => { namesEn[c.cat] = c.catEn; c.items.forEach(i => { namesEn[i.name] = i.nameEn; }); });
@@ -25,6 +30,61 @@
   const guestsOf = state => host()?.guests ?? state.guests ?? window.__CASA__.guests ?? 0;
   // En el enlace del cliente no se muestran los nombres de los invitados.
   const canSeeGuests = () => !host() || host().editable;
+
+  // ---------------------------------------------------------------- staff
+  const staffOf = st => st.furniture.filter(f => f.type === 'staff');
+  const waiters = st => staffOf(st).filter(f => SECTIONED.includes(f.role));
+  /** Mesero (o capitán) que atiende una mesa. */
+  const waiterOf = (st, tableId) => waiters(st).find(w => (w.tables || []).includes(tableId));
+  const ROLE_PLURAL = { coordinador: ['coordinator', 'coordinadores'], capitan: ['captains', 'capitanes'], mesero: ['waiters', 'meseros'],
+    barman: ['bartenders', 'barman'], hostess: ['hostesses', 'hostess'], seguridad: ['security', 'de seguridad'], valet: ['valets', 'valets'] };
+
+  /** Reparte las mesas entre los meseros: cada mesa al mesero más cercano que todavía tenga cupo. */
+  function distributeTables(st) {
+    const ws = waiters(st).filter(w => w.role === 'mesero');
+    const pool = ws.length ? ws : waiters(st);
+    if (!pool.length) return false;
+    const tables = tablesOf(st);
+    const cap = Math.ceil(tables.length / pool.length);
+    pool.forEach(w => { w.tables = []; });
+    const dist = (a, b) => Math.hypot(a.cx - b.cx, a.cy - b.cy);
+    tables.slice().sort((a, b) => Math.min(...pool.map(w => dist(w, a))) - Math.min(...pool.map(w => dist(w, b)))).forEach(f => {
+      const w = pool.slice().sort((a, b) => dist(a, f) - dist(b, f)).find(x => x.tables.length < cap) || pool[0];
+      w.tables.push(f.id);
+    });
+    return true;
+  }
+
+  /** Dietas y alergias de un grupo de invitados: "2 vegetariano · 1 sin gluten". */
+  function dietSummary(guests) {
+    const n = {};
+    guests.forEach(g => { const d = (g.diet || '').trim().toLowerCase(); if (d) n[d] = (n[d] || 0) + 1; });
+    return Object.entries(n).map(([d, k]) => `${k} ${d}`).join(' · ');
+  }
+
+  // Dibujo 2D del marcador (círculo con la inicial del rol) y figura simple en 3D.
+  function staffSvg(w, d, c, f, K) {
+    const r = Math.min(w, d) / 2, letter = ROLE_LETTER[f?.role] || 'S';
+    return `<circle r="${r}" fill="${c}" ${K.ST}/><circle r="${r * .78}" fill="none" stroke="#fff" stroke-width="${r * .08}" opacity=".7"/>
+      <text font-size="${r * (letter.length > 1 ? .78 : .95)}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-weight="700" pointer-events="none">${letter}</text>`;
+  }
+  function staff3d(g, f, K) {
+    const body = K.mat(f.color || '#2f6fb0', { roughness: .7 }), skin = K.mat('#d9a77f', { roughness: .8 });
+    g.add(K.cyl(.13, .17, .82, body, 0, 0, 0, 16), K.cyl(.19, .15, .5, body, 0, .82, 0, 16));
+    g.add(K.blob(.11, .13, .11, skin, 0, 1.47, 0, 16));
+  }
+  // Las mesas de una sección llevan un aro del color de su mesero.
+  function withSection(draw) {
+    return (w, d, c, f, K) => {
+      const base = draw ? draw(w, d, c, f, K) : K.rc(-w / 2, -d / 2, w, d, c);
+      const waiter = f?.id && typeof state !== 'undefined' ? waiterOf(state, f.id) : null;
+      if (!waiter) return base;
+      const shape = (inset, extra) => f.type === 'rtable'
+        ? `<circle r="${Math.min(w, d) / 2 - inset}" ${extra} pointer-events="none"/>`
+        : `<rect x="${-w / 2 + inset}" y="${-d / 2 + inset}" width="${w - 2 * inset}" height="${d - 2 * inset}" rx="160" ${extra} pointer-events="none"/>`;
+      return shape(0, `fill="${waiter.color}" opacity=".2"`) + base + shape(45, `fill="none" stroke="${waiter.color}" stroke-width="90" opacity=".85"`);
+    };
+  }
 
   // ---------------------------------------------------------------- invitados
   // Lista por distribución: state.guestList = [{id, name, group, diet, table}] (table = id de la mesa).
@@ -91,6 +151,7 @@
   // Nombre de catálogo de una pieza (las mesas se llaman "Mesa 3"); si se cambió el tamaño, se aclara.
   const ITEMS = CAT.flatMap(c => c.items);
   function pieceName(f) {
+    if (f.type === 'staff') return nm(ITEMS.find(i => i.role === f.role)?.name || f.name);
     const same = ITEMS.find(i => i.type === f.type && i.w === f.w && i.d === f.d);
     if (same) return nm(same.name);
     const base = ITEMS.find(i => i.type === f.type);
@@ -99,6 +160,18 @@
 
   function onAdd(f, it, state) {
     if (it && it[5]) Object.assign(f, it[5]);
+    if (f.type === 'staff') {
+      // "Mesero 3"; cada mesero con su color para distinguir su sección en el plano
+      const base = (ITEMS.find(i => i.role === f.role)?.name) || f.name.replace(/ \d+$/, '');
+      const used = new Set(state.furniture.filter(g => g.type === 'staff' && g.role === f.role)
+        .map(g => +(new RegExp('^' + base + ' (\\d+)$').exec(g.name)?.[1] || 0)));
+      let k = 1;
+      while (used.has(k)) k++;
+      f.name = `${base} ${k}`;
+      if (SECTIONED.includes(f.role)) f.color = SECTION_COLORS[(k - 1) % SECTION_COLORS.length];
+      delete f.tables;
+      return;
+    }
     if (!NUMBERED.includes(f.type)) return;
     const used = new Set(state.furniture.map(g => +(/^Mesa (\d+)$/.exec(g.name)?.[1] || 0)));
     let n = 1;
@@ -120,7 +193,7 @@
   function inventory(st) {
     const tables = st.furniture.filter(f => SEATED.includes(f.type));
     const pieces = {}, chairs = {}, cloths = {};
-    st.furniture.forEach(f => { const k = pieceName(f); pieces[k] = (pieces[k] || 0) + 1; });
+    st.furniture.forEach(f => { if (f.type === 'staff') return; const k = pieceName(f); pieces[k] = (pieces[k] || 0) + 1; });
     tables.forEach(f => { const c = f.chair || CHAIR; chairs[c] = (chairs[c] || 0) + seats(f); });
     tables.forEach(f => { cloths[f.color] = (cloths[f.color] || 0) + 1; });
     return { tables, pieces: Object.entries(pieces).sort((a, b) => b[1] - a[1]), chairs: Object.entries(chairs), cloths: Object.entries(cloths) };
@@ -151,9 +224,27 @@
       ${tables.length ? `<h3 style="margin-top:12px">${t('Tablecloths', 'Manteles')}</h3>
         <table>${cloths.map(([c, n]) => row(`${sw(c)}${colorName(c)}`, n)).join('')}</table>` : ''}
       <div class="actions"><button class="btn" id="xPrintSetup">${t('Setup sheet (PDF)', 'Hoja de montaje (PDF)')}</button></div></section>
+    ${staffSection(state)}
     ${canSeeGuests() ? `<section><h3>${t('Layout template', 'Plantilla de montaje')} <small>${t(`for ${guests || 'your'} guests`, `para ${guests || 'tus'} invitados`)}</small></h3>
       <div class="actions">${Object.entries(TEMPLATES).map(([k, [en, es]]) => `<button class="btn" data-template="${k}">${t(en, es)}</button>`).join('')}</div>
       <div class="muted" style="margin-top:6px">${t('Replaces the furniture of this layout; you can undo it.', 'Reemplaza los muebles de esta distribución; se puede deshacer.')}</div></section>` : ''}`;
+  }
+
+  function staffSection(st) {
+    const staff = staffOf(st);
+    if (!staff.length) return `<section><h3>${t('Staff', 'Staff')}</h3><div class="muted">${t(
+      'Add coordinators, captains, waiters, bartenders… from the “Staff” catalog to plan the service.',
+      'Agrega coordinador, capitanes, meseros, barman… desde el catálogo “Staff” para planear el servicio.')}</div></section>`;
+    const byRole = {};
+    staff.forEach(f => { byRole[f.role] = (byRole[f.role] || 0) + 1; });
+    const summary = Object.entries(byRole).map(([r, n]) => `${n} ${t((ROLE_PLURAL[r] || [r, r])[0], (ROLE_PLURAL[r] || [r, r])[1])}`).join(' · ');
+    const ws = waiters(st), tables = tablesOf(st), free = tables.filter(f => !waiterOf(st, f.id)).length;
+    return `<section><h3>${t('Staff', 'Staff')}</h3><div>${esc(summary)}</div>
+      ${ws.length ? `<table style="margin-top:6px">${ws.map(w => `<tr class="click" data-fsel="${w.id}"><td><span class="sw" style="background:${w.color}"></span>${esc(w.name)}</td>
+        <td class="r">${(w.tables || []).filter(id => tables.some(f => f.id === id)).length} ${t('tables', 'mesas')}</td></tr>`).join('')}</table>
+        ${free ? `<div class="muted" style="margin-top:4px;color:#b3372a">${t(`${free} tables without a waiter`, `${free} mesas sin mesero`)}</div>` : ''}
+        <div class="actions"><button class="btn" id="xDistribute">${t('Split tables among waiters', 'Repartir mesas entre meseros')}</button>
+        <button class="btn" id="xPrintWaiters">${t('Waiters sheet (PDF)', 'Hoja de meseros (PDF)')}</button></div>` : ''}</section>`;
   }
 
   const TEMPLATES = { redondas: ['Round tables', 'Redondas'], imperial: ['Banquet tables', 'Imperiales'], coctel: ['Cocktail', 'Cóctel'] };
@@ -184,6 +275,11 @@
     if (open) open.onclick = () => select({ kind: 'ext', panel: 'guests' });
     document.getElementById('xPrintSetup').onclick = () => printSetup(state);
     document.querySelectorAll('#panel [data-template]').forEach(b => b.onclick = () => applyTemplate(b.dataset.template));
+    document.querySelectorAll('#panel [data-fsel]').forEach(tr => tr.onclick = () => select({ kind: 'furn', id: tr.dataset.fsel }));
+    const dist = document.getElementById('xDistribute');
+    if (dist) dist.onclick = () => mutate(() => distributeTables(state)) || toast(t('Tables split among waiters', 'Mesas repartidas entre los meseros'));
+    const pw = document.getElementById('xPrintWaiters');
+    if (pw) pw.onclick = () => printWaiters(state);
     const input = document.getElementById('xGuests');
     if (!input) return;
     input.onchange = () => {
@@ -194,6 +290,16 @@
   }
 
   function panel(f) {
+    if (f.type === 'staff' && SECTIONED.includes(f.role)) {
+      const tables = tablesOf(state), mine = new Set(f.tables || []);
+      return `<div class="full" style="grid-column:1/-1"><b style="font-weight:600">${t('Tables served', 'Mesas que atiende')}</b>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${tables.map(x => {
+          const other = !mine.has(x.id) && waiterOf(state, x.id);
+          return `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);flex-direction:row">
+            <input type="checkbox" data-wtable="${x.id}" ${mine.has(x.id) ? 'checked' : ''}>${esc(x.name.replace(/^Mesa /, ''))}${other ? `<span class="sw" style="background:${other.color};margin:0 0 0 4px"></span>` : ''}</label>`;
+        }).join('')}</div>
+        <div class="muted" style="margin-top:4px">${t('A colored dot means another waiter has it.', 'El punto de color indica que la atiende otro mesero.')}</div></div>`;
+    }
     if (!SEATED.includes(f.type)) return '';
     return `<label>${t('Chairs', 'Sillas')}<input type="number" id="xSeats" value="${f.seats ?? 0}" min="0" max="40" step="1" inputmode="numeric"></label>
       <label>${t('Chair color', 'Color de silla')}<input type="color" id="xChair" value="${f.chair || CHAIR}"></label>
@@ -201,6 +307,12 @@
   }
 
   function bindPanel(f, upd) {
+    document.querySelectorAll('#panel [data-wtable]').forEach(cb => cb.onchange = () => mutate(() => {
+      const id = cb.dataset.wtable;
+      waiters(state).forEach(w => { if (w.id !== f.id && w.tables) w.tables = w.tables.filter(x => x !== id); });
+      const me = state.furniture.find(g => g.id === f.id);
+      me.tables = (me.tables || []).filter(x => x !== id).concat(cb.checked ? [id] : []);
+    }));
     const s = document.getElementById('xSeats');
     if (!s) return;
     s.onchange = () => { const v = parseInt(s.value, 10); if (!isNaN(v)) upd(g => { g.seats = Math.max(0, Math.min(40, v)); }); };
@@ -216,7 +328,10 @@
   function panelAfter(f) {
     if (!SEATED.includes(f.type)) return '';
     const here = seatedAt(state, f.id), cap = seats(f);
-    const head = `<h3>${t('Guests at this table', 'Invitados en esta mesa')} <small>${here.length}/${cap}</small></h3>`;
+    const waiter = waiterOf(state, f.id), diets = dietSummary(here);
+    const head = `<h3>${t('Guests at this table', 'Invitados en esta mesa')} <small>${here.length}/${cap}</small></h3>
+      ${waiter ? `<div class="muted"><span class="sw" style="background:${waiter.color}"></span>${t('Served by', 'La atiende')} ${esc(waiter.name)}</div>` : ''}
+      ${diets && canSeeGuests() ? `<div class="muted" style="color:#b5653a">${esc(diets)}</div>` : ''}`;
     const view = `<div class="actions"><button class="btn primary" data-viewfrom="${f.id}">${t('View from this table (3D)', 'Ver desde esta mesa (3D)')}</button></div>`;
     if (!canSeeGuests()) return `<section>${head}${view}</section>`;
     const free = list(state).filter(g => !isSeated(state, g));
@@ -405,13 +520,32 @@
   function printByTable(st) {
     const cards = tablesOf(st).map(f => {
       const here = seatedAt(st, f.id);
+      const diets = dietSummary(here), waiter = waiterOf(st, f.id);
       return `<div class="card"><h3><span>${esc(f.name)}</span><span class="muted">${here.length}/${seats(f)}</span></h3>
+        ${waiter || diets ? `<p class="muted" style="margin:-2px 0 6px;font-size:12px">${[waiter ? esc(waiter.name) : '', diets ? `<span class="diet">${esc(diets)}</span>` : ''].filter(Boolean).join(' · ')}</p>` : ''}
         <ol>${here.map(g => `<li>${esc(g.name)}${g.diet ? ` <span class="diet">${esc(g.diet)}</span>` : ''}</li>`).join('')}</ol></div>`;
     });
     const free = list(st).filter(g => !isSeated(st, g));
     if (free.length) cards.push(`<div class="card"><h3><span>${t('No table', 'Sin mesa')}</span><span class="muted">${free.length}</span></h3>
       <ol>${free.map(g => `<li>${esc(g.name)}</li>`).join('')}</ol></div>`);
     openPrint(t('Guests by table', 'Invitados por mesa'), `${header(t('Guests by table', 'Invitados por mesa'))}<div class="grid">${cards.join('')}</div>`);
+  }
+
+  /** Para cada mesero: sus mesas, cuántos invitados y las dietas de cada mesa. */
+  function printWaiters(st) {
+    const tables = tablesOf(st);
+    const cards = waiters(st).map(w => {
+      const mine = tables.filter(f => (w.tables || []).includes(f.id));
+      const guests = mine.reduce((a, f) => a + seatedAt(st, f.id).length, 0);
+      return `<div class="card"><h3><span><span class="sw" style="background:${w.color}"></span>${esc(w.name)}</span><span class="muted">${guests} ${t('guests', 'invitados')}</span></h3>
+        <table>${mine.map(f => { const here = seatedAt(st, f.id); const d = dietSummary(here);
+          return `<tr><td><b>${esc(f.name)}</b></td><td class="r">${here.length}/${seats(f)}</td></tr>${d ? `<tr><td colspan="2" class="diet">${esc(d)}</td></tr>` : ''}`; }).join('')
+          || `<tr><td class="muted">${t('No tables yet', 'Sin mesas asignadas')}</td></tr>`}</table></div>`;
+    });
+    const free = tables.filter(f => !waiterOf(st, f.id));
+    if (free.length) cards.push(`<div class="card"><h3><span>${t('Without a waiter', 'Sin mesero')}</span><span class="muted">${free.length}</span></h3>
+      <p>${free.map(f => esc(f.name)).join(', ')}</p></div>`);
+    openPrint(t('Waiters sheet', 'Hoja de meseros'), `${header(t('Waiters sheet', 'Hoja de meseros'))}${planSvg()}<div class="grid" style="margin-top:12px">${cards.join('')}</div>`);
   }
 
   function printAbc(st) {
@@ -431,7 +565,10 @@
   }
 
   window.__EXT__ = {
-    lib, namesEn, nolabel: MODELS.nolabel || [], svg: MODELS.svg || {}, build3d: MODELS.build3d || {},
+    lib, namesEn, nolabel: (MODELS.nolabel || []).concat('staff'),
+    svg: Object.assign({}, MODELS.svg, { staff: staffSvg },
+      Object.fromEntries(SEATED.map(k => [k, withSection((MODELS.svg || {})[k])]))),
+    build3d: Object.assign({}, MODELS.build3d, { staff: staff3d }),
     seats, onAdd, overview, bindOverview, panel, bindPanel, panelAfter, label, CHAIR,
     extPanel: sel => (sel.panel === 'guests' && canSeeGuests() ? guestsPanel() : ''),
     bindExtPanel: sel => { if (sel.panel === 'guests' && canSeeGuests()) bindGuestsPanel(); },

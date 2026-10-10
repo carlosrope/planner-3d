@@ -20,6 +20,9 @@ const furniture = z.object({
   seats: z.number().int().min(0).max(80).optional(),
   table: num.positive().max(100_000).optional(),
   chair: color.optional(),
+  /** Staff: rol del marcador y mesas que atiende (meseros y capitanes). */
+  role: z.string().max(20).optional(),
+  tables: z.array(id).max(300).optional(),
 });
 
 const guest = z.object({

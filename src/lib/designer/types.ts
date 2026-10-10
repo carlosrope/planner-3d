@@ -78,6 +78,9 @@ export type Furniture = {
   seats?: number;
   table?: number;
   chair?: string;
+  /** Staff: rol del marcador y mesas que atiende. */
+  role?: string;
+  tables?: string[];
 };
 
 /** Estado de una planta tal como lo guarda el diseñador. */
