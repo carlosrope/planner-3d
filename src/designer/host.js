@@ -11,6 +11,9 @@
 (function () {
   const D = window.__HOST_DATA__;
   const EDIT = D.mode === 'edit';
+  // Enlace del cliente con ?visita: entra directo a la visita guiada en lugar de la portada
+  const TOUR_LINK = !EDIT && new URLSearchParams(location.search).has('visita');
+  const OPENS_KEY = 'planner3d-compartir-abre';
   const dists = D.distributions;
   let active = dists.find(d => d.id === D.activeId) || dists[0];
   let api = null, levelId = null;
@@ -186,6 +189,9 @@
   dialog.hostDlg .row .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
   dialog.hostDlg .row .btn.danger{color:#b3372a}
   dialog.hostDlg .muted{color:var(--muted);font-size:12px;margin:8px 0 0}
+  dialog.hostDlg .opens{display:flex;gap:4px;padding:3px;border-radius:10px;background:#f2ede4;margin-bottom:6px}
+  dialog.hostDlg .opens button{flex:1;min-height:36px;border:0;border-radius:8px;background:transparent;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+  dialog.hostDlg .opens button.on{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:600}
   dialog.hostDlg .thumb{width:100%;aspect-ratio:1200/630;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#f2ede4;margin-bottom:10px}
   #hostBar .brandChip{display:inline-flex;align-items:center;gap:6px;padding:0 8px 0 2px;font-weight:600;white-space:nowrap;max-width:14em}
   #hostBar .brandChip span{overflow:hidden;text-overflow:ellipsis}
@@ -465,7 +471,10 @@
     g.font = '700 38px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     g.fillText(D.title.slice(0, 48), x, areaH + band / 2 - (B.name ? 16 : 0));
     if (B.name) { g.font = '400 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'; g.globalAlpha = .9; g.fillText(t(`Design by ${B.name}`, `Diseño de ${B.name}`).slice(0, 70), x, areaH + band / 2 + 24); g.globalAlpha = 1; }
-    return cv.toDataURL('image/jpeg', 0.84);
+    // WhatsApp a veces no muestra imágenes de más de ~300 KB: se baja la calidad hasta que quepa
+    let q = 0.84, out = cv.toDataURL('image/jpeg', q);
+    while (out.length > 380_000 && q > 0.5) out = cv.toDataURL('image/jpeg', (q -= 0.1));
+    return out;
   }
 
   /** Portada del enlace del cliente: quién hizo el diseño y botones grandes para verlo. */
@@ -504,27 +513,70 @@
     try { url = new URL((await request('POST', `/api/events/${D.eventId}/share`, preview ? { preview } : {})).path, location.origin).toString(); }
     catch (e) { busy.close(); return api.toast(e.message); }
     busy.close();
-    const text = t(`Take a look at the design of ${D.title}: ${url}`, `Mira el diseño de ${D.title}: ${url}`);
+    // Al abrir el enlace: la visita guiada directo (se recuerda la elección) o la portada con botones
+    let opens = 'tour';
+    try { opens = localStorage.getItem(OPENS_KEY) || 'tour'; } catch { /* sin almacenamiento */ }
+    const link = () => { const u = new URL(url); if (opens === 'tour') u.searchParams.set('visita', '1'); return u.toString(); };
+    const text = () => opens === 'tour'
+      ? t(`Take the guided 3D tour of ${D.title}: ${link()}`, `Mira la visita guiada en 3D de ${D.title}: ${link()}`)
+      : t(`Take a look at the design of ${D.title}: ${link()}`, `Mira el diseño de ${D.title}: ${link()}`);
     const dlg = dialog(`<h3>${t('Share with your client', 'Compartir con tu cliente')}</h3>
       ${preview ? `<img class="thumb" src="${preview}" alt="">` : ''}
       ${preview && !(typeof is3D === 'function' && is3D()) ? `<p class="muted" style="margin:-4px 0 10px">${t(
         'Tip: share from the 3D view so the WhatsApp preview shows the 3D.',
         'Consejo: comparte desde la Vista 3D para que la vista previa en WhatsApp salga en 3D.')}</p>` : ''}
-      <label>${t('View link (2D, 3D and walk-through; nothing is saved)', 'Enlace de solo vista (2D, 3D y recorrido; no se guarda nada)')}<input readonly value="${escape(url)}"></label>
+      <label>${t('When they open it', 'Al abrir el enlace')}</label>
+      <div class="opens" role="group"><button data-opens="tour">▶ ${t('Guided tour', 'Visita guiada')}</button>
+        <button data-opens="cover">${t('Cover page', 'Portada')}</button></div>
+      <p class="muted" data-a="note" style="margin:0 0 10px"></p>
+      <label>${t('View link (2D, 3D and walk-through; nothing is saved)', 'Enlace de solo vista (2D, 3D y recorrido; no se guarda nada)')}<input readonly></label>
       <div class="row">${navigator.share ? `<button class="btn primary" data-a="native">${t('Share…', 'Compartir…')}</button>` : ''}
-        <a class="btn wa" data-a="wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}">WhatsApp</a></div>
+        <a class="btn wa" data-a="wa" target="_blank" rel="noopener">WhatsApp</a></div>
       <div class="row"><button class="btn" data-a="copy">${t('Copy link', 'Copiar enlace')}</button>
-        <a class="btn" target="_blank" rel="noopener" href="${escape(url)}">${t('Open', 'Abrir')}</a></div>
+        <a class="btn" data-a="open" target="_blank" rel="noopener">${t('Open', 'Abrir')}</a></div>
       <p class="muted">${t('It shows every layout; the recommended one opens first.', 'Muestra todas las distribuciones; abre primero la recomendada.')}</p>
       <div class="row"><button class="btn" data-a="close">${t('Close', 'Cerrar')}</button></div>`);
     const input = dlg.querySelector('input');
+    const apply = () => {
+      dlg.querySelectorAll('[data-opens]').forEach(b => b.classList.toggle('on', b.dataset.opens === opens));
+      dlg.querySelector('[data-a="note"]').textContent = opens === 'tour'
+        ? t('It starts the guided 3D tour right away; then they can walk around or see the plan.',
+          'Entra directo a la visita guiada en 3D; después puede recorrer por su cuenta o ver el plano.')
+        : t('It opens a cover with your brand and buttons for the tour, the 3D and the plan.',
+          'Abre una portada con tu marca y botones para la visita, el 3D y el plano.');
+      input.value = link();
+      dlg.querySelector('[data-a="wa"]').href = `https://wa.me/?text=${encodeURIComponent(text())}`;
+      dlg.querySelector('[data-a="open"]').href = link();
+    };
+    dlg.querySelectorAll('[data-opens]').forEach(b => b.onclick = () => {
+      opens = b.dataset.opens;
+      try { localStorage.setItem(OPENS_KEY, opens); } catch { /* sin almacenamiento */ }
+      apply();
+    });
+    apply();
     input.onfocus = () => input.select();
     dlg.querySelector('[data-a="copy"]').onclick = async () => {
-      try { await navigator.clipboard.writeText(url); api.toast(t('Link copied', 'Enlace copiado')); }
+      try { await navigator.clipboard.writeText(link()); api.toast(t('Link copied', 'Enlace copiado')); }
       catch { input.focus(); input.select(); }
     };
-    dlg.querySelector('[data-a="native"]')?.addEventListener('click', () => navigator.share({ title: D.title, text, url }).catch(() => {}));
+    dlg.querySelector('[data-a="native"]')?.addEventListener('click', () => navigator.share({ title: D.title, text: text(), url: link() }).catch(() => {}));
     dlg.querySelector('[data-a="close"]').onclick = () => dlg.close();
+  }
+
+  /** Enlace con ?visita: en lugar de la portada, entra directo a la visita guiada (si el 3D no carga, la portada). */
+  function tourIntro() {
+    const el = document.createElement('div');
+    el.id = 'clientWelcome';
+    el.innerHTML = `<div class="card">
+      ${B.name ? `<div class="who">${brandMark()}<div><small>${t('Design by', 'Diseño de')}</small><b>${escape(B.name)}</b></div></div>` : ''}
+      <h2>${escape(D.title)}</h2><p class="props">${t('Getting the guided tour ready…', 'Preparando la visita guiada…')}</p></div>`;
+    document.body.appendChild(el);
+    const go = (n = 0) => {
+      if (window.View3D) { el.remove(); setView('3d').then(() => window.View3D.tour?.()); }
+      else if (n < 100) setTimeout(() => go(n + 1), 100);
+      else { el.remove(); clientWelcome(); }   // el 3D no cargó (three.js viene de internet): la portada de siempre
+    };
+    go();
   }
 
   window.__HOST__ = {
@@ -548,7 +600,7 @@
       document.head.appendChild(style);
       syncUrl();
       renderBar();
-      if (!EDIT) clientWelcome();
+      if (TOUR_LINK) tourIntro(); else if (!EDIT) clientWelcome();
     },
   };
 })();

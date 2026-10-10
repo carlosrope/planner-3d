@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { NextResponse } from "next/server";
@@ -20,6 +20,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/events/[id]
 
   const parsed = body.safeParse(await request.json().catch(() => ({})));
   const preview = parsed.success ? parsed.data.preview : undefined;
+  // WhatsApp guarda la vista previa de cada dirección: con una imagen nueva, el enlace lleva su huella
+  // (?v=) para que se vea la imagen nueva. Es la misma huella que usa la página (md5 de la imagen).
+  const version = preview ? `?v=${createHash("md5").update(preview).digest("hex").slice(0, 8)}` : "";
 
   const [existing] = await db
     .select({ token: shareLink.token })
@@ -28,7 +31,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/events/[id]
     .limit(1);
   if (existing) {
     if (preview) await db.update(shareLink).set({ preview }).where(eq(shareLink.token, existing.token));
-    return NextResponse.json({ path: `/v/${existing.token}` });
+    return NextResponse.json({ path: `/v/${existing.token}${version}` });
   }
 
   const [first] = await db
@@ -41,5 +44,5 @@ export async function POST(request: Request, ctx: RouteContext<"/api/events/[id]
   // Sin letras que se confunden al leerlas (I/l/1, O/0).
   const token = Array.from(randomBytes(16), (b) => TOKEN_CHARS[b % TOKEN_CHARS.length]).join("");
   await db.insert(shareLink).values({ token, eventId: id, layoutId: first.id, role: "cliente", layers: [], preview });
-  return NextResponse.json({ path: `/v/${token}` }, { status: 201 });
+  return NextResponse.json({ path: `/v/${token}${version}` }, { status: 201 });
 }

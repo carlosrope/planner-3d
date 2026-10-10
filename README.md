@@ -49,8 +49,10 @@ npm run dev
   barra / dulces / pastel, una mesa de atrás, una junto a la pista, la mesa principal y la pista. Casa:
   acceso, sala, comedor, cocina, recámaras, baños y servicio, terraza y jardín, con el área de cada
   cuarto. Pausa, siguiente y terminar; mirar o caminar la pone en pausa; x1/x2/x3 también la acelera.
-- **Compartir:** enlace `/v/…` de solo vista con portada de la marca, vista previa para WhatsApp,
-  WhatsApp del negocio y comentarios del cliente (💬 en el diseñador).
+- **Compartir:** enlace `/v/…` de solo vista; al compartir se elige si abre directo la **visita guiada**
+  (`?visita=1`, se recuerda la elección) o la portada de la marca. Vista previa para WhatsApp con la
+  huella de la imagen en el enlace y en la imagen (`?v=`), para que al volver a compartir no salga la
+  imagen vieja del caché. WhatsApp del negocio y comentarios del cliente (💬 en el diseñador).
 - Borradores del aviso de privacidad y los términos en `docs/legal/` (pendientes de revisión legal).
 
 ### Probar en el iPhone

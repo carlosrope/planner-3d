@@ -130,7 +130,13 @@ export async function canEditLayout(layoutId: string, userId: string) {
 /** Evento abierto con un enlace para compartir (solo lectura; no pide sesión). */
 export async function getSharedEvent(token: string) {
   const [row] = await db
-    .select({ event, venue, firstLayoutId: shareLink.layoutId, hasPreview: sql<boolean>`${shareLink.preview} is not null` })
+    .select({
+      event,
+      venue,
+      firstLayoutId: shareLink.layoutId,
+      /** Huella de la imagen de vista previa (cambia con la imagen; null si no hay): rompe el caché de WhatsApp. */
+      previewVersion: sql<string | null>`substr(md5(${shareLink.preview}), 1, 8)`,
+    })
     .from(shareLink)
     .innerJoin(event, eq(shareLink.eventId, event.id))
     .innerJoin(venue, eq(event.venueId, venue.id))

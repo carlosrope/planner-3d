@@ -9,15 +9,23 @@ export async function GET(request: Request, ctx: RouteContext<"/v/[token]">) {
   const data = await getSharedEvent(token);
   const plan = data?.venue.plan;
   if (!data || !plan) return new Response("Este enlace ya no está disponible.", { status: 404 });
-  const wanted = new URL(request.url).searchParams.get("d") ?? data.firstLayoutId;
+  const url = new URL(request.url);
+  const wanted = url.searchParams.get("d") ?? data.firstLayoutId;
+  // ?visita: el enlace abre directo la visita guiada (lo arranca host.js)
+  const tour = url.searchParams.has("visita");
   const full = withStarter(plan, { guests: data.event.guestCount ?? 0, kind: data.event.kind });
   const [org, comments] = await Promise.all([getOrgBrand(data.event.orgId), listComments(data.event.id)]);
   const brand = brandOf(org);
+  const what = tour ? "visita guiada en 3D" : "plano y recorrido 3D";
   const description = brand.name
-    ? `Diseño de ${brand.name}: plano y recorrido 3D`
+    ? `Diseño de ${brand.name}: ${what}`
+    : tour ? `Visita guiada en 3D ${plan.kind === "salon" ? "del evento" : "de la casa"}`
     : plan.kind === "salon" ? "Plano 2D y recorrido 3D del evento" : "Plano 2D y recorrido 3D de la casa";
+  const origin = publicOrigin(request);
   return designerResponse({ ...full, title: data.event.title }, hostFor("view", data.event, data.layouts, wanted, brand, comments), {
-    image: data.hasPreview ? `${publicOrigin(request)}/v/${token}/vista.jpg` : undefined,
+    image: data.previewVersion ? `${origin}/v/${token}/vista.jpg?v=${data.previewVersion}` : undefined,
     description,
+    url: `${origin}/v/${token}${tour ? "?visita=1" : ""}`,
+    siteName: brand.name || undefined,
   });
 }

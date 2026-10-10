@@ -106,7 +106,11 @@ const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "
 const json = (v: unknown) => JSON.stringify(v).replace(/</g, "\\u003c");
 const inline = (code: string) => `<script>\n${code}\n</script>\n`;
 
-export async function designerResponse(plan: DesignerPlan, host?: HostData, meta?: { image?: string; description?: string }) {
+export async function designerResponse(
+  plan: DesignerPlan,
+  host?: HostData,
+  meta?: { image?: string; description?: string; url?: string; siteName?: string },
+) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
   if (plan.kind === "salon") {
@@ -121,13 +125,16 @@ export async function designerResponse(plan: DesignerPlan, host?: HostData, meta
   const description = escapeHtml(
     meta?.description ?? (plan.kind === "salon" ? "Plano 2D y recorrido 3D del evento" : "Plano 2D y recorrido 3D de la casa"),
   );
+  const tag = (property: string, content: string) => `\n<meta property="${property}" content="${escapeHtml(content)}">`;
   const image = meta?.image
-    ? `\n<meta property="og:image" content="${escapeHtml(meta.image)}">\n<meta property="og:image:width" content="1200">` +
-      `\n<meta property="og:image:height" content="630">\n<meta name="twitter:card" content="summary_large_image">`
+    ? tag("og:image", meta.image) + tag("og:image:type", "image/jpeg") + tag("og:image:width", "1200") +
+      tag("og:image:height", "630") + tag("og:image:alt", plan.title) + `\n<meta name="twitter:card" content="summary_large_image">`
     : "";
+  const extra = tag("og:type", "website") + tag("og:locale", "es_MX") +
+    (meta?.url ? tag("og:url", meta.url) : "") + (meta?.siteName ? tag("og:site_name", meta.siteName) : "");
   const page = html.replace(
     /<title>[^<]*<\/title>/,
-    `<title>${title}</title>\n<meta property="og:title" content="${title}">\n<meta property="og:description" content="${description}">${image}`,
+    `<title>${title}</title>\n<meta property="og:title" content="${title}">\n<meta property="og:description" content="${description}">${extra}${image}`,
   );
   // Los datos van antes del primer <script> porque el diseñador los lee al cargar.
   const at = page.indexOf("<script");
