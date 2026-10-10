@@ -607,6 +607,25 @@ sub(
 # El alejamiento máximo de la cámara crece con el lugar (un salón de 44 m no cabe a 45 m)
 sub("orbit.maxDistance = 45;", "orbit.maxDistance = Math.max(45, 45*S3);")
 
+# Salones: panel de la lista de invitados, invitados debajo de cada mesa y ocupación en el plano
+sub(
+    "  const p = $('#panel');\n  if (ui.sel?.kind === 'furn'){",
+    "  const p = $('#panel');\n"
+    "  if (ui.sel?.kind === 'ext' && EXT){ p.innerHTML = EXT.extPanel(ui.sel); EXT.bindExtPanel(ui.sel); if (p.innerHTML) return; ui.sel = null; }\n"
+    "  if (ui.sel?.kind === 'furn'){",
+)
+sub(
+    "  <section class=\"muted\" style=\"font-size:12px\">${tr('拖动家具移动",
+    "  ${EXT?.panelAfter?.(f) ?? ''}\n  <section class=\"muted\" style=\"font-size:12px\">${tr('拖动家具移动",
+)
+sub(
+    "opacity=\".8\" pointer-events=\"none\">${esc(nm(f.name))}</text>",
+    "opacity=\".8\" pointer-events=\"none\">${esc(EXT?.label?.(f) ?? nm(f.name))}</text>",
+)
+
+# Botones deshabilitados del panel (p. ej. exportes con la lista vacía)
+sub(".narrow-only{display:none!important}", "#panel .btn:disabled{opacity:.4;pointer-events:none}\n.narrow-only{display:none!important}")
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

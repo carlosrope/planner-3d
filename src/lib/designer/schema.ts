@@ -22,11 +22,21 @@ const furniture = z.object({
   chair: color.optional(),
 });
 
+const guest = z.object({
+  id,
+  name: z.string().min(1).max(80),
+  group: z.string().max(60).optional(),
+  diet: z.string().max(80).optional(),
+  table: id.optional(),
+});
+
 const levelState = z.object({
   furniture: z.array(furniture).max(3000),
   rooms: z.record(id, z.object({ name: z.string().max(80), mat: z.string().max(40) })).optional(),
   demolished: z.array(z.string().max(16)).max(500).optional(),
   measures: z.array(z.unknown()).max(500).optional(),
+  /** Salones: lista de invitados de esta distribución (table = id de la mesa). */
+  guestList: z.array(guest).max(3000).optional(),
 });
 
 export const designDocSchema = z.object({

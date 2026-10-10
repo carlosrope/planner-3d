@@ -86,6 +86,8 @@ export type LevelState = {
   rooms?: Record<string, { name: string; mat: string }>;
   demolished?: string[];
   measures?: unknown[];
+  /** Salones: lista de invitados de esta distribución (table = id de la mesa). */
+  guestList?: { id: string; name: string; group?: string; diet?: string; table?: string }[];
 };
 
 /** Una distribución completa: una entrada por planta (las que faltan usan el amueblado inicial). */

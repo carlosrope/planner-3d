@@ -63,7 +63,12 @@
     saving = request('PUT', `/api/layouts/${dist.id}`, { doc: dist.doc, revision: dist.revision })
       .then(r => { dist.revision = r.revision; setStatus(pending ? t('Saving…', 'Guardando…') : t('Saved', 'Guardado')); })
       .catch(e => {
-        if (e.status === 401 || e.status === 404) {
+        if (e.status === 400) {
+          conflict = true;
+          setStatus(t('Not saved', 'Sin guardar'));
+          alert(t('This change could not be saved (invalid data). Reload the page; if it happens again, let us know.',
+            'Este cambio no se pudo guardar (datos inválidos). Recarga la página; si vuelve a pasar, avísanos.'));
+        } else if (e.status === 401 || e.status === 404) {
           conflict = true;
           setStatus(t('Not saved', 'Sin guardar'));
           alert(t('Your session ended. Sign in again in another tab and reload this page; your last change was not saved.',
