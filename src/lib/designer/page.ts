@@ -36,6 +36,7 @@ export type HostData = {
   title: string;
   guests: number | null;
   backHref?: string;
+  backLabel?: string;
   activeId: string;
   distributions: { id: string; name: string; note: string; recommended: boolean; revision: number; doc: unknown }[];
 };
@@ -48,7 +49,7 @@ export function hostFor(
   ev: { id: string; title: string; guestCount: number | null },
   layouts: LayoutRow[],
   wanted: string | null,
-  backHref?: string,
+  back?: { href: string; label: string },
 ): HostData {
   const active = layouts.find((l) => l.id === wanted) ?? layouts.find((l) => l.recommended) ?? layouts[0];
   return {
@@ -56,7 +57,8 @@ export function hostFor(
     eventId: ev.id,
     title: ev.title,
     guests: ev.guestCount,
-    backHref,
+    backHref: back?.href,
+    backLabel: back?.label,
     activeId: active.id,
     distributions: layouts.map(({ id, name, note, recommended, revision, doc }) => ({ id, name, note, recommended, revision, doc })),
   };

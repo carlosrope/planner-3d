@@ -16,16 +16,16 @@ async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const db = drizzle({ client: pool });
   const places = [
-    { ...DEMO_VENUE, plan: plan("salones/salon-demo.json") },
-    { ...CHARDONNAY, plan: plan("casas/chardonnay.json") },
+    { ...DEMO_VENUE, kind: "salon" as const, plan: plan("salones/salon-demo.json") },
+    { ...CHARDONNAY, kind: "casa" as const, plan: plan("casas/chardonnay.json") },
   ];
   for (const v of places) {
     const [existing] = await db.select({ id: venue.id }).from(venue).where(eq(venue.name, v.name));
     if (existing) {
-      await db.update(venue).set({ spec: v.spec, plan: v.plan, city: v.city }).where(eq(venue.id, existing.id));
+      await db.update(venue).set({ kind: v.kind, spec: v.spec, plan: v.plan, city: v.city }).where(eq(venue.id, existing.id));
       console.log(`Actualizado: ${v.name}`);
     } else {
-      await db.insert(venue).values({ name: v.name, city: v.city, isPublic: true, spec: v.spec, plan: v.plan });
+      await db.insert(venue).values({ name: v.name, kind: v.kind, city: v.city, isPublic: true, spec: v.spec, plan: v.plan });
       console.log(`Creado: ${v.name}`);
     }
   }

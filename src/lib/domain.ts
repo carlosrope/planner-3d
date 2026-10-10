@@ -11,6 +11,17 @@ export const EVENT_KIND_LABELS: Record<EventKind, string> = {
   otro: "Otro",
 };
 
+/** Tipos de evento en un salón (la casa tiene su propia sección). */
+export const SALON_EVENT_KINDS = ["boda", "xv", "graduacion", "corporativo", "otro"] as const satisfies readonly EventKind[];
+
+/** Las dos secciones de la app: eventos en salón (wedding planners) y casas (inmobiliarias). */
+export const SECTIONS = {
+  salones: { label: "Eventos en salón", venueKind: "salon" },
+  casas: { label: "Casas", venueKind: "casa" },
+} as const;
+export type Section = keyof typeof SECTIONS;
+export const sectionOf = (venueKind: string): Section => (venueKind === "casa" ? "casas" : "salones");
+
 export const EVENT_STATUSES = ["borrador", "confirmado", "realizado", "cancelado"] as const;
 export type EventStatus = (typeof EVENT_STATUSES)[number];
 export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {

@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { EventKind, EventStatus, MemberRole, OrgKind, ShareRole } from "../domain";
 import type { DesignDoc, DesignerPlan } from "../designer/types";
-import type { Layer, VenueSpec } from "../layout/types";
+import type { Layer, VenueKind, VenueSpec } from "../layout/types";
 
 const id = () =>
   text("id")
@@ -122,6 +122,8 @@ export const membership = pgTable(
 export const venue = pgTable("venue", {
   id: id(),
   name: text("name").notNull(),
+  /** Salón de eventos o casa (inmobiliaria): decide en qué sección aparece y qué se diseña. */
+  kind: text("kind").$type<VenueKind>().notNull().default("salon"),
   city: text("city").notNull().default("Los Mochis"),
   /** El salón dueño del modelo, si es cliente. */
   ownerOrgId: text("owner_org_id").references(() => organization.id, { onDelete: "set null" }),

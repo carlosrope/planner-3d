@@ -507,6 +507,7 @@ def main(house_path, cfg_path, out_path):
         )
     out = {
         "id": cfg["id"],
+        "kind": "casa",
         "title": cfg["title"],
         "subtitle": cfg["subtitle"],
         "lot": [mm(W), mm(D)],

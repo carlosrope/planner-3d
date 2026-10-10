@@ -53,7 +53,7 @@ const venueVisibleTo = (orgId: string) =>
 
 export async function listVenues(orgId: string) {
   return db
-    .select({ id: venue.id, name: venue.name, city: venue.city })
+    .select({ id: venue.id, name: venue.name, city: venue.city, kind: venue.kind })
     .from(venue)
     .where(venueVisibleTo(orgId))
     .orderBy(asc(venue.name));
@@ -78,6 +78,7 @@ export async function listEvents(orgId: string) {
       eventDate: event.eventDate,
       guestCount: event.guestCount,
       venueName: venue.name,
+      venueKind: venue.kind,
     })
     .from(event)
     .innerJoin(venue, eq(event.venueId, venue.id))

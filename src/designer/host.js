@@ -189,7 +189,7 @@
     const tabs = dists.map(d => `<button class="btn dist ${d === active ? 'on' : ''}" data-dist="${d.id}"
       title="${escape(d.note || '')}"><b>${escape(d.name)}</b>${d.recommended ? '<span class="star">★</span>' : ''}${d.note ? `<small>${escape(d.note)}</small>` : ''}</button>`).join('');
     bar.innerHTML = EDIT
-      ? `${D.backHref ? `<a class="btn" href="${escape(D.backHref)}">← ${t('Events', 'Eventos')}</a>` : ''}${tabs}
+      ? `${D.backHref ? `<a class="btn" href="${escape(D.backHref)}">← ${escape(D.backLabel || t('Projects', 'Proyectos'))}</a>` : ''}${tabs}
          <button class="btn" data-a="new" title="${t('New layout (copy of the current one)', 'Nueva distribución (copia de la actual)')}">＋</button>
          <button class="btn primary" data-a="share">${t('Share', 'Compartir')}</button><span id="hostStatus">${escape(statusText)}</span>`
       : `${tabs}<span class="viewonly">${t('View only', 'Solo vista')}</span>`;
