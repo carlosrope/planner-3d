@@ -34,6 +34,11 @@ npm run dev
   mesa y A–Z, meseros, CSV).
 - **Casas:** ficha de la propiedad (precio, m², recámaras…) y botón amueblada / sin muebles en el
   enlace del cliente.
+- **Recorrido** (3D, salones y casas): velocidad x1/x2/x3 (se recuerda), de pie o sentado, «Ir a…»
+  (entrada, pista, cada mesa sentado mirando a la pista, cada cuarto), dos toques en el piso para ir
+  ahí (en una mesa: sentarse), mapa que se abre grande para elegir a dónde ir, sensibilidad al mirar y
+  vista más amplia en el celular vertical. En escritorio: `1` `2` `3` velocidad, `C` sentarse, doble
+  clic para ir.
 - **Compartir:** enlace `/v/…` de solo vista con portada de la marca, vista previa para WhatsApp,
   WhatsApp del negocio y comentarios del cliente (💬 en el diseñador).
 - Borradores del aviso de privacidad y los términos en `docs/legal/` (pendientes de revisión legal).

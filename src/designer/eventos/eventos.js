@@ -346,17 +346,39 @@
       ${view}</section>`;
   }
 
+  /** Lugar de un invitado en la mesa (mm): del lado opuesto a la pista (o al escenario, o a la mesa principal), mirando hacia allá. */
+  function seatView(st, f) {
+    const focus = ['dancefloor', 'stage', 'headtable'].map(k => st.furniture.find(g => g.type === k && g.id !== f.id)).find(Boolean);
+    const tx = focus ? focus.cx : BOUNDS.x + BOUNDS.w / 2, ty = focus ? focus.cy : BOUNDS.y + BOUNDS.h / 2;
+    const dx = f.cx - tx, dy = f.cy - ty, len = Math.hypot(dx, dy) || 1;
+    const back = Math.min(f.w, f.d) / 2 + 150;   // detrás de la silla
+    return { x: f.cx + dx / len * back, y: f.cy + dy / len * back, tx, ty };
+  }
+
   /** Cámara 3D sentada en la mesa, mirando a la pista (o al escenario, o a la mesa principal). */
   async function viewFromTable(id) {
     const f = state.furniture.find(g => g.id === id);
     if (!f) return;
-    const focus = ['dancefloor', 'stage', 'headtable'].map(k => state.furniture.find(g => g.type === k && g.id !== f.id)).find(Boolean);
-    const tx = focus ? focus.cx : BOUNDS.x + BOUNDS.w / 2, ty = focus ? focus.cy : BOUNDS.y + BOUNDS.h / 2;
-    const dx = f.cx - tx, dy = f.cy - ty, len = Math.hypot(dx, dy) || 1;
-    const back = Math.min(f.w, f.d) / 2 + 150;   // detrás de la silla del lado opuesto a la pista
+    const v = seatView(state, f);
     if (typeof is3D === 'function' && !is3D()) { await setView('3d'); await new Promise(r => setTimeout(r, 200)); }
     closeDrawers?.();
-    window.View3D?.viewFrom(f.cx + dx / len * back, f.cy + dy / len * back, tx, ty);
+    window.View3D?.viewFrom(v.x, v.y, v.tx, v.ty);
+  }
+
+  /** «Ir a…» del recorrido: la pista (de pie, de espaldas al escenario, mirando a los invitados) y cada mesa (sentado, como en «Ver desde esta mesa»). */
+  function walkSpots(st) {
+    const out = [], dance = st.furniture.find(g => g.type === 'dancefloor');
+    if (dance) {
+      const stage = ['stage', 'dj'].map(k => st.furniture.find(g => g.type === k)).find(Boolean);
+      const ax = stage ? dance.cx - stage.cx : BOUNDS.x + BOUNDS.w / 2 - dance.cx, ay = stage ? dance.cy - stage.cy : BOUNDS.y + BOUNDS.h / 2 - dance.cy;
+      const len = Math.hypot(ax, ay), ux = len ? ax / len : 0, uy = len ? ay / len : 1;
+      const back = Math.max(0, Math.min(dance.w, dance.d) / 2 - 500);   // en la orilla del lado del escenario: se ve toda la pista
+      out.push({ group: t('Places', 'Lugares'), label: t('Dance floor', 'Pista de baile'), x: dance.cx - ux * back, y: dance.cy - uy * back,
+        tx: dance.cx + ux * 6000, ty: dance.cy + uy * 6000, sit: false });
+    }
+    tablesOf(st).forEach(f => out.push({ group: t('Tables', 'Mesas'), label: nm(f.name), id: f.id, cx: f.cx, cy: f.cy,
+      r: Math.max(f.w, f.d) / 2, sit: true, ...seatView(st, f) }));
+    return out;
   }
 
   /** Nombre en el plano: con lista de invitados, la mesa muestra cuántos lleva ("Mesa 3 · 7/10"). */
@@ -572,6 +594,6 @@
     seats, onAdd, overview, bindOverview, panel, bindPanel, panelAfter, label, CHAIR,
     extPanel: sel => (sel.panel === 'guests' && canSeeGuests() ? guestsPanel() : ''),
     bindExtPanel: sel => { if (sel.panel === 'guests' && canSeeGuests()) bindGuestsPanel(); },
-    parseList, autoSeat,
+    parseList, autoSeat, walkSpots,
   };
 })();

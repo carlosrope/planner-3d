@@ -642,6 +642,453 @@ sub(
     "    flyTo(pose(new THREE.Vector3(wx(tx), 1.1, wz(ty)), new THREE.Vector3(wx(x), 1.4, wz(y))), 1400); },",
 )
 
+# ---------------------------------------------------------------------------
+# Recorrido: la vista sigue al dedo, velocidad x1/x2/x3, de pie o sentado, sensibilidad al mirar,
+# «Ir a…» (entrada, cuartos, pista y mesas), doble toque en el piso para ir ahí y mapa con
+# «toca a dónde quieres ir». En el original, arrastrar a la derecha giraba la vista a la izquierda
+# (como si se jalara el paisaje), al revés que el mouse con el puntero capturado.
+
+sub(
+    "#walkExit{position:absolute;right:16px;bottom:28px;z-index:3;display:none}",
+    """#walkExit{position:absolute;right:16px;bottom:28px;z-index:3;display:none}
+/* ---------- Recorrido: velocidad, altura, ir a…, mapa ---------- */
+#walkHud{position:absolute;inset:0;z-index:4;pointer-events:none;touch-action:manipulation}
+#walkHud[hidden],#walkHud [hidden]{display:none!important}
+#walkHud>*{pointer-events:auto}
+.wh-top{position:absolute;left:12px;top:12px;display:flex;gap:6px}
+.wh-pill{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:4px;height:36px;padding:0 14px;border:0;
+  border-radius:18px;background:rgba(255,253,249,.94);color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.18);font:inherit;font-size:13px;
+  font-weight:600;cursor:pointer;white-space:nowrap}
+.wh-pill select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer}
+#whCfg{width:36px;padding:0;font-size:17px}
+#whPop{position:absolute;left:12px;top:56px;display:grid;gap:5px;padding:10px 12px;border-radius:12px;background:rgba(255,253,249,.97);
+  box-shadow:0 8px 26px rgba(40,30,20,.22);font-size:12px;color:var(--muted)}
+.wh-seg{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:rgba(255,253,249,.94);box-shadow:0 2px 10px rgba(0,0,0,.18)}
+#whPop .wh-seg{background:#f2ece2;box-shadow:none}
+.wh-seg button{min-width:40px;height:32px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:var(--ink);font:inherit;
+  font-size:13px;font-weight:600;cursor:pointer}
+.wh-seg button.on{background:var(--accent);color:#fff}
+.wh-side{position:absolute;right:16px;bottom:16px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+#whMap{position:absolute;right:12px;top:12px;display:block;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.22);cursor:pointer}
+#whBig{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  padding:12px;background:rgba(30,28,25,.72)}
+#whBig canvas{display:block;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);cursor:crosshair}
+#whBig p{margin:0;color:#fff;font-size:13px;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+#whBig .btn{background:#fff}
+#view3d.mapopen #joy,#view3d.mapopen #walkExit{visibility:hidden}
+#whFade{position:absolute;inset:0;z-index:2;background:#1e1c19;opacity:0;pointer-events:none;transition:opacity .22s}
+#whFade.on{opacity:1}
+#view3d.walking #hint3d{top:auto;bottom:110px;white-space:normal;width:max-content;max-width:calc(100% - 32px);text-align:center;line-height:1.35}
+#hint3d.gone{opacity:0}
+@media (pointer:coarse){
+  .wh-side{bottom:84px}
+  #view3d.walking #hint3d{bottom:176px}
+}""",
+)
+sub(
+    '      <button class="btn primary" id="walkExit" data-en="Exit walk">退出漫游</button>',
+    '      <button class="btn primary" id="walkExit" data-en="Exit walk">退出漫游</button>\n'
+    '      <div id="whFade"></div>\n'
+    '      <div id="walkHud" hidden></div>',
+)
+
+# La vista sigue al dedo (y al mouse sin capturar): arrastrar a la derecha mira a la derecha
+sub(
+    "  eul.y += dx * .005; eul.x = THREE.MathUtils.clamp(eul.x + dy * .005, -1.35, 1.35);",
+    "  const k = .005 * walk.look;   // la vista sigue al dedo, igual que el mouse con el puntero capturado\n"
+    "  eul.y -= dx * k; eul.x = THREE.MathUtils.clamp(eul.x - dy * k, -1.35, 1.35);",
+)
+sub(
+    "const HINT_TOUCHWALK = () => tr('左下摇杆移动 · 拖动画面转向 · 点门开关', 'Joystick moves · drag to look · tap doors to open');\n"
+    "const HINT_WALK = () => tr('WASD 移动 · 鼠标转向 · Shift 快走 · E 开关门 · Esc 暂停', 'WASD moves · mouse looks · Shift runs · E opens doors · Esc pauses');",
+    "const HINT_TOUCHWALK = () => tr('左下摇杆移动 · 拖动画面转向 · 双击地面走过去', 'Joystick moves · drag to look · double-tap the floor to go there',\n"
+    "  'El control te mueve · arrastra para mirar · toca dos veces el piso para ir ahí');\n"
+    "const HINT_WALK = () => tr('WASD 移动 · 鼠标转向 · 1 2 3 速度 · C 坐下 · 双击走过去 · Esc 暂停', 'WASD moves · mouse looks · 1 2 3 speed · C sits · double-click to go · Esc pauses',\n"
+    "  'WASD para moverte · el mouse mira · 1 2 3 velocidad · C para sentarte · doble clic para ir · Esc pausa');",
+)
+# En el celular la ayuda es la del control desde antes de empezar (el original ponía la del teclado)
+sub(
+    "opt.mode === 'orbit' ? HINT_ORBIT() : touchWalk ? HINT_TOUCHWALK() : HINT_WALK(); }",
+    "opt.mode === 'orbit' ? HINT_ORBIT() : touchWalk || COARSE ? HINT_TOUCHWALK() : HINT_WALK(); }",
+)
+sub(
+    "  $('#walkOverlay').style.display = 'none'; $('#joy').style.display = 'block'; $('#walkExit').style.display = 'block';\n"
+    "  syncHint3d();\n}",
+    "  $('#walkOverlay').style.display = 'none'; $('#joy').style.display = 'block'; $('#walkExit').style.display = 'block';\n"
+    "  syncHint3d(); flashHint();\n}",
+)
+sub(
+    "walkCtl.addEventListener('lock', () => { $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'block'; });",
+    "walkCtl.addEventListener('lock', () => { $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'block'; flashHint(); });",
+)
+sub(
+    "    $('#walkOverlay').style.display = 'flex';\n    syncHint3d();\n  } else {\n    walkCtl.unlock(); stopTouchWalk(); orbit.enabled = true;",
+    "    $('#walkOverlay').style.display = 'flex';\n    walkHud(true); syncHint3d();\n  } else {\n    walkHud(false); walkCtl.unlock(); stopTouchWalk(); orbit.enabled = true;",
+)
+# (el original ponía la función en lugar del texto al salir del 3D desde el recorrido)
+sub(
+    "  if (opt.mode === 'walk'){ walkCtl.unlock(); stopTouchWalk(); $('#hint3d').textContent = HINT_ORBIT;",
+    "  if (opt.mode === 'walk'){ walkHud(false); walkCtl.unlock(); stopTouchWalk(); $('#hint3d').textContent = HINT_ORBIT();",
+)
+# En el recorrido las aristas de muros y puertas son líneas, y three.js da por tocada cualquier línea
+# a menos de 1 m del rayo: junto a una pared todos los toques "chocaban" con ellas.
+sub(
+    "const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();",
+    "const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();\nray.params.Line.threshold = .01;   // las aristas del recorrido no tapan los toques",
+)
+# Toque en el recorrido: puertas como antes; dos toques en el piso llevan ahí
+sub(
+    "      if (tap){ const h = pick(e); if (h?.door && h.dist < 3.5) h.door.open = !h.door.open; }   // 漫游时点门开关",
+    "      if (tap){ const h = pick(e); if (h?.door && h.dist < 3.5) h.door.open = !h.door.open; else walkTap(e); }   // 漫游时点门开关",
+)
+sub(
+    """function stepWalk(dt){
+  if (!walkCtl.isLocked && !touchWalk) return;
+  const sp = (keys.ShiftLeft || keys.ShiftRight ? 2.6 : 1.4) * dt, fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+  const right = new THREE.Vector3(-fwd.z, 0, fwd.x), mv = new THREE.Vector3();
+  if (keys.KeyW || keys.ArrowUp) mv.add(fwd); if (keys.KeyS || keys.ArrowDown) mv.sub(fwd);
+  if (keys.KeyD || keys.ArrowRight) mv.add(right); if (keys.KeyA || keys.ArrowLeft) mv.sub(right);
+  if (touchWalk){ mv.addScaledVector(fwd, -joy.y).addScaledVector(right, joy.x); }
+  const mag = Math.min(1, mv.length());        // 摇杆推得越远走得越快
+  if (mag < .05) return;
+  mv.normalize().multiplyScalar(sp * mag);
+  const p = camera.position;
+  if (!blocked(p.x + mv.x, p.z)) p.x += mv.x;
+  if (!blocked(p.x, p.z + mv.z)) p.z += mv.z;
+}""",
+    r"""function stepWalk(dt){
+  if (glide){ stepGlide(); walkMapTick(); return; }
+  const p = camera.position;
+  p.y += (eyeH() - p.y) * Math.min(1, dt*6);                // sentarse o pararse sin brinco
+  if (!walkCtl.isLocked && !touchWalk){ walkMapTick(); return; }
+  const sp = (keys.ShiftLeft || keys.ShiftRight ? 2.6 : 1.4) * walk.speed * dt, fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+  const right = new THREE.Vector3(-fwd.z, 0, fwd.x), mv = new THREE.Vector3();
+  if (keys.KeyW || keys.ArrowUp) mv.add(fwd); if (keys.KeyS || keys.ArrowDown) mv.sub(fwd);
+  if (keys.KeyD || keys.ArrowRight) mv.add(right); if (keys.KeyA || keys.ArrowLeft) mv.sub(right);
+  if (touchWalk){ mv.addScaledVector(fwd, -joy.y).addScaledVector(right, joy.x); }
+  const mag = Math.min(1, mv.length());        // 摇杆推得越远走得越快
+  if (mag >= .05){
+    if (walk.sit && walk.sitAuto) setSit(false);             // al caminar se levanta de la mesa
+    mv.normalize().multiplyScalar(sp * mag);
+    if (!blocked(p.x + mv.x, p.z)) p.x += mv.x;
+    if (!blocked(p.x, p.z + mv.z)) p.z += mv.z;
+  }
+  walkMapTick();
+}
+
+/* ---------- Recorrido: velocidad, altura de la vista, sensibilidad, ir a…, doble toque y mapa ---------- */
+const WALK_KEY = 'planner3d-recorrido';
+const walk = (() => {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(WALK_KEY)) || {}; } catch(e){}
+  return {speed: [1, 2, 3].includes(s.speed) ? s.speed : 1, look: [.6, 1, 1.6].includes(s.look) ? s.look : 1,
+    map: s.map !== false, sit: false, sitAuto: false};
+})();
+function saveWalk(){ try { localStorage.setItem(WALK_KEY, JSON.stringify({speed:walk.speed, look:walk.look, map:walk.map})); } catch(e){} }
+const eyeH = () => walk.sit ? 1.2 : 1.6;                       // altura de los ojos de pie / sentado (m)
+const planXY = v => [v.x*1000 + OX, v.z*1000 + OY];           // posición 3D → plano (mm)
+const FLAT = ['rug', 'dancefloor', 'staff'];                   // se puede pisar
+const ROUND = ['rtable', 'roundtable', 'cocktail', 'cake', 'plant', 'platform360', 'candelabra', 'flowerstand', 'staff'];
+let glide = null, lastTap = null, spots = [], mapKey = '', bigOpen = false;
+
+function setSpeed(v){ walk.speed = v; saveWalk(); syncWalkHud(); }
+function setSit(v, auto = false){ walk.sit = v; walk.sitAuto = v && auto; syncWalkHud(); }
+// Las indicaciones del recorrido se ven unos segundos y se quitan para no tapar la vista
+function flashHint(){
+  const h = $('#hint3d'); h.classList.remove('gone'); clearTimeout(flashHint.t);
+  flashHint.t = setTimeout(() => { if (opt.mode === 'walk') h.classList.add('gone'); }, 6000);
+}
+function walkHud(on){
+  glide = null; lastTap = null; bigMap(false); clearTimeout(flashHint.t);
+  $('#whFade').classList.remove('on'); $('#hint3d').classList.toggle('gone', on);
+  $('#walkHud').hidden = !on; $('#view3d').classList.toggle('walking', on); walkFov(on);
+  if ($('#whPop')) $('#whPop').hidden = true;
+  if (on){ setSit(false); buildWalkGo(); walkMapTick(true); }
+  $('#tip').textContent = on ? (COARSE ? HINT_TOUCHWALK() : HINT_WALK()) : TIPS()['3d'];
+}
+
+// En el recorrido, con el celular vertical la vista se abre (con 45° de alto se ve apenas 27° a lo ancho,
+// como por un tubo): se busca ~60° a lo ancho sin pasar de 75° de alto. En pantallas anchas queda igual.
+function walkFov(on = opt.mode === 'walk'){
+  const need = 2*Math.atan(Math.tan(Math.PI/6)/camera.aspect)*180/Math.PI;
+  camera.fov = on ? THREE.MathUtils.clamp(need, FOV, 75) : FOV;
+  camera.updateProjectionMatrix();
+}
+
+function inPoly([x, y], poly){
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi)*(y - yi)/(yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+function inFurn(x, y){
+  return opt.furn && state.furniture.some(f => {
+    if (FLAT.includes(f.type)) return false;
+    const a = (f.rot || 0)*Math.PI/180, dx = x - f.cx, dy = y - f.cy;
+    return Math.abs(dx*Math.cos(a) + dy*Math.sin(a)) < f.w/2 + 250 && Math.abs(-dx*Math.sin(a) + dy*Math.cos(a)) < f.d/2 + 250;
+  });
+}
+const freeAt = (x, y) => !blocked(wx(x), wz(y), .3) && !inFurn(x, y);
+// ¿Se llega en línea recta sin atravesar muros? (puntos del plano en mm)
+function clearPath(a, b){
+  const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 150);
+  for (let i = 1; i < n; i++) if (blocked(wx(a[0] + (b[0] - a[0])*i/n), wz(a[1] + (b[1] - a[1])*i/n), .05)) return false;
+  return true;
+}
+// El lugar libre más cercano a (x, y), lejos de muros y muebles, que además cumpla ok(); null si no hay
+function nearFree(x, y, ok = () => true){
+  if (freeAt(x, y) && ok(x, y)) return [x, y];
+  for (let r = 250; r <= 3000; r += 250)
+    for (let k = 0; k < 16; k++){
+      const px = x + Math.cos(k*Math.PI/8)*r, py = y + Math.sin(k*Math.PI/8)*r;
+      if (freeAt(px, py) && ok(px, py)) return [px, py];
+    }
+  return null;
+}
+// Ir a un punto del plano (mm) mirando hacia `to`: cerca y a la vista se desliza; lejos o tras un muro, fundido
+function walkTo(p, to, sit = walk.sit, auto = false){
+  if (opt.mode !== 'walk') return;
+  setSit(sit, auto);
+  const a = camera.position.clone(), b = new THREE.Vector3(wx(p[0]), eyeH(), wz(p[1])), q0 = camera.quaternion.clone(), q1 = q0.clone();
+  if (to) q1.setFromRotationMatrix(new THREE.Matrix4().lookAt(b, new THREE.Vector3(wx(to[0]), sit ? 1 : 1.45, wz(to[1])), camera.up));
+  const d = Math.hypot(b.x - a.x, b.z - a.z), near = d < 12 && clearPath(planXY(a), p);
+  glide = {t0:performance.now(), dur: near ? Math.min(1100, 320 + d*90) : 520, a, b, q0, q1, fade: !near};
+  if (!near) $('#whFade').classList.add('on');
+}
+function stepGlide(){
+  const g = glide, t = clamp01((performance.now() - g.t0)/g.dur);
+  if (!g.fade){ const e = ease(t); camera.position.lerpVectors(g.a, g.b, e); camera.quaternion.slerpQuaternions(g.q0, g.q1, e); }
+  else if (t >= .45 && !g.done){ g.done = true; camera.position.copy(g.b); camera.quaternion.copy(g.q1); $('#whFade').classList.remove('on'); }
+  if (t >= 1) glide = null;
+}
+// Doble toque (o doble clic con el mouse capturado): en el piso, ir ahí sin atravesar muros;
+// en una mesa, sentarse en ella; en otro mueble, ir junto a él
+function walkTap(e){
+  $('#whPop').hidden = true;
+  const now = performance.now(), prev = lastTap;
+  lastTap = {t:now, x:e.clientX, y:e.clientY};
+  if (prev && now - prev.t < 350 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 40){ lastTap = null; goScreen(e.clientX, e.clientY); }
+}
+function goScreen(x, y){
+  const h = pick({clientX:x, clientY:y}), here = planXY(camera.position), seen = (px, py) => clearPath(here, [px, py]);
+  const t = h?.fid && spots.find(s => s.table?.id === h.fid);
+  if (t) return goSpot(t);                                   // dos toques en una mesa: sentarse ahí
+  const f = h?.fid && getF(h.fid), g = !f && groundAt(x, y);
+  let p = null;
+  if (f){   // otro mueble: junto a él, del lado que da hacia ti, mirándolo
+    const dx = here[0] - f.cx, dy = here[1] - f.cy, L = Math.hypot(dx, dy) || 1, R = Math.max(f.w, f.d)/2 + 400;
+    p = nearFree(f.cx + dx/L*R, f.cy + dy/L*R, seen);
+  } else if (g) p = nearFree(g.x, g.y, seen);
+  if (p) walkTo(p, f ? [f.cx, f.cy] : null);
+}
+
+// «Ir a…»: entrada, lugares y mesas del evento, cuartos
+function buildWalkGo(){
+  const W0 = PLANTA.walk || {from:[OX, OY], to:[OX, OY - 3000]};
+  spots = [{label: PLANTA.entry ? tr('入口', 'Entrance', 'Entrada') : tr('起点', 'Start', 'Inicio'), p:W0.from, to:W0.to}];
+  (EXT?.walkSpots?.(state) || []).forEach(s => spots.push({group:s.group, label:s.label, p:[s.x, s.y], to:[s.tx, s.ty], sit:s.sit, table:s.r ? s : null}));
+  ROOMS.filter(r => !r.void).forEach(r => spots.push({group:tr('房间', 'Rooms', 'Cuartos'), label:nm(state.rooms[r.id].name), room:r}));
+  const groups = [...new Set(spots.map(s => s.group || ''))];
+  $('#whGo').innerHTML = `<option value="">${esc(tr('前往…', 'Go to…', 'Ir a…'))}</option>` + groups.map(g => {
+    const o = spots.map((s, i) => (s.group || '') === g ? `<option value="${i}">${esc(s.label)}</option>` : '').join('');
+    return g ? `<optgroup label="${esc(g)}">${o}</optgroup>` : o;
+  }).join('');
+}
+function goSpot(s){
+  if (s.room) return goRoom(s.room);
+  if (s.sit) return walkTo(s.p, s.to, true, true);          // el lugar exacto, como «Ver desde esta mesa»
+  walkTo(nearFree(...s.p) || s.p, s.to, false);
+}
+// Un cuarto: se entra por el lado más cercano a donde estás, mirando al centro (como en una visita)
+function goRoom(r){
+  const xs = r.poly.map(p => p[0]), ys = r.poly.map(p => p[1]), inside = (x, y) => inPoly([x, y], r.poly);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  let c = [(x0 + x1)/2, (y0 + y1)/2];
+  if (!inside(...c)) c = r.at && inside(...r.at) ? r.at : nearFree(c[0], c[1], inside) || c;
+  const [hx, hy] = planXY(camera.position), step = Math.max(300, Math.min(x1 - x0, y1 - y0)/12), cand = [];
+  for (let x = x0 + step/2; x < x1; x += step) for (let y = y0 + step/2; y < y1; y += step)
+    if (inside(x, y) && freeAt(x, y)) cand.push([x, y, Math.hypot(x - hx, y - hy)]);
+  cand.sort((a, b) => a[2] - b[2]);
+  const p = cand.find(([x, y]) => Math.hypot(x - c[0], y - c[1]) > 900 && clearPath([x, y], c));
+  if (p) walkTo(p, c, false);
+  else walkTo(nearFree(c[0], c[1], inside) || c, null, false);
+}
+
+// Mapa: chico en la esquina; al tocarlo se abre grande para elegir a dónde ir (o una mesa para sentarse)
+const SMALL_MAP = () => COARSE ? [96, 128] : [150, 190];
+function mapFit(cw, ch){
+  const b = WALL_BOX, pad = 1200, bw = b.x1 - b.x0 + 2*pad, bh = b.y1 - b.y0 + 2*pad, k = Math.min(cw/bw, ch/bh);
+  return {k, w: Math.round(bw*k), h: Math.round(bh*k), x0: b.x0 - pad, y0: b.y0 - pad};
+}
+function bigFit(){ const v = $('#view3d'); return mapFit(v.clientWidth - 32, v.clientHeight - 130); }
+function drawMap(cv, m, big){
+  const dpr = devicePixelRatio || 1, P = (x, y) => [(x - m.x0)*m.k, (y - m.y0)*m.k], g = cv.getContext('2d');
+  if (cv.width !== Math.round(m.w*dpr) || cv.height !== Math.round(m.h*dpr)){
+    cv.width = Math.round(m.w*dpr); cv.height = Math.round(m.h*dpr); cv.style.width = m.w + 'px'; cv.style.height = m.h + 'px';
+  }
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = 'rgba(255,253,249,.95)'; g.fillRect(0, 0, m.w, m.h);
+  ROOMS.forEach(r => {
+    if (r.void) return;
+    g.beginPath(); r.poly.forEach(([x, y], i) => g[i ? 'lineTo' : 'moveTo'](...P(x, y))); g.closePath();
+    g.fillStyle = r.outdoor ? '#e3e9d8' : '#efe7da'; g.fill();
+  });
+  if (opt.furn) state.furniture.forEach(f => {
+    const [x, y] = P(f.cx, f.cy), w = f.w*m.k, d = f.d*m.k;
+    g.save(); g.translate(x, y); g.rotate((f.rot || 0)*Math.PI/180); g.beginPath();
+    if (ROUND.includes(f.type)) g.arc(0, 0, Math.min(w, d)/2, 0, 2*Math.PI); else g.rect(-w/2, -d/2, w, d);
+    g.fillStyle = FLAT.includes(f.type) ? '#e2d6c2' : ['rtable', 'itable', 'headtable'].includes(f.type) ? '#c8a988' : '#d2c8ba'; g.fill();
+    g.restore();
+  });
+  g.fillStyle = '#4a443d';
+  WALLS.forEach((w, i) => {
+    if (state.demolished.includes('w' + i)) return;
+    const [ax, ay] = P(w[0], w[1]), [bx, by] = P(w[2], w[3]);
+    g.fillRect(ax, ay, Math.max(1.2, bx - ax), Math.max(1.2, by - ay));
+  });
+  if (big){   // números de mesa y nombres de cuartos para elegir
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#5c554c';
+    g.font = '500 10px -apple-system,Helvetica,sans-serif';
+    ROOMS.forEach(r => {
+      if (r.void || !r.at) return;
+      const xs = r.poly.map(p => p[0]), room = (Math.max(...xs) - Math.min(...xs))*m.k - 6, name = nm(state.rooms[r.id].name);
+      const [x, y] = P(...r.at), words = name.split(' '), half = Math.ceil(words.length/2);
+      if (g.measureText(name).width <= room || words.length < 2) g.fillText(name, x, y);
+      else { g.fillText(words.slice(0, half).join(' '), x, y - 6); g.fillText(words.slice(half).join(' '), x, y + 6); }
+    });
+    g.fillStyle = '#2b2824'; g.font = '600 11px -apple-system,Helvetica,sans-serif';
+    spots.forEach(s => { if (s.table) g.fillText(/\d+$/.exec(s.label)?.[0] ?? '★', ...P(s.table.cx, s.table.cy)); });
+  }
+  // Tú: punto con el cono de la vista
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const [x, y] = P(...planXY(camera.position)), a = Math.atan2(dir.z, dir.x), R = big ? 46 : 24;
+  const px = Math.min(Math.max(x, 6), m.w - 6), py = Math.min(Math.max(y, 6), m.h - 6);
+  g.fillStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#b5653a';
+  g.globalAlpha = .3; g.beginPath(); g.moveTo(px, py); g.arc(px, py, R, a - .55, a + .55); g.closePath(); g.fill();
+  g.globalAlpha = 1; g.beginPath(); g.arc(px, py, big ? 7 : 5, 0, 2*Math.PI); g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke();
+}
+function walkMapTick(force){
+  if (!walk.map && !bigOpen) return;
+  const c = camera.position, dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const key = [c.x, c.z, Math.atan2(dir.z, dir.x)].map(v => v.toFixed(2)).join();
+  if (!force && key === mapKey) return;
+  mapKey = key;
+  if (walk.map) drawMap($('#whMap'), mapFit(...SMALL_MAP()), false);
+  if (bigOpen) drawMap($('#whBig canvas'), bigFit(), true);
+}
+function bigMap(on){
+  bigOpen = on; if ($('#whBig')) $('#whBig').hidden = !on;
+  $('#view3d').classList.toggle('mapopen', on);
+  if (on){ $('#whPop').hidden = true; walkMapTick(true); }
+}
+function mapGo(cv, e){
+  const m = bigFit(), r = cv.getBoundingClientRect(), x = (e.clientX - r.left)/m.k + m.x0, y = (e.clientY - r.top)/m.k + m.y0;
+  bigMap(false);
+  const t = spots.find(s => s.table && Math.hypot(x - s.table.cx, y - s.table.cy) < s.table.r);
+  if (t) return goSpot(t);
+  const p = nearFree(x, y);
+  if (p) walkTo(p, null);
+}
+
+function syncWalkHud(){
+  const on = (sel, f) => document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', f(b.dataset)));
+  on('#whSpeed button', d => +d.sp === walk.speed);
+  on('#whEye button', d => (d.eye === 'sit') === walk.sit);
+  on('#whLook button', d => +d.look === walk.look);
+  on('#whMapOn button', d => (d.map === '1') === walk.map);
+  if ($('#whMap')) $('#whMap').hidden = !walk.map;
+  if (walkCtl) walkCtl.pointerSpeed = walk.look;
+}
+function renderWalkHud(){
+  const seg = items => items.map(([k, v, l]) => `<button data-${k}="${v}">${esc(l)}</button>`).join('');
+  $('#walkHud').innerHTML = `
+    <div class="wh-top">
+      <label class="wh-pill">${esc(tr('前往…', 'Go to…', 'Ir a…'))} ▾<select id="whGo" aria-label="${esc(tr('前往', 'Go to', 'Ir a'))}"></select></label>
+      <button class="wh-pill" id="whCfg" aria-label="${esc(tr('设置', 'Settings', 'Ajustes'))}">⚙&#xFE0E;</button>
+    </div>
+    <div id="whPop" hidden>
+      <span>${esc(tr('转向灵敏度', 'Look speed', 'Al mirar'))}</span>
+      <div class="wh-seg" id="whLook">${seg([['look', .6, tr('慢', 'Slow', 'Suave')], ['look', 1, tr('中', 'Normal', 'Normal')], ['look', 1.6, tr('快', 'Fast', 'Rápido')]])}</div>
+      <span>${esc(tr('小地图', 'Map', 'Mapa'))}</span>
+      <div class="wh-seg" id="whMapOn">${seg([['map', 1, tr('显示', 'Show', 'Ver')], ['map', 0, tr('隐藏', 'Hide', 'Ocultar')]])}</div>
+    </div>
+    <canvas id="whMap" role="button" aria-label="${esc(tr('地图：点击选择去哪里', 'Map: tap to choose where to go', 'Mapa: tócalo para elegir a dónde ir'))}"></canvas>
+    <div class="wh-side">
+      <div class="wh-seg" id="whEye">${seg([['eye', 'stand', tr('站立', 'Standing', 'De pie')], ['eye', 'sit', tr('坐下', 'Seated', 'Sentado')]])}</div>
+      <div class="wh-seg" id="whSpeed" role="group" aria-label="${esc(tr('速度', 'Speed', 'Velocidad'))}">${seg([['sp', 1, 'x1'], ['sp', 2, 'x2'], ['sp', 3, 'x3']])}</div>
+    </div>
+    <div id="whBig" hidden>
+      <p>${esc(EXT ? tr('点击要去的位置 · 点餐桌坐下', 'Tap where you want to go · tap a table to sit there', 'Toca a dónde quieres ir · toca una mesa para sentarte')
+        : tr('点击要去的位置', 'Tap where you want to go', 'Toca a dónde quieres ir'))}</p>
+      <canvas></canvas>
+      <button class="btn" id="whClose">${esc(tr('关闭', 'Close', 'Cerrar'))}</button>
+    </div>`;
+  bigMap(false);
+  if (opt.mode === 'walk'){ buildWalkGo(); syncWalkHud(); walkMapTick(true); }
+}
+function bindWalkHud(){
+  const hud = $('#walkHud');
+  hud.addEventListener('click', e => {
+    const b = e.target.closest('button,canvas'), d = b?.dataset || {};
+    if (!b){ if (e.target.id === 'whBig') bigMap(false); return; }
+    if (d.sp) setSpeed(+d.sp);
+    else if (d.eye) setSit(d.eye === 'sit');
+    else if (d.look){ walk.look = +d.look; saveWalk(); syncWalkHud(); }
+    else if (d.map){ walk.map = d.map === '1'; saveWalk(); syncWalkHud(); walkMapTick(true); }
+    else if (b.id === 'whCfg') $('#whPop').hidden = !$('#whPop').hidden;
+    else if (b.id === 'whMap') bigMap(true);
+    else if (b.id === 'whClose') bigMap(false);
+    else if (b.parentElement?.id === 'whBig') mapGo(b, e);
+  });
+  hud.addEventListener('change', e => {
+    if (e.target.id !== 'whGo' || e.target.value === '') return;
+    const s = spots[+e.target.value]; e.target.value = ''; e.target.blur();
+    if (s) goSpot(s);
+  });
+  document.addEventListener('dblclick', () => {   // con el mouse capturado: ir a donde apunta la mira
+    if (!active || opt.mode !== 'walk' || !walkCtl.isLocked) return;
+    const r = renderer.domElement.getBoundingClientRect(); goScreen(r.left + r.width/2, r.top + r.height/2);
+  });
+}""",
+)
+sub(
+    "  if (opt.mode === 'walk' && e.code === 'KeyE'){ const h = pick(); if (h?.door && h.dist < 2.5) h.door.open = !h.door.open; }\n});",
+    "  if (opt.mode === 'walk' && e.code === 'KeyE'){ const h = pick(); if (h?.door && h.dist < 2.5) h.door.open = !h.door.open; }\n"
+    "  if (opt.mode === 'walk' && /^Digit[123]$/.test(e.code)) setSpeed(+e.code[5]);\n"
+    "  if (opt.mode === 'walk' && e.code === 'KeyC') setSit(!walk.sit);\n"
+    "  if (bigOpen && e.code === 'Escape') bigMap(false);\n});",
+)
+sub(
+    """    : [tr('点击开始，从入户门进入', 'Click to start at the front door'),
+       tr('<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> 移动 · 鼠标转向 · <kbd>Shift</kbd> 快走', '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move · mouse looks · <kbd>Shift</kbd> runs'),
+       tr('<kbd>E</kbd> 开关正前方的门 · <kbd>Esc</kbd> 暂停', '<kbd>E</kbd> opens the door ahead · <kbd>Esc</kbd> pauses')];
+  t.forEach((h, i) => $('#wo' + (i + 1)).innerHTML = h);
+  syncHint3d();""",
+    """    : [tr('点击开始，从入户门进入', 'Click to start at the front door'),
+       tr('<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> 移动 · 鼠标转向 · <kbd>Shift</kbd> 快走', '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move · mouse looks · <kbd>Shift</kbd> runs'),
+       tr('<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 速度 · <kbd>C</kbd> 坐下 · 双击走过去 · <kbd>E</kbd> 开关门 · <kbd>Esc</kbd> 暂停',
+          '<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> speed · <kbd>C</kbd> sits · double-click to go there · <kbd>E</kbd> doors · <kbd>Esc</kbd> pauses',
+          '<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> velocidad · <kbd>C</kbd> sentarte · doble clic para ir · <kbd>E</kbd> puertas · <kbd>Esc</kbd> pausa')];
+  t.forEach((h, i) => $('#wo' + (i + 1)).innerHTML = h);
+  renderWalkHud();
+  syncHint3d();""",
+)
+sub(
+    "       tr('点门开关 · 点「退出漫游」回到鸟瞰', 'Tap doors to open · \"Exit walk\" returns to orbit')]",
+    "       tr('双击地面走过去 · 点门开关', 'Double-tap the floor to go there · tap doors to open',\n"
+    "          'Toca dos veces el piso para ir ahí · toca las puertas para abrirlas')]",
+)
+sub("  bindJoystick();\n", "  bindJoystick(); bindWalkHud();\n")
+sub(
+    "    camera.aspect = SW()/SH(); camera.updateProjectionMatrix();\n  }).observe(stage);",
+    "    camera.aspect = SW()/SH(); walkFov();\n  }).observe(stage);",
+)
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

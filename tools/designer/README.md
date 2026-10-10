@@ -27,6 +27,10 @@ dice de qué versión es.
    - Pisos con precio en pesos y pisos de exterior (concreto, pasto, deck); la doble altura no se cobra.
    - Altura por planta, ventanas con repisa propia, escalera en 3D, cámaras y sombras a escala de la casa.
    - En el celular la barra se reduce a tres renglones; en pantallas grandes queda igual que el original.
+   - Recorrido: arrastrar mira hacia donde se arrastra (en el original estaba al revés que el mouse),
+     velocidad x1/x2/x3, de pie / sentado, «Ir a…», dos toques para ir, mapa, sensibilidad y vista más
+     amplia en pantallas verticales. Los lugares de salones (pista, mesas) salen de `eventos.js`
+     (`walkSpots`).
 
 3. **Páginas** (`src/lib/designer/page.ts`): inyectan antes del primer `<script>` los datos del lugar
    (`window.__CASA__`), en salones el catálogo y los modelos de eventos (`src/designer/eventos/`), y en
