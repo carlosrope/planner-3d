@@ -204,7 +204,97 @@
     border:1px solid var(--line);background:#fff;color:var(--ink);text-decoration:none;align-items:center}
   #clientWelcome .btn.go{border:0;color:#fff;font-weight:600}
   #clientWelcome .btn.wa{border:0;background:#25d366;color:#fff;font-weight:600}
-  #clientWelcome .tiny{color:var(--muted);font-size:11px;margin:14px 0 0}`;
+  #clientWelcome .tiny{color:var(--muted);font-size:11px;margin:14px 0 0}
+  #hostBar .badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#b3372a;color:#fff;font-size:11px;margin-left:4px}
+  dialog.hostDlg textarea{font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);
+    min-height:90px;resize:vertical;-webkit-user-select:text;user-select:text}
+  dialog.hostDlg .comments{max-height:46vh;overflow:auto;margin:6px -4px 0;padding:0 4px}
+  dialog.hostDlg .cmt{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px;background:#fff}
+  dialog.hostDlg .cmt.done{opacity:.55}
+  dialog.hostDlg .cmt .meta{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+  dialog.hostDlg .cmt p{margin:4px 0 0;white-space:pre-wrap}
+  dialog.hostDlg .cmt .row{margin-top:6px}
+  dialog.hostDlg .cmt .row .btn{min-height:34px;font-size:13px}
+  dialog.hostDlg .seg2{display:flex;gap:6px;margin-bottom:10px}
+  dialog.hostDlg .seg2 .btn{flex:1;min-height:38px;border:1px solid var(--line);background:#fff}
+  dialog.hostDlg .seg2 .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}`;
+
+  // ---------------------------------------------------------------- comentarios del cliente
+  const comments = D.comments || [];
+  const pendingComments = () => comments.filter(c => !c.resolved).length;
+  const ago = when => {
+    const s2 = (Date.now() - new Date(when).getTime()) / 1000, rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+    if (s2 < 3600) return rtf.format(-Math.max(1, Math.round(s2 / 60)), 'minute');
+    if (s2 < 86400) return rtf.format(-Math.round(s2 / 3600), 'hour');
+    return rtf.format(-Math.round(s2 / 86400), 'day');
+  };
+  /** Nombre de la pieza comentada en la distribución donde se comentó. */
+  const objectName = c => {
+    if (!c.objectId) return '';
+    const d = dists.find(x => x.id === c.layoutId);
+    const all = d === active ? api.state.furniture : Object.values(docOf(d || active).levels).flatMap(l => l.furniture || []);
+    return all.find(f => f.id === c.objectId)?.name || t('a removed piece', 'una pieza que ya no está');
+  };
+  const cmtHtml = (c, actions) => `<div class="cmt ${c.resolved ? 'done' : ''}" data-cid="${c.id}">
+      <div class="meta"><b>${escape(c.authorName)}</b><span>${escape(dists.find(d => d.id === c.layoutId)?.name || '')} · ${ago(c.createdAt)}</span></div>
+      ${c.objectId ? `<div class="meta">${t('About', 'Sobre')} ${escape(objectName(c))}</div>` : ''}
+      <p>${escape(c.body)}</p>${actions ? `<div class="row">${actions(c)}</div>` : ''}</div>`;
+
+  /** La planner revisa los comentarios: ver la pieza en el plano y marcar como resuelto. */
+  function commentsDialog() {
+    const dlg = dialog(`<h3>${t('Client comments', 'Comentarios del cliente')}</h3>
+      ${comments.length ? '' : `<p class="muted">${t('When your client comments from the link, you will see it here.',
+        'Cuando tu cliente comente desde el enlace, lo verás aquí.')}</p>`}
+      <div class="comments">${comments.map(c => cmtHtml(c, x => `${x.objectId ? `<button class="btn" data-see="${x.id}">${t('See it', 'Ver en el plano')}</button>` : ''}
+        <button class="btn" data-done="${x.id}">${x.resolved ? t('Reopen', 'Reabrir') : '✓ ' + t('Resolved', 'Resuelto')}</button>`)).join('')}</div>
+      <div class="row"><button class="btn" data-a="close">${t('Close', 'Cerrar')}</button></div>`);
+    dlg.querySelector('[data-a="close"]').onclick = () => dlg.close();
+    dlg.querySelectorAll('[data-done]').forEach(b => b.onclick = async () => {
+      const c = comments.find(x => x.id === b.dataset.done);
+      try { await request('PATCH', `/api/comments/${c.id}`, { resolved: !c.resolved }); c.resolved = !c.resolved; }
+      catch (e) { return api.toast(e.message); }
+      dlg.close(); renderBar(); commentsDialog();
+    });
+    dlg.querySelectorAll('[data-see]').forEach(b => b.onclick = async () => {
+      const c = comments.find(x => x.id === b.dataset.see);
+      dlg.close();
+      if (c.layoutId !== active.id) await select(c.layoutId);
+      if (api.state.furniture.some(f => f.id === c.objectId)) window.select({ kind: 'furn', id: c.objectId });
+    });
+  }
+
+  /** El cliente comenta desde su enlace: en general o sobre la pieza que tiene seleccionada. */
+  function commentDialog() {
+    const sel = typeof ui !== 'undefined' && ui.sel?.kind === 'furn' ? api.state.furniture.find(f => f.id === ui.sel.id) : null;
+    let about = sel ? sel.id : null;
+    let saved = '';
+    try { saved = localStorage.getItem('planner3d-nombre') || ''; } catch { /* sin almacenamiento */ }
+    const mine = comments.filter(c => c.layoutId === active.id);
+    const dlg = dialog(`<h3>${t('Comment on proposal', 'Comentar la propuesta')} ${escape(active.name)}</h3>
+      ${sel ? `<div class="seg2"><button class="btn on" data-about="obj">${escape(sel.name)}</button><button class="btn" data-about="all">${t('In general', 'En general')}</button></div>`
+        : `<p class="muted" style="margin:-4px 0 10px">${t('Tip: tap a table or piece first to comment about it.', 'Consejo: toca primero una mesa o mueble para comentar sobre él.')}</p>`}
+      <label>${t('Your name', 'Tu nombre')}<input id="cmName" maxlength="60" value="${escape(saved)}" autocomplete="name"></label>
+      <label>${t('Comment', 'Comentario')}<textarea id="cmBody" maxlength="600" placeholder="${t('E.g. Move my parents’ table closer to the dance floor', 'Ej. Acerca la mesa de mis papás a la pista')}"></textarea></label>
+      <div class="row"><button class="btn primary" data-a="send">${t('Send', 'Enviar')}</button><button class="btn" data-a="close">${t('Cancel', 'Cancelar')}</button></div>
+      ${mine.length ? `<div class="comments">${mine.map(c => cmtHtml(c)).join('')}</div>` : ''}`);
+    dlg.querySelectorAll('[data-about]').forEach(b => b.onclick = () => {
+      about = b.dataset.about === 'obj' ? sel.id : null;
+      dlg.querySelectorAll('[data-about]').forEach(x => x.classList.toggle('on', x === b));
+    });
+    dlg.querySelector('[data-a="close"]').onclick = () => dlg.close();
+    dlg.querySelector('[data-a="send"]').onclick = async () => {
+      const authorName = dlg.querySelector('#cmName').value.trim(), body = dlg.querySelector('#cmBody').value.trim();
+      if (!authorName || !body) return api.toast(t('Write your name and your comment', 'Escribe tu nombre y tu comentario'));
+      try { localStorage.setItem('planner3d-nombre', authorName); } catch { /* sin almacenamiento */ }
+      const token = location.pathname.split('/')[2];
+      try {
+        const r = await request('POST', `/api/v/${token}/comments`, { layoutId: active.id, objectId: about || undefined, authorName, body });
+        comments.unshift(r.comment);
+      } catch (e) { return api.toast(e.message); }
+      dlg.close();
+      api.toast(t('Thanks! Your comment was sent', `¡Gracias! Tu comentario le llegó a ${B.name || 'la planner'}`));
+    };
+  }
 
   // ---------------------------------------------------------------- marca del negocio
   const B = D.brand || { name: '' };
@@ -223,9 +313,12 @@
     bar.innerHTML = EDIT
       ? `${D.backHref ? `<a class="btn" href="${escape(D.backHref)}">← ${escape(D.backLabel || t('Projects', 'Proyectos'))}</a>` : ''}${tabs}
          <button class="btn" data-a="new" title="${t('New layout (copy of the current one)', 'Nueva distribución (copia de la actual)')}">＋</button>
-         <button class="btn primary" data-a="share">${t('Share', 'Compartir')}</button><span id="hostStatus">${escape(statusText)}</span>`
+         <button class="btn primary" data-a="share">${t('Share', 'Compartir')}</button>
+         <button class="btn" data-a="comments" title="${t('Client comments', 'Comentarios del cliente')}">💬${pendingComments() ? `<span class="badge">${pendingComments()}</span>` : ''}</button>
+         <span id="hostStatus">${escape(statusText)}</span>`
       : `${B.name ? `<span class="brandChip">${brandMark()}<span>${escape(B.name)}</span></span>` : ''}${tabs}
          ${B.whatsapp ? `<a class="btn primary" target="_blank" rel="noopener" href="${escape(waLink(t(`Hi, I saw the design of ${D.title}`, `Hola, vi el diseño de ${D.title}`)))}">WhatsApp</a>` : ''}
+         <button class="btn" data-a="comment">💬 ${t('Comment', 'Comentar')}</button>
          <span class="viewonly">${t('View only', 'Solo vista')}</span>`;
     bar.querySelectorAll('[data-dist]').forEach(b => b.onclick = () => {
       const d = dists.find(x => x.id === b.dataset.dist);
@@ -233,6 +326,8 @@
     });
     bar.querySelector('[data-a="new"]')?.addEventListener('click', () => create(active));
     bar.querySelector('[data-a="share"]')?.addEventListener('click', shareDialog);
+    bar.querySelector('[data-a="comments"]')?.addEventListener('click', commentsDialog);
+    bar.querySelector('[data-a="comment"]')?.addEventListener('click', commentDialog);
   }
 
   function dialog(html) {

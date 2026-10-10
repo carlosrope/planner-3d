@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { db } from "./db";
-import { event, layout, membership, organization, shareLink, venue, venueAccess } from "./db/schema";
+import { comment, event, layout, membership, organization, shareLink, venue, venueAccess } from "./db/schema";
 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
 
@@ -169,4 +169,36 @@ export async function getSharePreview(token: string) {
     .where(and(eq(shareLink.token, token), or(isNull(shareLink.expiresAt), gt(shareLink.expiresAt, new Date()))))
     .limit(1);
   return row?.preview ?? null;
+}
+
+/** Comentarios del cliente en todas las distribuciones de un evento (los más recientes primero). */
+export async function listComments(eventId: string) {
+  return db
+    .select({
+      id: comment.id,
+      layoutId: comment.layoutId,
+      objectId: comment.objectId,
+      authorName: comment.authorName,
+      body: comment.body,
+      resolved: comment.resolved,
+      createdAt: comment.createdAt,
+    })
+    .from(comment)
+    .innerJoin(layout, eq(comment.layoutId, layout.id))
+    .where(eq(layout.eventId, eventId))
+    .orderBy(desc(comment.createdAt))
+    .limit(300);
+}
+
+/** El comentario existe y el usuario puede editar su evento. */
+export async function canEditComment(commentId: string, userId: string) {
+  const [row] = await db
+    .select({ id: comment.id })
+    .from(comment)
+    .innerJoin(layout, eq(comment.layoutId, layout.id))
+    .innerJoin(event, eq(layout.eventId, event.id))
+    .innerJoin(membership, and(eq(membership.orgId, event.orgId), eq(membership.userId, userId)))
+    .where(eq(comment.id, commentId))
+    .limit(1);
+  return Boolean(row);
 }

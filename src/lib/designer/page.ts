@@ -41,6 +41,18 @@ export type HostData = {
   distributions: { id: string; name: string; note: string; recommended: boolean; revision: number; doc: unknown }[];
   /** Marca del negocio que hizo el diseño (portada del enlace del cliente y vista previa). */
   brand: Brand;
+  /** Comentarios del cliente (en el enlace del cliente solo se muestran sus textos, sin borrar). */
+  comments: HostComment[];
+};
+
+export type HostComment = {
+  id: string;
+  layoutId: string;
+  objectId: string | null;
+  authorName: string;
+  body: string;
+  resolved: boolean;
+  createdAt: Date | string;
 };
 
 export type Brand = { name: string; logo: string | null; color: string | null; whatsapp: string | null };
@@ -64,6 +76,7 @@ export function hostFor(
   layouts: LayoutRow[],
   wanted: string | null,
   brand: Brand,
+  comments: HostComment[],
   back?: { href: string; label: string },
 ): HostData {
   const active = layouts.find((l) => l.id === wanted) ?? layouts.find((l) => l.recommended) ?? layouts[0];
@@ -76,6 +89,7 @@ export function hostFor(
     backLabel: back?.label,
     activeId: active.id,
     brand,
+    comments,
     distributions: layouts.map(({ id, name, note, recommended, revision, doc }) => ({ id, name, note, recommended, revision, doc })),
   };
 }
