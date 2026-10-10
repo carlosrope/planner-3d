@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import chardonnay from "@/designer/casas/chardonnay.json";
 import salon from "@/designer/salones/salon-demo.json";
+import { sampleGuests, seatGuests } from "./samples";
 import { designDocSchema } from "./schema";
 import { starterDesign, starterFurniture } from "./starter";
 import type { DesignerPlan, Furniture } from "./types";
@@ -48,6 +49,21 @@ describe("montaje inicial de un salón", () => {
     });
   });
 
+  it("la plantilla de imperiales sienta a todos con mesas de 16 sin choques", () => {
+    const items = starterFurniture(SALON, { guests: 240, kind: "boda", template: "imperial" });
+    const tables = items.filter((f) => f.type === "itable");
+    expect(tables.length).toBe(Math.ceil((240 - 2) / 16));
+    expect(items.reduce((a, f) => a + (f.seats ?? 0), 0)).toBeGreaterThanOrEqual(240);
+    tables.forEach((t, i) => tables.slice(i + 1).forEach((u) => expect(overlap(box(t), box(u))).toBe(false)));
+  });
+
+  it("la plantilla de cóctel usa periqueras (una por cada 6) y salas lounge, sin mesas numeradas", () => {
+    const items = starterFurniture(SALON, { guests: 180, kind: "corporativo", template: "coctel" });
+    expect(items.filter((f) => f.type === "cocktail")).toHaveLength(30);
+    expect(items.filter((f) => f.type === "lounge")).toHaveLength(3);
+    expect(items.some((f) => /^Mesa \d+$/.test(f.name))).toBe(false);
+  });
+
   it("si no caben todos, pone las que caben", () => {
     const items = starterFurniture(SALON, { guests: 2000, kind: "boda" });
     expect(items.filter((f) => f.type === "rtable").length).toBeLessThan(200);
@@ -71,5 +87,26 @@ describe("documento del diseño", () => {
       levels: { pb: { furniture: [{ id: "a", type: "rtable", name: "x", cx: 0, cy: 0, w: -1, d: 10, rot: 0, color: "rojo" }] } },
     };
     expect(designDocSchema.safeParse(bad).success).toBe(false);
+  });
+});
+
+describe("proyectos de ejemplo", () => {
+  it("genera invitados en familias, con ids únicos y algunas dietas", () => {
+    const guests = sampleGuests(220);
+    expect(guests).toHaveLength(220);
+    expect(new Set(guests.map((g) => g.id)).size).toBe(220);
+    expect(new Set(guests.map((g) => g.group)).size).toBeGreaterThan(20);
+    expect(guests.some((g) => g.diet)).toBe(true);
+  });
+
+  it("sienta a 220 invitados en redondas y en imperiales sin que sobre nadie", () => {
+    for (const template of ["redondas", "imperial"] as const) {
+      const furniture = starterFurniture(SALON, { guests: 220, kind: "boda", template });
+      const guests = sampleGuests(220);
+      expect(seatGuests(furniture, guests)).toBe(0);
+      for (const f of furniture) expect(guests.filter((g) => g.table === f.id).length).toBeLessThanOrEqual(f.seats ?? 0);
+      const doc = { v: 1, levels: { salon: { furniture, guestList: guests } } };
+      expect(designDocSchema.safeParse(doc).success).toBe(true);
+    }
   });
 });

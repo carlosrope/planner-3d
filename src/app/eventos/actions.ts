@@ -1,12 +1,15 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getVenueForOrg, requireOrg, requireUser } from "@/lib/dal";
+import { getVenueForOrg, listVenues, requireOrg, requireUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { event, layout } from "@/lib/db/schema";
 import { SALON_EVENT_KINDS, sectionOf } from "@/lib/domain";
-import { starterDesign } from "@/lib/designer/starter";
+import { sampleGuests, seatGuests } from "@/lib/designer/samples";
+import { starterDesign, starterFurniture, type Template } from "@/lib/designer/starter";
+import type { DesignDoc, DesignerPlan } from "@/lib/designer/types";
 
 export type CreateEventState = { error?: string } | null;
 
@@ -69,4 +72,97 @@ export async function createEvent(_prev: CreateEventState, formData: FormData): 
     return created.id;
   });
   redirect(`/eventos/${eventId}`);
+}
+
+/**
+ * Proyectos de ejemplo para una cuenta nueva (la demo nunca empieza vacía): una boda con dos
+ * propuestas e invitados ya sentados, unos XV años y una casa amueblada y sin muebles.
+ */
+export async function createSamples(): Promise<void> {
+  const user = await requireUser();
+  const org = await requireOrg(user);
+  const places = await listVenues(org.id);
+  const pick = async (kind: "salon" | "casa") => {
+    const found = places.find((v) => v.kind === kind);
+    return found ? await getVenueForOrg(org.id, found.id) : null;
+  };
+  const [salon, casa] = await Promise.all([pick("salon"), pick("casa")]);
+  const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
+  const salonDoc = (plan: DesignerPlan, guests: number, kind: "boda" | "xv", template: Template): DesignDoc => {
+    const furniture = starterFurniture(plan, { guests, kind, template });
+    const guestList = sampleGuests(guests);
+    seatGuests(furniture, guestList);
+    return { v: 1, levels: { [plan.levels[0].id]: { furniture, guestList } } };
+  };
+
+  type Sample = {
+    venueId: string;
+    kind: "boda" | "xv" | "casa";
+    title: string;
+    clientNames: string | null;
+    eventDate: string | null;
+    guestCount: number | null;
+    layouts: { name: string; note: string; recommended: boolean; doc: DesignDoc }[];
+  };
+  const samples: Sample[] = [];
+  if (salon?.plan) {
+    samples.push({
+      venueId: salon.id,
+      kind: "boda",
+      title: "Boda Sofía y Daniel (ejemplo)",
+      clientNames: "Sofía y Daniel",
+      eventDate: day(120),
+      guestCount: 220,
+      layouts: [
+        { name: "A", note: "Banquete con redondas", recommended: true, doc: salonDoc(salon.plan, 220, "boda", "redondas") },
+        { name: "B", note: "Mesas imperiales", recommended: false, doc: salonDoc(salon.plan, 220, "boda", "imperial") },
+      ],
+    });
+    samples.push({
+      venueId: salon.id,
+      kind: "xv",
+      title: "XV años de Valeria (ejemplo)",
+      clientNames: "Familia Armenta",
+      eventDate: day(200),
+      guestCount: 150,
+      layouts: [{ name: "A", note: "Banquete con redondas", recommended: true, doc: salonDoc(salon.plan, 150, "xv", "redondas") }],
+    });
+  }
+  if (casa?.plan) {
+    const empty: DesignDoc = { v: 1, levels: Object.fromEntries(casa.plan.levels.map((l) => [l.id, { furniture: [] }])) };
+    samples.push({
+      venueId: casa.id,
+      kind: "casa",
+      title: `${casa.name} · Familia Ramírez (ejemplo)`,
+      clientNames: "Familia Ramírez",
+      eventDate: null,
+      guestCount: null,
+      layouts: [
+        { name: "A", note: "Amueblada", recommended: true, doc: { v: 1, levels: {} } },
+        { name: "B", note: "Sin muebles", recommended: false, doc: empty },
+      ],
+    });
+  }
+
+  await db.transaction(async (tx) => {
+    for (const s of samples) {
+      const [created] = await tx
+        .insert(event)
+        .values({
+          orgId: org.id,
+          venueId: s.venueId,
+          kind: s.kind,
+          title: s.title,
+          clientNames: s.clientNames,
+          eventDate: s.eventDate,
+          guestCount: s.guestCount,
+        })
+        .returning({ id: event.id });
+      await tx.insert(layout).values(
+        s.layouts.map((l, position) => ({ eventId: created.id, ...l, position, updatedBy: user.id })),
+      );
+    }
+  });
+  revalidatePath("/eventos");
 }

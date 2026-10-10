@@ -360,6 +360,7 @@
   window.__HOST__ = {
     get guests() { return D.guests; },
     editable: EDIT,
+    eventId: D.eventId,
     async setGuests(n) {
       D.guests = n;
       api?.rerender();

@@ -624,7 +624,8 @@ sub(
 )
 
 # Botones deshabilitados del panel (p. ej. exportes con la lista vacía)
-sub(".narrow-only{display:none!important}", "#panel .btn:disabled{opacity:.4;pointer-events:none}\n.narrow-only{display:none!important}")
+sub(".narrow-only{display:none!important}", "#panel .btn:disabled{opacity:.4;pointer-events:none}\n"
+    "#panel .actions .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}\n.narrow-only{display:none!important}")
 
 # Foto del 3D como imagen (vista previa del enlace del cliente)
 sub(

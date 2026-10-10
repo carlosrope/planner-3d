@@ -150,13 +150,40 @@
         ${chairs.map(([c, n]) => row(`${sw(c)}${t('Chairs', 'Sillas')} ${colorName(c).toLowerCase()}`, n)).join('')}</table>
       ${tables.length ? `<h3 style="margin-top:12px">${t('Tablecloths', 'Manteles')}</h3>
         <table>${cloths.map(([c, n]) => row(`${sw(c)}${colorName(c)}`, n)).join('')}</table>` : ''}
-      <div class="actions"><button class="btn" id="xPrintSetup">${t('Setup sheet (PDF)', 'Hoja de montaje (PDF)')}</button></div></section>`;
+      <div class="actions"><button class="btn" id="xPrintSetup">${t('Setup sheet (PDF)', 'Hoja de montaje (PDF)')}</button></div></section>
+    ${canSeeGuests() ? `<section><h3>${t('Layout template', 'Plantilla de montaje')} <small>${t(`for ${guests || 'your'} guests`, `para ${guests || 'tus'} invitados`)}</small></h3>
+      <div class="actions">${Object.entries(TEMPLATES).map(([k, [en, es]]) => `<button class="btn" data-template="${k}">${t(en, es)}</button>`).join('')}</div>
+      <div class="muted" style="margin-top:6px">${t('Replaces the furniture of this layout; you can undo it.', 'Reemplaza los muebles de esta distribución; se puede deshacer.')}</div></section>` : ''}`;
+  }
+
+  const TEMPLATES = { redondas: ['Round tables', 'Redondas'], imperial: ['Banquet tables', 'Imperiales'], coctel: ['Cocktail', 'Cóctel'] };
+
+  async function applyTemplate(kind) {
+    const guests = guestsOf(state) || list(state).length || 200;
+    const where = host()?.eventId ? `evento=${encodeURIComponent(host().eventId)}` : `lugar=${encodeURIComponent(window.__CASA__.id)}`;
+    if (!confirm(t(`Replace the furniture with the “${TEMPLATES[kind][0]}” template for ${guests} guests? You can undo it.`,
+      `¿Reemplazar los muebles con la plantilla “${TEMPLATES[kind][1]}” para ${guests} invitados? Se puede deshacer.`))) return;
+    let data;
+    try {
+      const r = await fetch(`/api/plantilla?tipo=${kind}&invitados=${guests}&${where}`);
+      data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+    } catch (e) { return toast(e.message || t('Could not load the template', 'No se pudo cargar la plantilla')); }
+    const seated = list(state).some(g => g.table);
+    ui.sel = null;
+    mutate(() => {
+      state.furniture = data.furniture.map(f => ({ ...f, id: uid() }));
+      list(state).forEach(g => { delete g.table; });
+    });
+    toast(seated ? t('Template applied: guests need their tables again', 'Plantilla aplicada: vuelve a acomodar a los invitados')
+      : t('Template applied', 'Plantilla aplicada'));
   }
 
   function bindOverview() {
     const open = document.getElementById('xOpenGuests');
     if (open) open.onclick = () => select({ kind: 'ext', panel: 'guests' });
     document.getElementById('xPrintSetup').onclick = () => printSetup(state);
+    document.querySelectorAll('#panel [data-template]').forEach(b => b.onclick = () => applyTemplate(b.dataset.template));
     const input = document.getElementById('xGuests');
     if (!input) return;
     input.onchange = () => {

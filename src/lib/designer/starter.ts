@@ -41,7 +41,21 @@ const grow = ([x0, y0, x1, y1]: Box, m: number): Box => [x0 - m, y0 - m, x1 + m,
 const hits = (a: Box, b: Box) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
 const inside = (a: Box, z: Box) => a[0] >= z[0] && a[1] >= z[1] && a[2] <= z[2] && a[3] <= z[3];
 
-export function starterFurniture(plan: DesignerPlan, opts: { guests: number; kind: EventKind }): Furniture[] {
+/** Plantillas de montaje: qué piezas llenan la zona de mesas. */
+export const TEMPLATES = ["redondas", "imperial", "coctel"] as const;
+export type Template = (typeof TEMPLATES)[number];
+export const TEMPLATE_LABELS: Record<Template, string> = {
+  redondas: "Banquete con mesas redondas",
+  imperial: "Mesas imperiales",
+  coctel: "Cóctel con periqueras y salas lounge",
+};
+
+type Fill = { name: string; count: number; gapX: number; gapY: number; numbered: boolean };
+
+export function starterFurniture(
+  plan: DesignerPlan,
+  opts: { guests: number; kind: EventKind; template?: Template },
+): Furniture[] {
   const setup = plan.setup;
   if (!setup) return [];
   let n = 0;
@@ -83,54 +97,78 @@ export function starterFurniture(plan: DesignerPlan, opts: { guests: number; kin
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) place("Candelabro de piso", { cx: cx + sx * hw, cy: cy + sy * hh });
   }
 
-  // Lugares libres para mesas: rejilla dentro de la zona, sin tocar fijos ni columnas.
+  // Lugares libres: rejilla dentro de la zona de mesas, sin tocar fijos, columnas ni lo ya puesto.
   const zone = setup.tables;
   const blocked = out.filter((f) => f.type !== "candelabra").map((f) => grow(boxOf(f), CLEAR));
   for (const w of plan.levels[0]?.walls ?? []) {
     const b: Box = [w[0], w[1], w[2], w[3]];
     if (hits(b, zone)) blocked.push(grow(b, CLEAR));
   }
-  const table = item("Mesa redonda 1.80 m");
-  const pitch = table.w + AISLE;
-  const cols = Math.floor((zone[2] - zone[0] - table.w) / pitch) + 1;
-  const rows = Math.floor((zone[3] - zone[1] - table.d) / pitch) + 1;
-  const x0 = (zone[0] + zone[2]) / 2 - ((cols - 1) * pitch) / 2;
-  const y0 = (zone[1] + zone[3]) / 2 - ((rows - 1) * pitch) / 2;
   const focus = setup.dance ?? setup.stage ?? { cx: (zone[0] + zone[2]) / 2, cy: zone[1] };
-  const spots: { cx: number; cy: number; dist: number }[] = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const cx = Math.round(x0 + c * pitch);
-      const cy = Math.round(y0 + r * pitch);
-      const b = boxOf({ cx, cy, w: table.w, d: table.d, rot: 0 });
-      if (!inside(b, zone) || blocked.some((o) => hits(b, o))) continue;
-      spots.push({ cx, cy, dist: Math.hypot(cx - focus.cx, cy - focus.cy) });
+  let tableNo = 0;
+  const fill = ({ name, count, gapX, gapY, numbered }: Fill) => {
+    const it = item(name);
+    const px = it.w + gapX;
+    const py = it.d + gapY;
+    const cols = Math.floor((zone[2] - zone[0] - it.w) / px) + 1;
+    const rows = Math.floor((zone[3] - zone[1] - it.d) / py) + 1;
+    const x0 = (zone[0] + zone[2]) / 2 - ((cols - 1) * px) / 2;
+    const y0 = (zone[1] + zone[3]) / 2 - ((rows - 1) * py) / 2;
+    const spots: { cx: number; cy: number; dist: number }[] = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cx = Math.round(x0 + c * px);
+        const cy = Math.round(y0 + r * py);
+        const b = boxOf({ cx, cy, w: it.w, d: it.d, rot: 0 });
+        if (!inside(b, zone) || blocked.some((o) => hits(b, o))) continue;
+        spots.push({ cx, cy, dist: Math.hypot(cx - focus.cx, cy - focus.cy) });
+      }
     }
-  }
-  spots.sort((a, b) => a.dist - b.dist);
+    spots.sort((a, b) => a.dist - b.dist);
+    for (const s of spots.slice(0, Math.max(0, count))) {
+      const f: Furniture = {
+        id: `s${++n}`,
+        type: it.type,
+        name: numbered ? `Mesa ${++tableNo}` : it.name,
+        cx: s.cx,
+        cy: s.cy,
+        w: it.w,
+        d: it.d,
+        rot: 0,
+        color: it.color,
+        ...(it.seats ? { seats: it.seats, table: it.table } : {}),
+      };
+      out.push(f);
+      blocked.push(grow(boxOf(f), Math.min(gapX, gapY) / 2));
+    }
+  };
 
   const headSeats = out.reduce((a, f) => a + (f.seats ?? 0), 0);
-  const needed = Math.max(0, Math.ceil((opts.guests - headSeats) / (table.seats ?? 10)));
-  spots.slice(0, needed).forEach((s, i) =>
-    out.push({
-      id: `s${++n}`,
-      type: table.type,
-      name: `Mesa ${i + 1}`,
-      cx: s.cx,
-      cy: s.cy,
-      w: table.w,
-      d: table.d,
-      rot: 0,
-      color: table.color,
-      seats: table.seats,
-      table: table.table,
-    }),
-  );
+  const guests = Math.max(0, opts.guests - headSeats);
+  const template = opts.template ?? "redondas";
+  if (template === "coctel") {
+    // De pie: una periquera por cada 6 invitados y una sala lounge por cada 60 (máximo 4).
+    fill({ name: "Sala lounge", count: Math.min(4, Math.ceil(guests / 60)), gapX: 1500, gapY: 1500, numbered: false });
+    fill({ name: "Periquera", count: Math.ceil(guests / 6), gapX: 1700, gapY: 1700, numbered: false });
+  } else {
+    const name = template === "imperial" ? "Mesa imperial 4.80 m" : "Mesa redonda 1.80 m";
+    const seats = item(name).seats ?? 10;
+    fill({
+      name,
+      count: Math.ceil(guests / seats),
+      gapX: template === "imperial" ? 1200 : AISLE,
+      gapY: template === "imperial" ? 900 : AISLE,
+      numbered: true,
+    });
+  }
   return out;
 }
 
 /** Distribución inicial de un evento: salones con montaje; casas con el amueblado del modelo. */
-export function starterDesign(plan: DesignerPlan, opts: { guests: number; kind: EventKind }): DesignDoc {
+export function starterDesign(
+  plan: DesignerPlan,
+  opts: { guests: number; kind: EventKind; template?: Template },
+): DesignDoc {
   if (plan.kind !== "salon") return { v: 1, levels: {} };
   const level = plan.levels[0];
   return { v: 1, levels: { [level.id]: { furniture: starterFurniture(plan, opts) } } };

@@ -6,6 +6,7 @@ import { listEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
 import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, SECTIONS, sectionOf, type Section } from "@/lib/domain";
 import { NewEventForm } from "./NewEventForm";
 import { SignOutButton } from "./SignOutButton";
+import { Welcome } from "./Welcome";
 
 export const metadata: Metadata = { title: "Proyectos" };
 
@@ -61,6 +62,8 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
           <SignOutButton />
         </div>
       </header>
+
+      {events.length === 0 && <Welcome />}
 
       <nav className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-stone-200/70 p-1" aria-label="Secciones">
         {(Object.keys(SECTIONS) as Section[]).map((s) => (
