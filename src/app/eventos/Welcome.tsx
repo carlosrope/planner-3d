@@ -45,3 +45,21 @@ export function Welcome() {
     </section>
   );
 }
+
+/** Al final de Proyectos: cargar ejemplos para una demo aunque la cuenta ya tenga proyectos. */
+export function SamplesLink() {
+  return (
+    <form action={createSamples} className="mt-8 text-center">
+      <SamplesLinkButton />
+    </form>
+  );
+}
+
+function SamplesLinkButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button disabled={pending} className="text-sm text-stone-500 underline disabled:opacity-60">
+      {pending ? "Preparando ejemplos…" : "¿Vas a dar una demo? Cargar proyectos de ejemplo"}
+    </button>
+  );
+}

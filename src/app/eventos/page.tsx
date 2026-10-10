@@ -6,7 +6,7 @@ import { listEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
 import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, SECTIONS, sectionOf, type Section } from "@/lib/domain";
 import { NewEventForm } from "./NewEventForm";
 import { SignOutButton } from "./SignOutButton";
-import { Welcome } from "./Welcome";
+import { SamplesLink, Welcome } from "./Welcome";
 
 export const metadata: Metadata = { title: "Proyectos" };
 
@@ -118,6 +118,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         <p className="mb-4 text-sm text-stone-500">{COPY[section].hint}</p>
         <NewEventForm key={section} section={section} venues={places} />
       </section>
+      {events.length > 0 && <SamplesLink />}
     </>
   );
 }
