@@ -207,6 +207,7 @@
     document.getElementById('xChair').onchange = e => upd(g => { g.chair = e.target.value; });
     document.querySelectorAll('#panel [data-unseat]').forEach(b => b.onclick = () =>
       mutate(() => { const g = list(state).find(x => x.id === b.dataset.unseat); if (g) delete g.table; }));
+    document.querySelectorAll('#panel [data-viewfrom]').forEach(b => b.onclick = () => viewFromTable(b.dataset.viewfrom));
     const add = document.getElementById('xSeatGuest');
     if (add) add.onchange = () => add.value && mutate(() => { const g = list(state).find(x => x.id === add.value); if (g) g.table = f.id; });
   }
@@ -216,7 +217,8 @@
     if (!SEATED.includes(f.type)) return '';
     const here = seatedAt(state, f.id), cap = seats(f);
     const head = `<h3>${t('Guests at this table', 'Invitados en esta mesa')} <small>${here.length}/${cap}</small></h3>`;
-    if (!canSeeGuests()) return `<section>${head}</section>`;
+    const view = `<div class="actions"><button class="btn primary" data-viewfrom="${f.id}">${t('View from this table (3D)', 'Ver desde esta mesa (3D)')}</button></div>`;
+    if (!canSeeGuests()) return `<section>${head}${view}</section>`;
     const free = list(state).filter(g => !isSeated(state, g));
     return `<section>${head}
       <table>${here.map(g => `<tr><td>${esc(g.name)}${g.diet ? ` <small class="muted">· ${esc(g.diet)}</small>` : ''}</td>
@@ -225,7 +227,21 @@
       ${free.length ? `<select id="xSeatGuest" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff">
         <option value="">＋ ${t('Seat a guest without a table…', 'Sentar a un invitado sin mesa…')}</option>
         ${free.map(g => `<option value="${g.id}">${esc(g.name)}${g.group ? ` · ${esc(g.group)}` : ''}</option>`).join('')}</select>` : ''}
-      <div class="actions"><button class="btn" onclick="select({kind:'ext',panel:'guests'})">${t('Open guest list', 'Abrir lista de invitados')}</button></div></section>`;
+      <div class="actions"><button class="btn" onclick="select({kind:'ext',panel:'guests'})">${t('Open guest list', 'Abrir lista de invitados')}</button></div>
+      ${view}</section>`;
+  }
+
+  /** Cámara 3D sentada en la mesa, mirando a la pista (o al escenario, o a la mesa principal). */
+  async function viewFromTable(id) {
+    const f = state.furniture.find(g => g.id === id);
+    if (!f) return;
+    const focus = ['dancefloor', 'stage', 'headtable'].map(k => state.furniture.find(g => g.type === k && g.id !== f.id)).find(Boolean);
+    const tx = focus ? focus.cx : BOUNDS.x + BOUNDS.w / 2, ty = focus ? focus.cy : BOUNDS.y + BOUNDS.h / 2;
+    const dx = f.cx - tx, dy = f.cy - ty, len = Math.hypot(dx, dy) || 1;
+    const back = Math.min(f.w, f.d) / 2 + 150;   // detrás de la silla del lado opuesto a la pista
+    if (typeof is3D === 'function' && !is3D()) { await setView('3d'); await new Promise(r => setTimeout(r, 200)); }
+    closeDrawers?.();
+    window.View3D?.viewFrom(f.cx + dx / len * back, f.cy + dy / len * back, tx, ty);
   }
 
   /** Nombre en el plano: con lista de invitados, la mesa muestra cuántos lleva ("Mesa 3 · 7/10"). */

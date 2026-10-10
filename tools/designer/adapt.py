@@ -634,6 +634,14 @@ sub(
     "  snap: () => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); },",
 )
 
+# "Ver desde esta mesa": la cámara a la altura de una persona sentada, mirando un punto del plano
+sub(
+    "  snap: () => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); },",
+    "  snap: () => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); },\n"
+    "  viewFrom: (x, y, tx, ty) => { if (!active) return; if (opt.mode === 'walk') setMode('orbit');\n"
+    "    flyTo(pose(new THREE.Vector3(wx(tx), 1.1, wz(ty)), new THREE.Vector3(wx(x), 1.4, wz(y))), 1400); },",
+)
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")
