@@ -3509,7 +3509,7 @@ function arriveByStairs(){
   const to = lookFrom(l.at, l.away), a = new THREE.Vector3(wx(l.step2[0]), eyeH() + l.lift*l.rise*2, wz(l.step2[1])), b = new THREE.Vector3(wx(l.at[0]), eyeH(), wz(l.at[1]));
   camera.position.copy(a); camera.quaternion.copy(lookQ(a, new THREE.Vector3(b.x, b.y - l.lift*.25, b.z)));
   glide = {t0: performance.now(), dur: 1200, a, b, q0: camera.quaternion.clone(), q1: lookQ(b, new THREE.Vector3(wx(to[0]), 1.45, wz(to[1]))), fade: false};
-  requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.add('arrived')));
+  setTimeout(() => document.documentElement.classList.add('arrived'), 40);   // un instante después, para que la transición corra
   setTimeout(() => document.documentElement.classList.remove('arriving', 'arrived'), 900);
   Q.delete('recorrido'); const cont = Q.has('visita'); Q.delete('visita');   // recargar no vuelve a «llegar»
   history.replaceState(null, '', location.pathname + (Q.size ? '?' + Q : ''));
