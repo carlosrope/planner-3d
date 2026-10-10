@@ -10,6 +10,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<script>if (/[?&]recorrido=/.test(location.search)) document.documentElement.classList.add('arriving');</script>
+<style>html.arriving::before{content:"";position:fixed;inset:0;z-index:500;background:#1e1c19;transition:opacity .5s}html.arrived::before{opacity:0}</style>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -226,6 +228,13 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
   font:inherit;font-size:16px;cursor:pointer}
 #wtPlay{background:var(--accent);color:#fff}
 #view3d.touring #joy,#view3d.touring #walkExit,#view3d.touring #whEye,#view3d.tourcard #hint3d{visibility:hidden}
+/* Escalera: al llegar al pie (o al desembarco) aparece el botón para cambiar de planta */
+#whStair{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);height:40px;padding:0 16px 0 12px;background:var(--accent);color:#fff;font-size:14px}
+#whStair svg{width:20px;height:20px;fill:currentColor}
+#view3d.touchwalk #whStair{bottom:172px}
+#view3d.tourcard:not(.touchwalk) #whStair{bottom:80px}
+#view3d.touchwalk.tourcard #whStair{bottom:236px}
+#view3d.recording #whStair{display:none!important}
 /* Video de la visita: en pantalla se ve el video tal cual (vertical), con la tarjeta de la visita abajo */
 #whRecBtn svg,#recAsk .btn svg{width:18px;height:18px;flex:none}
 #recAsk{position:absolute;inset:0;z-index:3;display:grid;place-items:center;padding:16px;background:rgba(30,28,25,.55)}
@@ -535,6 +544,9 @@ const R = (x0,y0,x1,y1) => [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
 // Cuartos: outdoor = exterior (sin techo); void = doble altura (sin piso); counted:false = no suma área
 const ROOMS = PLANTA.rooms;
 const DIMS = PLANTA.dims, ENTRY = PLANTA.entry, STAIRS = PLANTA.stairs || [], STAIR_LINES = PLANTA.stairLines || [];
+// Plantas vecinas (para subir y bajar la escalera en el recorrido) y dobles alturas (sin piso: no se pisan)
+const LEVEL_AT = CASA.levels.indexOf(PLANTA), BELOW = CASA.levels[LEVEL_AT - 1] || null, ABOVE = CASA.levels[LEVEL_AT + 1] || null;
+const VOIDS = ROOMS.filter(r => r.void).map(r => r.poly);
 // Pisos: precio estimado instalado en MXN por m² (Los Mochis, 2026). Ajustar con el proveedor.
 const MATS = {
   wood:    {name:'橡木地板', price:480, sw:'#d8b88a'},
@@ -1600,6 +1612,17 @@ fitView(); renderAll();
       undoStack.length = redoStack.length = 0; renderAll(); },
     rerender: renderAll, toast, tr, esc, PLANTA, CASA, viewMode: () => viewMode,
   });
+  // Abrir en 3D (?vista=3d: al cambiar de planta desde el 3D y al subir o bajar la escalera, que además trae
+  // ?recorrido=subir|bajar y entra directo al recorrido) y arrancar la visita guiada (?visita=1). El enlace del
+  // cliente sin vista=3d lo atiende host.js con su portada. El motor 3D carga después de este script.
+  const Q = new URLSearchParams(location.search), clientLink = !!HOST && !HOST.editable;
+  if (Q.get('vista') === '3d' || (Q.has('visita') && !clientLink)){
+    let tries = 0;
+    const go = () => window.View3D ? setView('3d').then(() => { if (Q.has('visita') && !Q.has('recorrido')) window.View3D.tour?.(); })
+      : ++tries < 150 ? setTimeout(go, 100) : document.documentElement.classList.remove('arriving');
+    go();
+    setTimeout(() => document.documentElement.classList.remove('arriving', 'arrived'), 20000);   // por si el 3D no carga
+  }
   const seg = $('#levelSeg');
   if (CASA.levels.length < 2) { seg.remove(); return; }
   const short = n => { const t = n.replace(/^planta\s+/i, ''); return t.charAt(0).toUpperCase() + t.slice(1); };
@@ -1612,10 +1635,6 @@ fitView(); renderAll();
     if (viewMode === '3d') u.searchParams.set('vista', '3d'); else u.searchParams.delete('vista');
     if (HOST?.navigate) HOST.navigate(u.toString()); else location.href = u.toString();
   });
-  // Al cambiar de planta desde el 3D se vuelve a abrir en 3D (el motor carga después de este script)
-  if (new URLSearchParams(location.search).get('vista') === '3d'){
-    let tries = 0; const go = () => window.View3D ? setView('3d') : ++tries < 150 && setTimeout(go, 100); go();
-  }
   // En el celular el menú Archivo sale de la tira deslizable: se coloca debajo de la barra
   $('details.menu').addEventListener('toggle', e => {
     const pop = e.target.querySelector('.menu-pop');
@@ -2426,6 +2445,7 @@ function wallBox([x0, y0, x1, y1], yb, yt, m){
     sk.position.set(o.position.x, sh/2, o.position.z); sk.userData.walkOnly = true; sk.visible = opt.mode === 'walk'; archUp.add(sk);
   }
 }
+function stepBox(st, i){ const h = (i + 1)*(st.rise || .18), yb = h - .45; return [yb < 1.5 ? 0 : yb, h]; }
 const edgeMat = new THREE.LineBasicMaterial({color:0x6f675b}), skirtMat = new THREE.MeshStandardMaterial({color:'#8b7f6e', roughness:.6});
 function shapeOf(poly, flip){ const s = new THREE.Shape(); poly.forEach(([x, y], i) => s[i ? 'lineTo' : 'moveTo'](wx(x), flip ? wz(y) : -wz(y))); return s; }
 
@@ -2481,9 +2501,29 @@ function buildArch(){
     door.cur = door.a1; pivot.rotation.y = door.cur; leaf.userData.door = knob.userData.door = door;
     doors.push(door); archUp.add(pivot);
   });
-  // Escalera: escalones macizos hasta la siguiente planta
+  // Escalera: cada escalón es una caja. Los de abajo llegan al piso; desde ~1.5 m de alto la caja flota con
+  // un fondo inclinado (una losa de 45 cm), así debajo del tramo alto se puede pasar (en Chardonnay el medio
+  // baño se entra por ahí). Los escalones con menos de 1.9 m libres debajo estorban al caminar (colliders).
   const stepMat = mat('#d9cfbf', {roughness:.7});
-  STAIRS.forEach(st => st.steps.forEach((r, i) => wallBox(r, 0, Math.min((i + 1) * (st.rise || .18), top), stepMat)));
+  STAIRS.forEach(st => st.steps.forEach((r, i) => {
+    const [yb, yt] = stepBox(st, i);
+    wallBox(r, yb, Math.min(yt, top), stepMat);
+    if (yb < 1.9) colliders.push([wx(r[0]), wz(r[1]), wx(r[2]), wz(r[3])]);
+  }));
+  // Planta con doble altura sobre la escalera de abajo: se ven los escalones subiendo por el hueco, los pisos de
+  // abajo que quedan bajo el hueco y los muros de abajo (lisos, sin ventanas), para que el hueco no quede en el aire
+  if (BELOW && VOIDS.length){
+    const Hb = BELOW.height || 2.8, under = poly => VOIDS.some(v => poly.some(p => inPoly(p, v)) || v.some(p => inPoly(p, poly)));
+    (BELOW.stairs || []).forEach(st => st.steps.forEach(([x0, y0, x1, y1], i) => {
+      const [yb, yt] = stepBox(st, i);
+      archUp.add(box(M(x1-x0), yt-yb, M(y1-y0), stepMat, wx((x0+x1)/2), yb - Hb, wz((y0+y1)/2)));
+    }));
+    BELOW.rooms.filter(r => !r.void && !r.outdoor && under(r.poly)).forEach(r => {
+      const geo = new THREE.ShapeGeometry(shapeOf(r.poly)); geo.rotateX(-Math.PI/2);
+      const fl = new THREE.Mesh(geo, floorMat(r.mat)); fl.position.y = -Hb; fl.receiveShadow = true; archFloor.add(fl);
+    });
+    BELOW.walls.forEach(w => archUp.add(box(M(w[2]-w[0]), w[4] === 'low' ? 1 : Hb, M(w[3]-w[1]), wallMat, wx((w[0]+w[2])/2), -Hb, wz((w[1]+w[3])/2))));
+  }
   SLIDES.forEach(({rect:[x0, y0, x1, y1], v}) => {
     const L = M(v ? y1-y0 : x1-x0), ph = Math.min(v ? 2.4 : 2.1, top), pl = L*.55;
     [[-1, -.02], [1, .02]].forEach(([s, off]) => {
@@ -2622,6 +2662,7 @@ async function enter(){
   renderer.setSize(SW(), SH()); labelRenderer.setSize(SW(), SH()); camera.aspect = SW()/SH(); camera.updateProjectionMatrix();
   sync(true);
   opt.mode = 'orbit'; orbit.enabled = false; showLabels(false);
+  if (arriveByStairs()) return;
   const A = planPose(), B = shownWhole() ? isoWhole() : isoFrom(A);
   grow = 0; furnGrow = 0; applyGrow(); setPose(A);
   stage.classList.add('animating');
@@ -2765,6 +2806,7 @@ function setMode(m, keep){   // keep: el recorrido empieza donde está la cámar
 }
 function blocked(x, z, r = .22){
   for (const [x0, z0, x1, z1] of colliders) if (x > x0 - r && x < x1 + r && z > z0 - r && z < z1 + r) return true;
+  if (VOIDS.length && inVoid(x*1000 + OX, z*1000 + OY, r*1000)) return true;
   for (const d of doors){
     const a = d.pivot.rotation.y, px = d.pivot.position.x, pz = d.pivot.position.z, ex = px + Math.cos(a)*.9, ez = pz - Math.sin(a)*.9;
     const t = clamp01(((x-px)*(ex-px) + (z-pz)*(ez-pz)) / ((ex-px)**2 + (ez-pz)**2));
@@ -2773,6 +2815,7 @@ function blocked(x, z, r = .22){
   return false;
 }
 function stepWalk(dt){
+  stairTick();
   if (glide){ stepGlide(); walkMapTick(); return; }
   if (tour && !tour.paused && tour.phase !== 'end' && stepTour(dt)){ walkMapTick(); return; }
   const p = camera.position;
@@ -2825,6 +2868,7 @@ function walkHud(on){
   $('#whFade').classList.remove('on'); $('#hint3d').classList.toggle('gone', on);
   $('#walkHud').hidden = !on; $('#view3d').classList.toggle('walking', on); walkFov(on);
   if ($('#whPop')) $('#whPop').hidden = true;
+  nearLink = null; if ($('#whStair')) $('#whStair').hidden = true;
   if (on){ setSit(false); buildWalkGo(); walkMapTick(true); }
   $('#tip').textContent = on ? (COARSE ? HINT_TOUCHWALK() : HINT_WALK()) : TIPS()['3d'];
 }
@@ -2916,7 +2960,8 @@ function buildWalkGo(){
   const W0 = PLANTA.walk || {from:[OX, OY], to:[OX, OY - 3000]};
   spots = [{label: PLANTA.entry ? tr('入口', 'Entrance', 'Entrada') : tr('起点', 'Start', 'Inicio'), p:W0.from, to:W0.to}];
   (EXT?.walkSpots?.(state) || []).forEach(s => spots.push({group:s.group, label:s.label, p:[s.x, s.y], to:[s.tx, s.ty], sit:s.sit, table:s.r ? s : null}));
-  ROOMS.filter(r => !r.void).forEach(r => spots.push({group:tr('房间', 'Rooms', 'Cuartos'), label:nm(state.rooms[r.id].name), room:r}));
+  ROOMS.filter(r => !r.void && !stairRoom(r)).forEach(r => spots.push({group:tr('房间', 'Rooms', 'Cuartos'), label:nm(state.rooms[r.id].name), room:r}));
+  STAIR_LINKS.forEach(l => spots.push({group:tr('房间', 'Rooms', 'Cuartos'), label:tr('楼梯', 'Stairs', 'Escalera'), p:l.at, to:l.step2}));
   const groups = [...new Set(spots.map(s => s.group || ''))];
   $('#whGo').innerHTML = `<option value="">${esc(tr('前往…', 'Go to…', 'Ir a…'))}</option>` + groups.map(g => {
     const o = spots.map((s, i) => (s.group || '') === g ? `<option value="${i}">${esc(s.label)}</option>` : '').join('');
@@ -2966,6 +3011,8 @@ function drawMap(cv, m, big){
     g.beginPath(); r.poly.forEach(([x, y], i) => g[i ? 'lineTo' : 'moveTo'](...P(x, y))); g.closePath();
     g.fillStyle = r.outdoor ? '#e3e9d8' : '#efe7da'; g.fill();
   });
+  g.fillStyle = '#e6dfd0'; g.strokeStyle = '#cdc3b2'; g.lineWidth = .6;
+  MAP_STAIRS.forEach(([x0, y0, x1, y1]) => { const [ax, ay] = P(x0, y0), [bx, by] = P(x1, y1); g.fillRect(ax, ay, bx - ax, by - ay); g.strokeRect(ax, ay, bx - ax, by - ay); });
   if (opt.furn) state.furniture.forEach(f => {
     if (f.type === 'vendor') return;
     const [x, y] = P(f.cx, f.cy), w = f.w*m.k, d = f.d*m.k;
@@ -3067,6 +3114,7 @@ function renderWalkHud(){
         <button class="wh-pill" id="whCycle"></button>
       </div>
     </div>
+    <button class="wh-pill" id="whStair" hidden></button>
     <div id="whTour" hidden>
       <div class="wt-txt"><b id="wtName"></b><small id="wtStep"></small></div>
       <button class="wt-btn" id="wtPlay"></button>
@@ -3078,6 +3126,8 @@ function renderWalkHud(){
       <h3>${esc(tr('录制导览视频', 'Record the tour as a video', 'Grabar video de la visita'))}</h3>
       <p>${esc(tr('竖屏视频，适合 WhatsApp 和 Instagram', 'A vertical video for WhatsApp and Instagram, with the name of each stop and your brand. Keep this screen open while it records.',
         'Video vertical para WhatsApp e Instagram, con el nombre de cada parada y tu marca. Deja esta pantalla abierta mientras se graba.'))}</p>
+      ${CASA.levels.length > 1 ? `<p>${esc(tr('每层楼分别录制', 'It records the floor you are on; record the other floor from there.',
+        'Se graba la planta en la que estás; la otra planta se graba desde ahí.'))}</p>` : ''}
       <span class="muted">${esc(tr('速度', 'Speed (faster = shorter video)', 'Velocidad (más rápido = video más corto)'))}</span>
       <div class="wh-seg">${seg([['sp', 1, 'x1'], ['sp', 2, 'x2'], ['sp', 3, 'x3']])}</div>
       <div class="row"><button class="btn primary" data-rec="go">${ICON.rec} ${esc(tr('录制', 'Record', 'Grabar'))}</button>
@@ -3090,7 +3140,7 @@ function renderWalkHud(){
       <button class="btn" id="whClose">${esc(tr('关闭', 'Close', 'Cerrar'))}</button>
     </div>`;
   $('#woTour').innerHTML = `${ICON.play} ${esc(tr('导览', 'Guided tour', 'Visita guiada'))}`;
-  bigMap(false); tourCard();
+  bigMap(false); tourCard(); nearLink = null;
   if (opt.mode === 'walk'){ buildWalkGo(); syncWalkHud(); walkMapTick(true); }
 }
 function bindWalkHud(){
@@ -3110,7 +3160,8 @@ function bindWalkHud(){
     else if (b.id === 'whTourBtn') startTour();
     else if (b.id === 'whRecBtn') recAsk(true);
     else if (d.rec) d.rec === 'go' ? startRecording() : recAsk(false);
-    else if (b.id === 'wtPlay') tour?.phase === 'end' ? startTour() : tour?.paused ? tourResume() : tourPause();
+    else if (b.id === 'whStair'){ if (nearLink) climb(nearLink); }
+    else if (b.id === 'wtPlay') tour?.phase === 'end' ? tourAgain() : tour?.paused ? tourResume() : tourPause();
     else if (b.id === 'wtNext') tourNext();
     else if (b.id === 'wtStop') tourEnd();
     else if (b.parentElement?.id === 'whBig') mapGo(b, e);
@@ -3146,6 +3197,7 @@ const ICON = {
   down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12l-6 7z"/></svg>',
   up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15h12l-6-7z"/></svg>',
   rec: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="#d93a2b"/></svg>',
+  stairs: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 22h20V2h-4v4h-4v4h-4v4h-4v4H2z"/></svg>',
 };
 const SHOW = ['bar', 'dessert', 'cake', 'booth', 'platform360'];   // en salones: lo que más se luce
 let tour = null, grids = {}, tourDrag = 0;
@@ -3156,14 +3208,13 @@ let tour = null, grids = {}, tourDrag = 0;
 // del más cercano al más lejano. Los pasillos no son parada: se cruzan caminando.
 const ROOM_KIND = [/acceso|recibidor|vest[ií]bulo|sala|estancia|comedor|cocina|family|tv|estudio/i,
   /ba[ñn]o|lavad|servicio|bodega|cl[oó]set|vestidor|m[aá]quinas/i, /pasillo|circulaci[oó]n/i];
-function tourStops(){
+function tourStops(from){   // from: sigue desde aquí (llegó por la escalera) en vez de empezar en la entrada
   const W0 = PLANTA.walk || {from:[OX, OY], to:[OX, OY - 3000]}, stops = [];
   const add = (name, p, to, sit = false) => stops.push({name, p, to, sit}), last = () => stops[stops.length - 1].p;
   const d2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]), mid = r => roomSpot(r, last());
   const ctr = r => { const xs = r.poly.map(q => q[0]), ys = r.poly.map(q => q[1]); return [(Math.min(...xs) + Math.max(...xs))/2, (Math.min(...ys) + Math.max(...ys))/2]; };
-  const stairs = r => STAIRS.some(st => st.steps.some(([x0, y0, x1, y1]) => inPoly([(x0 + x1)/2, (y0 + y1)/2], r.poly)));
-  const rooms = ROOMS.filter(r => !r.void && area(r.poly) >= 1.5 && !stairs(r));
-  add(PLANTA.entry ? tr('入口', 'Entrance', 'Entrada') : tr('起点', 'Start', 'Inicio'), W0.from, W0.to);
+  const rooms = ROOMS.filter(r => !r.void && area(r.poly) >= 1.5 && !stairRoom(r));
+  if (from) add(PLANTA.name, from, null); else add(PLANTA.entry ? tr('入口', 'Entrance', 'Entrada') : tr('起点', 'Start', 'Inicio'), W0.from, W0.to);
   if (EXT?.walkSpots){
     const main = rooms.slice().sort((a, b) => area(b.poly) - area(a.poly))[0];
     if (main){ const s = mid(main); add(nm(state.rooms[main.id].name), s.p, s.to); }
@@ -3195,6 +3246,9 @@ function tourStops(){
         add(`${nm(state.rooms[r.id].name)} · ${area(r.poly).toFixed(1)} m²`, s.p, s.to);
       }
     }
+    // Casa de dos plantas: la última parada es el pie de la escalera y desde ahí la visita sigue arriba
+    const up = STAIR_LINKS.find(l => l.dir === 'subir');
+    if (up) stops.push({name: tr('楼梯', 'Stairs', 'Escalera'), p: up.at, to: up.step2, sit: false, climb: up});
   }
   return stops;
 }
@@ -3206,11 +3260,10 @@ function makeGrid(furn){
   const nx = Math.ceil((B.x1 - B.x0 + 2*pad)/G) + 1, ny = Math.ceil((B.y1 - B.y0 + 2*pad)/G) + 1, memo = new Int8Array(nx*ny);
   const at = (x, y) => { const i = Math.round((x - x0)/G), j = Math.round((y - y0)/G); return i < 0 || j < 0 || i >= nx || j >= ny ? -1 : j*nx + i; };
   const pt = k => [x0 + (k % nx)*G, y0 + Math.floor(k/nx)*G];
-  const step = (x, y) => STAIRS.some(st => st.steps.some(([a, b, c, d]) => x > a - 200 && x < c + 200 && y > b - 200 && y < d + 200));
   const wall = (x, z) => colliders.some(([a, b, c, d]) => x > a - .18 && x < c + .18 && z > b - .18 && z < d + .18);   // cabe por puertas de 75 cm
   const free = k => {
     if (k < 0) return false;
-    if (!memo[k]){ const [x, y] = pt(k); memo[k] = wall(wx(x), wz(y)) || step(x, y) || (furn && inFurn(x, y, 120, -150)) ? 2 : 1; }
+    if (!memo[k]){ const [x, y] = pt(k); memo[k] = wall(wx(x), wz(y)) || inVoid(x, y, 180) || (furn && inFurn(x, y, 120, -150)) ? 2 : 1; }
     return memo[k] === 1;
   };
   return {G, nx, ny, at, pt, free};
@@ -3264,17 +3317,17 @@ function findPath(a, b){
   return null;
 }
 
-function startTour(){
+function startTour(o = {}){   // o.here: sigue desde este punto (mm); o.cont: vino subiendo de la planta de abajo
   if (!active || anim) return;
   if (opt.mode !== 'walk') setMode('walk');
   if (!touchWalk){ freeMouse(); startTouchWalk(); }
   bigMap(false);
   doors.forEach(d => d.open = true);                       // en la visita las puertas están abiertas
   grids = {};
-  tour = {stops: tourStops(), i: 0, phase: 'go', paused: false};
+  tour = {stops: tourStops(o.here), i: 0, phase: 'go', paused: false, cont: !!o.cont};
   tourCard();
 }
-function tourPause(){ tourDrag = 0; if (tour && !tour.paused && tour.phase !== 'end'){ tour.paused = true; tourCard(); if (rec?.mr.state === 'recording') rec.mr.pause(); } }
+function tourPause(){ tourDrag = 0; if (tour && !tour.paused && tour.phase !== 'end' && tour.phase !== 'climb'){ tour.paused = true; tourCard(); if (rec?.mr.state === 'recording') rec.mr.pause(); } }
 function tourResume(){
   if (!tour) return;
   tour.paused = false;
@@ -3284,7 +3337,7 @@ function tourResume(){
   tour.phase = 'go'; tourCard();
 }
 function tourNext(){
-  if (!tour || tour.phase === 'end') return;
+  if (!tour || tour.phase === 'end' || tour.phase === 'climb') return;
   tour.i++; tour.paused = false;
   if (rec?.mr.state === 'paused') rec.mr.resume();
   if (tour.i >= tour.stops.length) return tourFinish();
@@ -3300,14 +3353,14 @@ function tourCard(){
   if (!c) return;
   c.hidden = !tour;
   if (!tour) return;
-  const end = tour.phase === 'end', s = tour.stops[Math.min(tour.i, tour.stops.length - 1)];
-  $('#wtName').textContent = end ? tr('参观结束', 'End of the tour', 'Fin de la visita') : s.name;
+  const end = tour.phase === 'end', up = tour.phase === 'climb', s = tour.stops[Math.min(tour.i, tour.stops.length - 1)];
+  $('#wtName').textContent = end ? tr('参观结束', 'End of the tour', 'Fin de la visita') : up ? tr('上楼中…', 'Going up…', 'Subiendo…') : s.name;
   $('#wtStep').textContent = end ? tr('可以自己逛逛', 'Walk around on your own or watch it again', 'Recorre por tu cuenta o vuélvela a ver')
-    : `${tour.i + 1} ${tr('/', 'of', 'de')} ${tour.stops.length}`;
+    : up ? s.climb.level.name : `${tour.i + 1} ${tr('/', 'of', 'de')} ${tour.stops.length}`;
   $('#wtPlay').innerHTML = end ? ICON.again : tour.paused ? ICON.play : ICON.pause;
   $('#wtPlay').setAttribute('aria-label', end ? tr('重新播放', 'Watch again', 'Volver a ver')
     : tour.paused ? tr('继续', 'Resume', 'Seguir') : tr('暂停', 'Pause', 'Pausa'));
-  $('#wtNext').hidden = end;
+  $('#wtNext').hidden = end || up;
 }
 // Un cuadro de la visita: ir caminando, voltear a ver, quedarse mirando un momento. false = el usuario tomó el control
 function stepTour(dt){
@@ -3356,10 +3409,13 @@ function stepTour(dt){
     const H = 3.6/Math.sqrt(walk.speed);
     T.held += dt;
     cam.quaternion.copy(new THREE.Quaternion().setFromAxisAngle(UP_Y, Math.sin(Math.min(1, T.held/H)*Math.PI*2)*.16).multiply(T.q1));
-    if (T.held >= H){ T.i++; if (T.i >= T.stops.length) tourFinish(); else { T.phase = 'go'; tourCard(); } }
+    if (T.held >= H){
+      if (s.climb && !rec){ climb(s.climb, true); return true; }   // sigue en la planta alta (el video se graba por planta)
+      T.i++; if (T.i >= T.stops.length) tourFinish(); else { T.phase = 'go'; tourCard(); }
+    }
     return true;
   }
-  return false;
+  return T.phase === 'climb';   // subiendo: la cámara la lleva el glide y luego cambia la página
 }
 function tourTurn(){
   const T = tour, s = T.stops[T.i];
@@ -3369,6 +3425,105 @@ function tourTurn(){
   T.q1 = s.to ? new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(eye,
     new THREE.Vector3(wx(s.to[0]), s.sit ? 1 : 1.45, wz(s.to[1])), camera.up)) : T.q0.clone();
   Object.assign(T, {phase: 'turn', t0: performance.now()});
+}
+
+/* ---------- Escalera: subir y bajar de planta desde el recorrido ---------- */
+// Cada planta es una página (?planta=): al subir o bajar se abre la otra con ?vista=3d&recorrido=subir|bajar y entra
+// directo al recorrido, en el desembarco (arriba) o al pie (abajo). Las escaleras de esta planta suben a la siguiente
+// (ABOVE); las de la planta de abajo (BELOW) desembocan aquí. Con ?visita=1 la visita guiada sigue en la otra planta.
+const stairRoom = r => STAIRS.some(st => st.steps.some(([x0, y0, x1, y1]) => inPoly([(x0 + x1)/2, (y0 + y1)/2], r.poly)));
+const inVoid = (x, y, m = 0) => VOIDS.some(v => [[0, 0], [m, 0], [-m, 0], [0, m], [0, -m]].some(([dx, dy]) => inPoly([x + dx, y + dy], v)));
+const MAP_STAIRS = [...STAIRS, ...(VOIDS.length && BELOW ? BELOW.stairs || [] : [])].flatMap(st => st.steps);
+// Pie (antes del primer escalón) y desembarco (después del último) de una escalera, con su dirección de subida
+function stairEnds(st){
+  const S = st.steps, n = S.length, c = r => [(r[0] + r[2])/2, (r[1] + r[3])/2], depth = r => Math.min(r[2] - r[0], r[3] - r[1]);
+  const dir = (a, b) => { const d = [b[0] - a[0], b[1] - a[1]], L = Math.hypot(d[0], d[1]) || 1; return [d[0]/L, d[1]/L]; };
+  const up = n > 1 ? dir(c(S[0]), c(S[1])) : [0, -1], out = n > 1 ? dir(c(S[n - 2]), c(S[n - 1])) : up;
+  const k0 = depth(S[0])/2 + 650, k1 = depth(S[n - 1])/2 + 650;
+  return {foot: [c(S[0])[0] - up[0]*k0, c(S[0])[1] - up[1]*k0], up, second: c(S[Math.min(1, n - 1)]),
+    top: [c(S[n - 1])[0] + out[0]*k1, c(S[n - 1])[1] + out[1]*k1], out, prev: c(S[Math.max(0, n - 2)])};
+}
+// Enlaces de esta planta: dónde aparece el botón (at), a qué planta va, hacia dónde queda la espalda a la escalera
+// (away), el escalón al que se sube o baja al salir (step2) y el sentido (lift). Si el inicio del recorrido de la
+// planta está junto al desembarco, ese es el punto (el plano dice dónde se llega).
+const STAIR_LINKS = (() => {
+  const W = PLANTA.walk, L = [], near = p => W && Math.hypot(W.from[0] - p[0], W.from[1] - p[1]) < 2500 ? W.from : p;
+  if (ABOVE) STAIRS.forEach(st => { const e = stairEnds(st); L.push({dir: 'subir', level: ABOVE, at: near(e.foot), away: [-e.up[0], -e.up[1]], step2: e.second, lift: 1, rise: st.rise || .18}); });
+  if (BELOW) (BELOW.stairs || []).forEach(st => { const e = stairEnds(st); L.push({dir: 'bajar', level: BELOW, at: near(e.top), away: e.out, step2: e.prev, lift: -1, rise: st.rise || .18}); });
+  return L;
+})();
+const linkLabel = l => {
+  const n = l.level.name, es = /^planta\b/i.test(n) ? 'la ' + n.toLowerCase() : n;
+  return l.dir === 'subir' ? tr(`上楼：${n}`, `Up to ${n}`, `Subir a ${es}`) : tr(`下楼：${n}`, `Down to ${n}`, `Bajar a ${es}`);
+};
+// Hacia dónde mirar al llegar a p (mm) dando la espalda a la escalera (away): a donde mira el inicio del recorrido
+// de la planta si estamos ahí o se ve desde aquí; si no, la dirección más despejada
+function lookFrom(p, away){
+  const W = PLANTA.walk, dot = (a, b) => a[0]*b[0] + a[1]*b[1], unit = v => { const L = Math.hypot(v[0], v[1]) || 1; return [v[0]/L, v[1]/L]; };
+  if (W && dot(unit([W.to[0] - p[0], W.to[1] - p[1]]), away) > -.3 && (Math.hypot(W.from[0] - p[0], W.from[1] - p[1]) < 2500 || clearPath(p, W.to))) return W.to;
+  let best = away, bestN = -1;
+  for (let k = 0; k < 16; k++){
+    const a = k*Math.PI/8, d = [Math.cos(a), Math.sin(a)];
+    if (dot(d, away) < -.3) continue;   // no de frente a la escalera
+    let n = 0; while (n < 24 && !blocked(wx(p[0] + d[0]*(n + 1)*250), wz(p[1] + d[1]*(n + 1)*250), .05)) n++;
+    if (n + dot(d, away)*.5 > bestN){ bestN = n + dot(d, away)*.5; best = d; }
+  }
+  return [p[0] + best[0]*3000, p[1] + best[1]*3000];
+}
+let nearLink = null, climbing = null;
+// Cerca del pie o del desembarco aparece el botón para cambiar de planta (no durante la visita ni el video)
+function stairTick(){
+  const b = $('#whStair'); if (!b) return;
+  const busy = climbing || glide || rec || (tour && !tour.paused && tour.phase !== 'end'), here = planXY(camera.position);
+  const l = busy ? null : STAIR_LINKS.find(k => Math.hypot(here[0] - k.at[0], here[1] - k.at[1]) < 2000) || null;
+  if (l === nearLink) return;
+  nearLink = l; b.hidden = !l;
+  if (l){ b.innerHTML = `${ICON.stairs} ${esc(linkLabel(l))}`; $('#hint3d').classList.add('gone'); }
+}
+const lookQ = (from, to) => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(from, to, camera.up));
+const navigate = url => { if (HOST?.navigate) HOST.navigate(url); else location.href = url; };
+// Sube (o baja) los primeros escalones mientras se oscurece y abre la otra planta ya en el recorrido.
+// fromTour: la visita guiada sigue en la otra planta (?visita=1)
+function climb(l, fromTour = false){
+  if (climbing || opt.mode !== 'walk') return;
+  climbing = l; recStop(); bigMap(false); $('#whPop').hidden = true;
+  if (fromTour && tour){ tour.phase = 'climb'; tourCard(); } else tourEnd();
+  const a = camera.position.clone(), b = new THREE.Vector3(wx(l.step2[0]), eyeH() + l.lift*l.rise*2, wz(l.step2[1]));
+  glide = {t0: performance.now(), dur: 1000, a, b, q0: camera.quaternion.clone(), q1: lookQ(a, new THREE.Vector3(b.x, b.y + l.lift*.4, b.z)), fade: false};
+  stairTick();
+  const u = new URL(location.href);
+  u.searchParams.set('planta', l.level.id); u.searchParams.set('vista', '3d'); u.searchParams.set('recorrido', l.dir);
+  if (fromTour) u.searchParams.set('visita', '1'); else u.searchParams.delete('visita');
+  setTimeout(() => $('#whFade').classList.add('on'), 380);
+  setTimeout(() => navigate(u.toString()), 760);
+  setTimeout(() => { if (climbing === l){ climbing = null; $('#whFade').classList.remove('on'); } }, 6000);   // no se pudo cambiar de página
+}
+// Llegó por la escalera (?recorrido=subir|bajar): sin la animación de entrada, directo al recorrido subiendo el
+// último escalón (o bajando el primero) mientras se aclara. Con ?visita=1 la visita guiada sigue desde aquí.
+function arriveByStairs(){
+  const Q = new URLSearchParams(location.search), dir = Q.get('recorrido');
+  const l = dir && STAIR_LINKS.find(k => k.dir === (dir === 'subir' ? 'bajar' : 'subir'));
+  if (!l) return false;
+  grow = furnGrow = 1; applyGrow(); startLoop(); renderer.render(scene, camera); stage.classList.add('is3d');
+  setMode('walk', true); startTouchWalk();
+  const to = lookFrom(l.at, l.away), a = new THREE.Vector3(wx(l.step2[0]), eyeH() + l.lift*l.rise*2, wz(l.step2[1])), b = new THREE.Vector3(wx(l.at[0]), eyeH(), wz(l.at[1]));
+  camera.position.copy(a); camera.quaternion.copy(lookQ(a, new THREE.Vector3(b.x, b.y - l.lift*.25, b.z)));
+  glide = {t0: performance.now(), dur: 1200, a, b, q0: camera.quaternion.clone(), q1: lookQ(b, new THREE.Vector3(wx(to[0]), 1.45, wz(to[1]))), fade: false};
+  requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.add('arrived')));
+  setTimeout(() => document.documentElement.classList.remove('arriving', 'arrived'), 900);
+  Q.delete('recorrido'); const cont = Q.has('visita'); Q.delete('visita');   // recargar no vuelve a «llegar»
+  history.replaceState(null, '', location.pathname + (Q.size ? '?' + Q : ''));
+  if (cont) startTour({here: l.at, cont: l.dir === 'bajar'});
+  return true;
+}
+// «Volver a ver» cuando la visita vino subiendo de la planta de abajo: vuelve a empezar desde la entrada
+function tourAgain(){
+  const first = CASA.levels[0];
+  if (!tour?.cont || first.id === PLANTA.id) return startTour();
+  const u = new URL(location.href);
+  u.searchParams.set('planta', first.id); u.searchParams.set('vista', '3d'); u.searchParams.set('visita', '1'); u.searchParams.delete('recorrido');
+  $('#whFade').classList.add('on');
+  setTimeout(() => navigate(u.toString()), 300);
 }
 
 /* ---------- Video de la visita guiada: la visita grabada en vertical (9:16) con el nombre de cada parada y la marca ---------- */
@@ -3513,7 +3668,7 @@ addEventListener('keydown', e => {
   if (opt.mode === 'walk' && /^Digit[123]$/.test(e.code)) setSpeed(+e.code[5]);
   if (opt.mode === 'walk' && e.code === 'KeyC') setSit(!walk.sit);
   if (bigOpen && e.code === 'Escape') bigMap(false);
-  if (tour && e.code === 'Space'){ e.preventDefault(); tour.phase === 'end' ? startTour() : tour.paused ? tourResume() : tourPause(); }
+  if (tour && e.code === 'Space'){ e.preventDefault(); tour.phase === 'end' ? tourAgain() : tour.paused ? tourResume() : tourPause(); }
 });
 addEventListener('keyup', e => keys[e.code] = false);
 

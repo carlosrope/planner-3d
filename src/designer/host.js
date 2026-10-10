@@ -11,8 +11,15 @@
 (function () {
   const D = window.__HOST_DATA__;
   const EDIT = D.mode === 'edit';
+  const Q = new URLSearchParams(location.search);
+  // Llegó cambiando de planta (desde el 3D o por la escalera, ?recorrido=): sin portada; el diseñador abre el 3D solo
+  const ARRIVED = Q.has('vista') || Q.has('recorrido');
   // Enlace del cliente con ?visita: entra directo a la visita guiada en lugar de la portada
-  const TOUR_LINK = !EDIT && new URLSearchParams(location.search).has('visita');
+  const TOUR_LINK = !EDIT && Q.has('visita') && !ARRIVED;
+  // La portada sale una vez por pestaña: al cambiar de planta en 2D no vuelve a aparecer
+  const COVER_KEY = 'planner3d-portada-' + D.eventId;
+  const coverSeen = () => { try { return sessionStorage.getItem(COVER_KEY) === '1'; } catch { return false; } };
+  const coverDone = () => { try { sessionStorage.setItem(COVER_KEY, '1'); } catch { /* sin almacenamiento */ } };
   const OPENS_KEY = 'planner3d-compartir-abre';
   const dists = D.distributions;
   let active = dists.find(d => d.id === D.activeId) || dists[0];
@@ -494,7 +501,7 @@
       <p class="tiny">${t('You can move things around to try ideas; nothing is saved.', 'Puedes mover cosas para probar ideas; no se guarda nada.')}</p></div>`;
     document.body.appendChild(el);
     el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
-      el.remove();
+      el.remove(); coverDone();
       // El 3D carga three.js de internet: se espera hasta 10 s a que esté listo
       const tour = b.dataset.go === 'tour';
       if (tour || b.dataset.go === '3d') {
@@ -572,7 +579,7 @@
       <h2>${escape(D.title)}</h2><p class="props">${t('Getting the guided tour ready…', 'Preparando la visita guiada…')}</p></div>`;
     document.body.appendChild(el);
     const go = (n = 0) => {
-      if (window.View3D) { el.remove(); setView('3d').then(() => window.View3D.tour?.()); }
+      if (window.View3D) { el.remove(); coverDone(); setView('3d').then(() => window.View3D.tour?.()); }
       else if (n < 100) setTimeout(() => go(n + 1), 100);
       else { el.remove(); clientWelcome(); }   // el 3D no cargó (three.js viene de internet): la portada de siempre
     };
@@ -600,7 +607,7 @@
       document.head.appendChild(style);
       syncUrl();
       renderBar();
-      if (TOUR_LINK) tourIntro(); else if (!EDIT) clientWelcome();
+      if (TOUR_LINK) tourIntro(); else if (!EDIT && !ARRIVED && !coverSeen()) clientWelcome();
     },
   };
 })();

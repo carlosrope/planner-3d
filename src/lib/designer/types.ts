@@ -33,7 +33,8 @@ export type DesignerLevel = {
   dims: unknown[];
   entry: unknown;
   walk?: { from: [number, number]; to: [number, number] } | null;
-  stairs?: unknown[];
+  /** Escalera: escalones [x0,y0,x1,y1] en orden de subida y altura de cada uno (m). Sube a la planta siguiente. */
+  stairs?: { steps: Rect[]; rise?: number }[];
   stairLines?: unknown[];
   furniture: FurnitureTuple[];
 };

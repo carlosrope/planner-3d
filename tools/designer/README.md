@@ -33,6 +33,13 @@ dice de qué versión es.
      (`walkSpots`). «Ver desde esta mesa» abre el recorrido sentado (`View3D.viewFrom`).
    - Visita guiada (`View3D.tour()`): paradas armadas en `tourStops()` y caminos con A* en una rejilla de
      25 cm que esquiva muros, escalones y muebles; si no hay camino a pie, la parada se alcanza con fundido.
+   - Escalera (sección «Escalera» de adapt.py): los escalones estorban al caminar salvo donde hay 1.9 m libres
+     debajo (`stepBox`), la doble altura no se pisa (`inVoid`) y bajo ella se dibujan la escalera, pisos y muros
+     de la planta de abajo. `STAIR_LINKS` da el pie y el desembarco de cada escalera; cerca aparece el botón
+     «Subir / Bajar» (`climb`), que abre la otra planta con `?vista=3d&recorrido=subir|bajar` y `arriveByStairs()`
+     entra directo al recorrido (la página arranca a oscuras con `html.arriving`). La visita guiada cierra la
+     planta baja en la escalera y sigue arriba con `&visita=1`; `?visita=1` también arranca la visita en la
+     demostración y en el diseño guardado (host.js solo atiende el enlace del cliente sin `vista=3d`).
 
 3. **Páginas** (`src/lib/designer/page.ts`): inyectan antes del primer `<script>` los datos del lugar
    (`window.__CASA__`), en salones el catálogo y los modelos de eventos (`src/designer/eventos/`), y en

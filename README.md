@@ -43,15 +43,23 @@ npm run dev
   ahí (en una mesa: sentarse), mapa que se abre grande para elegir a dónde ir, sensibilidad al mirar y
   vista más amplia en el celular vertical. En escritorio: `1` `2` `3` velocidad, `C` sentarse, doble
   clic para ir.
+- **Casas de dos plantas:** los escalones no se atraviesan (el tramo alto flota como losa y debajo se pasa, como
+  al medio baño de Chardonnay) y la doble altura no se pisa. Al llegar al pie de la escalera aparece «Subir a la
+  planta alta» (arriba, «Bajar a la planta baja»): sube los primeros escalones con fundido y la otra planta abre
+  ya en el recorrido, en el desembarco o al pie (`?vista=3d&recorrido=subir|bajar`). Desde arriba se ven por el
+  hueco los escalones y el piso de abajo.
 - **Visita guiada** (▶ en el recorrido, en su tarjeta de inicio y botón principal de la portada del
   cliente): camina sola esquivando muros y mesas y se detiene a mirar. Salón: entrada, el salón,
   barra / dulces / pastel, una mesa de atrás, una junto a la pista, la mesa principal y la pista. Casa:
   acceso, sala, comedor, cocina, recámaras, baños y servicio, terraza y jardín, con el área de cada
-  cuarto. Pausa, siguiente y terminar; mirar o caminar la pone en pausa; x1/x2/x3 también la acelera.
+  cuarto. Pausa, siguiente y terminar; mirar o caminar la pone en pausa; x1/x2/x3 también la acelera. En una
+  casa de dos plantas termina la planta baja en la escalera y sigue sola arriba (`?planta=pa&vista=3d&recorrido=subir&visita=1`);
+  `?visita=1` también arranca la visita en la demostración y en el diseño de la planner.
 - **Video de la visita** (● en el recorrido; solo la planner y la demostración, no el enlace del cliente): graba la
   visita guiada en video vertical 720×1280 (MP4 en iPhone y Chrome) con la marca, el nombre de cada parada, una
   portada y un cierre con el contacto. En pantalla se ve el video tal cual; pausar la visita pausa el video y ✕
-  entrega lo grabado. Al final: verlo, compartirlo (WhatsApp, Instagram, guardar) o descargarlo.
+  entrega lo grabado. Al final: verlo, compartirlo (WhatsApp, Instagram, guardar) o descargarlo. Se graba por
+  planta (el video no puede cruzar el cambio de página); la planta baja cierra con la escalera.
 - **Compartir:** enlace `/v/…` de solo vista; al compartir se elige si abre directo la **visita guiada**
   (`?visita=1`, se recuerda la elección) o la portada de la marca. Vista previa para WhatsApp con la
   huella de la imagen en el enlace y en la imagen (`?v=`), para que al volver a compartir no salga la
