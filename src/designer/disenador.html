@@ -2904,7 +2904,10 @@ function roomSpot(r, [hx, hy]){
   for (let x = x0 + step/2; x < x1; x += step) for (let y = y0 + step/2; y < y1; y += step)
     if (inside(x, y) && freeAt(x, y)) cand.push([x, y, Math.hypot(x - hx, y - hy)]);
   cand.sort((a, b) => a[2] - b[2]);
-  const p = cand.find(([x, y]) => Math.hypot(x - c[0], y - c[1]) > 900 && clearPath([x, y], c));
+  // Mejor fuera del arco de las puertas: abiertas taparían la vista
+  const swing = ([x, y]) => DOORS.some(d => Math.hypot(x - d.h[0], y - d.h[1]) < (d.len || 900) + 350);
+  const pick = list => list.find(([x, y]) => Math.hypot(x - c[0], y - c[1]) > 900 && clearPath([x, y], c));
+  const p = pick(cand.filter(q => !swing(q))) || pick(cand);
   return p ? {p: p.slice(0, 2), to: c} : {p: nearFree(c[0], c[1], inside) || c, to: null};
 }
 function goRoom(r){ const s = roomSpot(r, planXY(camera.position)); walkTo(s.p, s.to, false); }
