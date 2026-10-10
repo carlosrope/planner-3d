@@ -253,13 +253,13 @@
   function bindGuestsPanel() {
     const $$ = sel => document.querySelectorAll('#panel ' + sel), $1 = id => document.getElementById(id);
     $1('gAddToggle').onclick = () => { ui2.adding = !ui2.adding; renderPanel(); if (ui2.adding) $1('gPaste')?.focus(); };
-    $1('gAdd') && ($1('gAdd').onclick = () => {
+    if ($1('gAdd')) $1('gAdd').onclick = () => {
       const found = parseList($1('gPaste').value);
       if (!found.length) return toast(t('Write at least one name', 'Escribe al menos un nombre'));
       ui2.adding = false;
       mutate(() => list(state).push(...found));
       toast(t(`${found.length} guests added`, `Se agregaron ${found.length} invitados`));
-    });
+    };
     $1('gAuto').onclick = () => {
       let left = 0;
       mutate(() => { left = autoSeat(state); });
