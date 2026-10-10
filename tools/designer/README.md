@@ -49,7 +49,8 @@ dice de qué versión es.
   novios; XV: mesa de honor y trono) con mesas redondas de 10 alrededor de la pista.
 - `src/designer/eventos/catalogo.json` es el catálogo de eventos (lo usan el diseñador y el montaje);
   `modelos.js` los dibuja en 2D y 3D; `eventos.js` numera mesas, cuenta sillas y arma la lista de
-  mobiliario.
+  mobiliario. `proveedores.js` (se carga antes de `eventos.js`, que le pasa sus ayudantes) maneja los
+  marcadores de proveedor, su ficha, sus hojas y el mensaje de WhatsApp; en 3D no se dibujan.
 - Un salón real se agrega igual que una casa: plano desde AutoCAD con `tools/cad-import`, más su `setup`.
 
 El 3D carga three.js desde jsDelivr, así que necesita internet.

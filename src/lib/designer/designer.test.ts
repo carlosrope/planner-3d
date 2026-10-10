@@ -4,7 +4,7 @@ import salon from "@/designer/salones/salon-demo.json";
 import { sampleGuests, seatGuests } from "./samples";
 import { designDocSchema } from "./schema";
 import { starterDesign, starterFurniture } from "./starter";
-import type { DesignerPlan, Furniture } from "./types";
+import { withoutVendors, type DesignDoc, type DesignerPlan, type Furniture } from "./types";
 
 const SALON = salon as unknown as DesignerPlan;
 const CASA = chardonnay as unknown as DesignerPlan;
@@ -87,6 +87,27 @@ describe("documento del diseño", () => {
       levels: { pb: { furniture: [{ id: "a", type: "rtable", name: "x", cx: 0, cy: 0, w: -1, d: 10, rot: 0, color: "rojo" }] } },
     };
     expect(designDocSchema.safeParse(bad).success).toBe(false);
+  });
+
+  const vendor = { id: "v1", type: "vendor", name: "DJ Beto", cx: 0, cy: 0, w: 700, d: 700, rot: 0, color: "#6d3fa0", kind: "dj",
+    contact: "Beto", phone: "6681234567", arrive: "15:00", setupFrom: "15:00", setupTo: "17:00", power: 2000,
+    load: "Acceso de servicio", notes: "Trae su planta", items: ["d1"] };
+
+  it("guarda la ficha completa de un proveedor y rechaza horas inválidas", () => {
+    const parsed = designDocSchema.parse({ v: 1, levels: { salon: { furniture: [vendor] } } });
+    expect(parsed.levels.salon.furniture[0]).toEqual(vendor);
+    const bad = { v: 1, levels: { salon: { furniture: [{ ...vendor, arrive: "25:00" }] } } };
+    expect(designDocSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it("el enlace del cliente no lleva proveedores (sus teléfonos y notas son de la planner)", () => {
+    const table = { id: "t1", type: "rtable", name: "Mesa 1", cx: 0, cy: 0, w: 2900, d: 2900, rot: 0, color: "#f4efe6" };
+    const doc = { v: 1, levels: { salon: { furniture: [table, vendor], guestList: [] } } } as DesignDoc;
+    const out = withoutVendors(doc) as DesignDoc;
+    expect(out.levels.salon.furniture.map((f) => f.id)).toEqual(["t1"]);
+    expect(out.levels.salon.guestList).toEqual([]);
+    expect(doc.levels.salon.furniture).toHaveLength(2);   // no toca el original
+    expect(withoutVendors(null)).toBeNull();
   });
 });
 

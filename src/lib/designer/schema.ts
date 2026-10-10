@@ -6,6 +6,7 @@ const num = z.number().finite();
 const mm = num.min(-200_000).max(200_000);
 const id = z.string().min(1).max(64);
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+const hhmm = z.union([z.literal(""), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)]);
 
 const furniture = z.object({
   id,
@@ -23,6 +24,17 @@ const furniture = z.object({
   /** Staff: rol del marcador y mesas que atiende (meseros y capitanes). */
   role: z.string().max(20).optional(),
   tables: z.array(id).max(300).optional(),
+  /** Proveedor: tipo, contacto, horarios (HH:MM), corriente (W), puerta de carga, notas y sus piezas. */
+  kind: z.string().max(20).optional(),
+  contact: z.string().max(60).optional(),
+  phone: z.string().max(20).optional(),
+  arrive: hhmm.optional(),
+  setupFrom: hhmm.optional(),
+  setupTo: hhmm.optional(),
+  power: z.number().int().min(0).max(100_000).optional(),
+  load: z.string().max(80).optional(),
+  notes: z.string().max(400).optional(),
+  items: z.array(id).max(300).optional(),
 });
 
 const guest = z.object({

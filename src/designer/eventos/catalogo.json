@@ -319,5 +319,110 @@
         "role": "valet"
       }
     ]
+  },
+  {
+    "cat": "Proveedores",
+    "catEn": "Vendors",
+    "items": [
+      {
+        "type": "vendor",
+        "name": "DJ",
+        "nameEn": "DJ",
+        "w": 700,
+        "d": 700,
+        "color": "#6d3fa0",
+        "kind": "dj"
+      },
+      {
+        "type": "vendor",
+        "name": "Banda o grupo",
+        "nameEn": "Band",
+        "w": 700,
+        "d": 700,
+        "color": "#8e3b5a",
+        "kind": "banda"
+      },
+      {
+        "type": "vendor",
+        "name": "Florería",
+        "nameEn": "Florist",
+        "w": 700,
+        "d": 700,
+        "color": "#3d8a5a",
+        "kind": "florista"
+      },
+      {
+        "type": "vendor",
+        "name": "Banquete",
+        "nameEn": "Catering",
+        "w": 700,
+        "d": 700,
+        "color": "#a8582a",
+        "kind": "banquete"
+      },
+      {
+        "type": "vendor",
+        "name": "Servicio de barra",
+        "nameEn": "Bar service",
+        "w": 700,
+        "d": 700,
+        "color": "#2c6e8f",
+        "kind": "barra"
+      },
+      {
+        "type": "vendor",
+        "name": "Pastelería",
+        "nameEn": "Cake maker",
+        "w": 700,
+        "d": 700,
+        "color": "#c2577a",
+        "kind": "pastel"
+      },
+      {
+        "type": "vendor",
+        "name": "Dulcería",
+        "nameEn": "Candy & desserts",
+        "w": 700,
+        "d": 700,
+        "color": "#d17a22",
+        "kind": "dulces"
+      },
+      {
+        "type": "vendor",
+        "name": "Foto y video",
+        "nameEn": "Photo & video",
+        "w": 700,
+        "d": 700,
+        "color": "#34495e",
+        "kind": "foto"
+      },
+      {
+        "type": "vendor",
+        "name": "Renta de photo booth",
+        "nameEn": "Photo booth rental",
+        "w": 700,
+        "d": 700,
+        "color": "#1f7a7a",
+        "kind": "photobooth"
+      },
+      {
+        "type": "vendor",
+        "name": "Rentadora de mobiliario",
+        "nameEn": "Furniture rental",
+        "w": 700,
+        "d": 700,
+        "color": "#7a5a3c",
+        "kind": "mobiliario"
+      },
+      {
+        "type": "vendor",
+        "name": "Otro proveedor",
+        "nameEn": "Other vendor",
+        "w": 700,
+        "d": 700,
+        "color": "#5d6166",
+        "kind": "otro"
+      }
+    ]
   }
 ]

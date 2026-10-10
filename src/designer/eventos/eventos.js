@@ -3,6 +3,7 @@
 // y exportes para imprimir o guardar en PDF (hoja de montaje, invitados por mesa y A–Z).
 // Se carga antes del diseñador (src/designer/disenador.html) solo en salones.
 // Datos: window.__EVENTOS__ (catalogo.json). Dibujos 2D y 3D: window.__EXT_MODELS__ (modelos.js).
+// Proveedores: window.__PROVEEDORES__ (proveedores.js), que aquí recibe los ayudantes de textos y hojas.
 (function () {
   const CAT = window.__EVENTOS__ || [];
   const MODELS = window.__EXT_MODELS__ || { svg: {}, build3d: {}, nolabel: [] };
@@ -18,7 +19,7 @@
   const lib = CAT.map(c => ({
     cat: c.cat,
     items: c.items.map(i => [i.type, i.name, i.w, i.d, i.color,
-      i.seats ? { seats: i.seats, table: i.table } : i.role ? { role: i.role } : undefined]),
+      i.seats ? { seats: i.seats, table: i.table } : i.role ? { role: i.role } : i.kind ? { kind: i.kind } : undefined]),
   }));
   const namesEn = {};
   CAT.forEach(c => { namesEn[c.cat] = c.catEn; c.items.forEach(i => { namesEn[i.name] = i.nameEn; }); });
@@ -160,6 +161,7 @@
 
   function onAdd(f, it, state) {
     if (it && it[5]) Object.assign(f, it[5]);
+    if (V?.onAdd(f, it, state)) return;
     if (f.type === 'staff') {
       // "Mesero 3"; cada mesero con su color para distinguir su sección en el plano
       const base = (ITEMS.find(i => i.role === f.role)?.name) || f.name.replace(/ \d+$/, '');
@@ -193,7 +195,7 @@
   function inventory(st) {
     const tables = st.furniture.filter(f => SEATED.includes(f.type));
     const pieces = {}, chairs = {}, cloths = {};
-    st.furniture.forEach(f => { if (f.type === 'staff') return; const k = pieceName(f); pieces[k] = (pieces[k] || 0) + 1; });
+    st.furniture.forEach(f => { if (f.type === 'staff' || f.type === 'vendor') return; const k = pieceName(f); pieces[k] = (pieces[k] || 0) + 1; });
     tables.forEach(f => { const c = f.chair || CHAIR; chairs[c] = (chairs[c] || 0) + seats(f); });
     tables.forEach(f => { cloths[f.color] = (cloths[f.color] || 0) + 1; });
     return { tables, pieces: Object.entries(pieces).sort((a, b) => b[1] - a[1]), chairs: Object.entries(chairs), cloths: Object.entries(cloths) };
@@ -225,6 +227,7 @@
         <table>${cloths.map(([c, n]) => row(`${sw(c)}${colorName(c)}`, n)).join('')}</table>` : ''}
       <div class="actions"><button class="btn" id="xPrintSetup">${t('Setup sheet (PDF)', 'Hoja de montaje (PDF)')}</button></div></section>
     ${staffSection(state)}
+    ${V?.section(state) ?? ''}
     ${canSeeGuests() ? `<section><h3>${t('Layout template', 'Plantilla de montaje')} <small>${t(`for ${guests || 'your'} guests`, `para ${guests || 'tus'} invitados`)}</small></h3>
       <div class="actions">${Object.entries(TEMPLATES).map(([k, [en, es]]) => `<button class="btn" data-template="${k}">${t(en, es)}</button>`).join('')}</div>
       <div class="muted" style="margin-top:6px">${t('Replaces the furniture of this layout; you can undo it.', 'Reemplaza los muebles de esta distribución; se puede deshacer.')}</div></section>` : ''}`;
@@ -280,6 +283,7 @@
     if (dist) dist.onclick = () => mutate(() => distributeTables(state)) || toast(t('Tables split among waiters', 'Mesas repartidas entre los meseros'));
     const pw = document.getElementById('xPrintWaiters');
     if (pw) pw.onclick = () => printWaiters(state);
+    V?.bindSection();
     const input = document.getElementById('xGuests');
     if (!input) return;
     input.onchange = () => {
@@ -296,10 +300,11 @@
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${tables.map(x => {
           const other = !mine.has(x.id) && waiterOf(state, x.id);
           return `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);flex-direction:row">
-            <input type="checkbox" data-wtable="${x.id}" ${mine.has(x.id) ? 'checked' : ''}>${esc(x.name.replace(/^Mesa /, ''))}${other ? `<span class="sw" style="background:${other.color};margin:0 0 0 4px"></span>` : ''}</label>`;
+            <input type="checkbox" style="width:auto;margin:0" data-wtable="${x.id}" ${mine.has(x.id) ? 'checked' : ''}>${esc(x.name.replace(/^Mesa /, ''))}${other ? `<span class="sw" style="background:${other.color};margin:0 0 0 4px"></span>` : ''}</label>`;
         }).join('')}</div>
         <div class="muted" style="margin-top:4px">${t('A colored dot means another waiter has it.', 'El punto de color indica que la atiende otro mesero.')}</div></div>`;
     }
+    if (V?.isVendor(f)) return V.panel(f);
     if (!SEATED.includes(f.type)) return '';
     return `<label>${t('Chairs', 'Sillas')}<input type="number" id="xSeats" value="${f.seats ?? 0}" min="0" max="40" step="1" inputmode="numeric"></label>
       <label>${t('Chair color', 'Color de silla')}<input type="color" id="xChair" value="${f.chair || CHAIR}"></label>
@@ -307,6 +312,7 @@
   }
 
   function bindPanel(f, upd) {
+    if (V?.isVendor(f)) return V.bindPanel(f, upd);
     document.querySelectorAll('#panel [data-wtable]').forEach(cb => cb.onchange = () => mutate(() => {
       const id = cb.dataset.wtable;
       waiters(state).forEach(w => { if (w.id !== f.id && w.tables) w.tables = w.tables.filter(x => x !== id); });
@@ -326,7 +332,7 @@
 
   /** Debajo de las propiedades de una mesa: quién se sienta ahí y agregar a alguien sin mesa. */
   function panelAfter(f) {
-    if (!SEATED.includes(f.type)) return '';
+    if (!SEATED.includes(f.type)) return V?.panelAfter(f) ?? '';
     const here = seatedAt(state, f.id), cap = seats(f);
     const waiter = waiterOf(state, f.id), diets = dietSummary(here);
     const head = `<h3>${t('Guests at this table', 'Invitados en esta mesa')} <small>${here.length}/${cap}</small></h3>
@@ -383,6 +389,7 @@
 
   /** Nombre en el plano: con lista de invitados, la mesa muestra cuántos lleva ("Mesa 3 · 7/10"). */
   function label(f) {
+    if (V?.isVendor(f)) return V.label(f);
     if (!SEATED.includes(f.type) || !canSeeGuests() || !list(state).length) return null;
     return `${nm(f.name)} · ${seatedAt(state, f.id).length}/${seats(f)}`;
   }
@@ -586,12 +593,17 @@
     download(`${window.__CASA__.title} - invitados.csv`, new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
   }
 
+  // Proveedores (proveedores.js): marcadores con ficha, resaltado de sus cosas y sus hojas
+  const V = window.__PROVEEDORES__?.({ t, ITEMS, pieceName, openPrint, planSvg, host, canEdit: canSeeGuests }) || null;
+
   window.__EXT__ = {
     lib, namesEn, nolabel: (MODELS.nolabel || []).concat('staff'),
-    svg: Object.assign({}, MODELS.svg, { staff: staffSvg },
+    svg: Object.assign({}, MODELS.svg, { staff: staffSvg }, V ? { vendor: V.svg } : {},
       Object.fromEntries(SEATED.map(k => [k, withSection((MODELS.svg || {})[k])]))),
-    build3d: Object.assign({}, MODELS.build3d, { staff: staff3d }),
+    // Los proveedores son de logística: en 3D no se dibujan
+    build3d: Object.assign({}, MODELS.build3d, { staff: staff3d }, V ? { vendor: () => {} } : {}),
     seats, onAdd, overview, bindOverview, panel, bindPanel, panelAfter, label, CHAIR,
+    selExtra: (f, px) => V?.selExtra(f, px) ?? '', vendors: V,
     extPanel: sel => (sel.panel === 'guests' && canSeeGuests() ? guestsPanel() : ''),
     bindExtPanel: sel => { if (sel.panel === 'guests' && canSeeGuests()) bindGuestsPanel(); },
     parseList, autoSeat, walkSpots,

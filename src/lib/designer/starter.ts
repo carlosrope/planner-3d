@@ -17,6 +17,8 @@ export type CatalogItem = {
   seats?: number;
   table?: number;
   role?: string;
+  /** Proveedores: tipo (dj, banquete, pastel…). */
+  kind?: string;
 };
 export const EVENT_CATALOG = catalog as { cat: string; catEn: string; items: CatalogItem[] }[];
 const ITEMS = EVENT_CATALOG.flatMap((c) => c.items);

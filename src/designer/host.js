@@ -529,6 +529,8 @@
 
   window.__HOST__ = {
     get guests() { return D.guests; },
+    get date() { return D.date || null; },   // AAAA-MM-DD
+    brand: B,
     editable: EDIT,
     eventId: D.eventId,
     async setGuests(n) {

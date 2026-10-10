@@ -1,7 +1,7 @@
 import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { DesignerPlan, PropertyDetails } from "./types";
+import { withoutVendors, type DesignerPlan, type PropertyDetails } from "./types";
 
 // Arma la página del diseñador (src/designer/disenador.html, adaptación de
 // wy51ai/floorplan-3d, MIT © 2026 wuyi) con los datos del lugar y, si aplica,
@@ -35,6 +35,8 @@ export type HostData = {
   eventId: string;
   title: string;
   guests: number | null;
+  /** Fecha del evento (AAAA-MM-DD) para las hojas y los mensajes a proveedores. */
+  date: string | null;
   backHref?: string;
   backLabel?: string;
   activeId: string;
@@ -74,7 +76,7 @@ type LayoutRow = { id: string; name: string; note: string; recommended: boolean;
 /** Datos del anfitrión para un evento: abre la distribución pedida, la recomendada o la primera. */
 export function hostFor(
   mode: HostData["mode"],
-  ev: { id: string; title: string; guestCount: number | null; details?: PropertyDetails | null },
+  ev: { id: string; title: string; guestCount: number | null; eventDate?: string | null; details?: PropertyDetails | null },
   layouts: LayoutRow[],
   wanted: string | null,
   brand: Brand,
@@ -87,13 +89,16 @@ export function hostFor(
     eventId: ev.id,
     title: ev.title,
     guests: ev.guestCount,
+    date: ev.eventDate ?? null,
     backHref: back?.href,
     backLabel: back?.label,
     activeId: active.id,
     brand,
     comments,
     details: ev.details ?? null,
-    distributions: layouts.map(({ id, name, note, recommended, revision, doc }) => ({ id, name, note, recommended, revision, doc })),
+    distributions: layouts.map(({ id, name, note, recommended, revision, doc }) => ({
+      id, name, note, recommended, revision, doc: mode === "view" ? withoutVendors(doc) : doc,
+    })),
   };
 }
 
@@ -107,6 +112,7 @@ export async function designerResponse(plan: DesignerPlan, host?: HostData, meta
   if (plan.kind === "salon") {
     head += inline(`window.__EVENTOS__ = ${await file("eventos/catalogo.json")};`);
     head += inline(await file("eventos/modelos.js"));
+    head += inline(await file("eventos/proveedores.js"));
     head += inline(await file("eventos/eventos.js"));
   }
   if (host) head += inline(`window.__HOST_DATA__ = ${json(host)};\n${await file("host.js")}`);

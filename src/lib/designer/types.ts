@@ -81,6 +81,17 @@ export type Furniture = {
   /** Staff: rol del marcador y mesas que atiende. */
   role?: string;
   tables?: string[];
+  /** Proveedor: tipo, contacto, horarios (HH:MM), corriente (W), puerta de carga, notas y sus piezas. */
+  kind?: string;
+  contact?: string;
+  phone?: string;
+  arrive?: string;
+  setupFrom?: string;
+  setupTo?: string;
+  power?: number;
+  load?: string;
+  notes?: string;
+  items?: string[];
 };
 
 /** Estado de una planta tal como lo guarda el diseñador. */
@@ -97,6 +108,16 @@ export type LevelState = {
 export type DesignDoc = { v: 1; levels: Record<string, LevelState> };
 
 export const emptyDesign = (): DesignDoc => ({ v: 1, levels: {} });
+
+/** El enlace del cliente no lleva proveedores: sus teléfonos, horarios y notas son de la planner. */
+export function withoutVendors(doc: unknown): unknown {
+  const d = doc as DesignDoc | null;
+  if (!d || typeof d !== "object" || !d.levels) return doc;
+  const levels = Object.fromEntries(
+    Object.entries(d.levels).map(([k, l]) => [k, { ...l, furniture: (l.furniture ?? []).filter((f) => f.type !== "vendor") }]),
+  );
+  return { ...d, levels };
+}
 
 /** Ficha de una casa en venta (proyecto de la sección Casas). Precio en pesos. */
 export type PropertyDetails = {

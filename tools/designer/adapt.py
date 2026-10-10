@@ -623,6 +623,9 @@ sub(
     "opacity=\".8\" pointer-events=\"none\">${esc(EXT?.label?.(f) ?? nm(f.name))}</text>",
 )
 
+# Al seleccionar, la extensión agrega lo suyo (un proveedor resalta sus piezas y su puerta de carga)
+sub("      const {hh} = aabb(f);\n", "      s += EXT?.selExtra?.(f, k) ?? '';\n      const {hh} = aabb(f);\n")
+
 # Botones deshabilitados del panel (p. ej. exportes con la lista vacía)
 sub(".narrow-only{display:none!important}", "#panel .btn:disabled{opacity:.4;pointer-events:none}\n"
     "#panel .actions .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}\n.narrow-only{display:none!important}")
@@ -814,7 +817,7 @@ const walk = (() => {
 function saveWalk(){ try { localStorage.setItem(WALK_KEY, JSON.stringify({speed:walk.speed, look:walk.look, map:walk.map})); } catch(e){} }
 const eyeH = () => walk.sit ? 1.2 : 1.6;                       // altura de los ojos de pie / sentado (m)
 const planXY = v => [v.x*1000 + OX, v.z*1000 + OY];           // posición 3D → plano (mm)
-const FLAT = ['rug', 'dancefloor', 'staff'];                   // se puede pisar
+const FLAT = ['rug', 'dancefloor', 'staff', 'vendor'];         // se puede pisar (los proveedores no se ven en 3D)
 const ROUND = ['rtable', 'roundtable', 'cocktail', 'cake', 'plant', 'platform360', 'candelabra', 'flowerstand', 'staff'];
 const TABLES = ['rtable', 'itable', 'headtable'];             // mesas de invitados (con sillas)
 let glide = null, lastTap = null, spots = [], mapKey = '', bigOpen = false;
@@ -972,6 +975,7 @@ function drawMap(cv, m, big){
     g.fillStyle = r.outdoor ? '#e3e9d8' : '#efe7da'; g.fill();
   });
   if (opt.furn) state.furniture.forEach(f => {
+    if (f.type === 'vendor') return;
     const [x, y] = P(f.cx, f.cy), w = f.w*m.k, d = f.d*m.k;
     g.save(); g.translate(x, y); g.rotate((f.rot || 0)*Math.PI/180); g.beginPath();
     if (ROUND.includes(f.type)) g.arc(0, 0, Math.min(w, d)/2, 0, 2*Math.PI); else g.rect(-w/2, -d/2, w, d);

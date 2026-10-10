@@ -32,6 +32,11 @@ npm run dev
   WhatsApp o Excel, acomodo automático por familias), staff con secciones de meseros, dietas por
   mesa, "Ver desde esta mesa" (abre el recorrido sentado en ese lugar) y hojas para imprimir o guardar
   en PDF (montaje, invitados por mesa y A–Z, meseros, CSV).
+- **Proveedores** (salones): DJ, banda, florería, banquete, barra, pastel, dulces, foto y video, photo
+  booth, mobiliario… como marcadores en el plano con su ficha (contacto, teléfono, llegada, montaje,
+  corriente, puerta de carga, notas y sus piezas). Al tocar uno se resaltan sus cosas y su puerta de carga.
+  En el resumen, por hora de llegada; hoja de proveedores y hoja de cada proveedor (PDF) y botón de
+  WhatsApp con sus datos. El enlace del cliente no lleva proveedores (los quita el servidor).
 - **Casas:** ficha de la propiedad (precio, m², recámaras…) y botón amueblada / sin muebles en el
   enlace del cliente.
 - **Recorrido** (3D, salones y casas): velocidad x1/x2/x3 (se recuerda), de pie o sentado, «Ir a…»
