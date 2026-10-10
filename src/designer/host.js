@@ -478,14 +478,21 @@
     el.innerHTML = `<div class="card">
       ${B.name ? `<div class="who">${brandMark()}<div><small>${t('Design by', 'Diseño de')}</small><b>${escape(B.name)}</b></div></div>` : ''}
       <h2>${escape(D.title)}</h2>${IS_CASA && hasDetails() ? detailsHtml() : ''}${props ? `<p class="props">${escape(props)}</p>` : ''}
-      <button class="btn go" data-go="3d" style="background:${escape(brandColor())}">${t('See it in 3D', 'Ver recorrido 3D')}</button>
+      <button class="btn go" data-go="tour" style="background:${escape(brandColor())}">▶ ${t('Guided tour', 'Visita guiada')}</button>
+      <button class="btn" data-go="3d">${t('Explore in 3D', 'Explorar en 3D')}</button>
       <button class="btn" data-go="2d">${t('See the floor plan', 'Ver plano')}</button>
       ${B.whatsapp ? `<a class="btn wa" target="_blank" rel="noopener" href="${escape(waLink(t(`Hi, I saw the design of ${D.title}`, `Hola, vi el diseño de ${D.title}`)))}">${t('Message', 'Escribir a')} ${escape(B.name || t('the planner', 'la planner'))}</a>` : ''}
       <p class="tiny">${t('You can move things around to try ideas; nothing is saved.', 'Puedes mover cosas para probar ideas; no se guarda nada.')}</p></div>`;
     document.body.appendChild(el);
     el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
       el.remove();
-      if (b.dataset.go === '3d') { const go = (n = 0) => window.View3D ? setView('3d') : n < 100 && setTimeout(() => go(n + 1), 100); go(); }
+      // El 3D carga three.js de internet: se espera hasta 10 s a que esté listo
+      const tour = b.dataset.go === 'tour';
+      if (tour || b.dataset.go === '3d') {
+        const go = (n = 0) => window.View3D ? setView('3d').then(() => tour && window.View3D.tour?.())
+          : n < 100 && setTimeout(() => go(n + 1), 100);
+        go();
+      }
     });
   }
 

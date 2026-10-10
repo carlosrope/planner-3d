@@ -30,7 +30,9 @@ dice de qué versión es.
    - Recorrido: arrastrar mira hacia donde se arrastra (en el original estaba al revés que el mouse),
      velocidad x1/x2/x3, de pie / sentado, «Ir a…», dos toques para ir, mapa, sensibilidad y vista más
      amplia en pantallas verticales. Los lugares de salones (pista, mesas) salen de `eventos.js`
-     (`walkSpots`).
+     (`walkSpots`). «Ver desde esta mesa» abre el recorrido sentado (`View3D.viewFrom`).
+   - Visita guiada (`View3D.tour()`): paradas armadas en `tourStops()` y caminos con A* en una rejilla de
+     25 cm que esquiva muros, escalones y muebles; si no hay camino a pie, la parada se alcanza con fundido.
 
 3. **Páginas** (`src/lib/designer/page.ts`): inyectan antes del primer `<script>` los datos del lugar
    (`window.__CASA__`), en salones el catálogo y los modelos de eventos (`src/designer/eventos/`), y en

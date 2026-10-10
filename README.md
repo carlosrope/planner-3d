@@ -30,8 +30,8 @@ npm run dev
 - **Mi negocio** (`/negocio`): nombre, logo, color y WhatsApp que aparecen en el enlace del cliente.
 - **Salones:** plantillas de montaje (redondas, imperiales, cóctel), lista de invitados (pegar desde
   WhatsApp o Excel, acomodo automático por familias), staff con secciones de meseros, dietas por
-  mesa, "Ver desde esta mesa" en 3D y hojas para imprimir o guardar en PDF (montaje, invitados por
-  mesa y A–Z, meseros, CSV).
+  mesa, "Ver desde esta mesa" (abre el recorrido sentado en ese lugar) y hojas para imprimir o guardar
+  en PDF (montaje, invitados por mesa y A–Z, meseros, CSV).
 - **Casas:** ficha de la propiedad (precio, m², recámaras…) y botón amueblada / sin muebles en el
   enlace del cliente.
 - **Recorrido** (3D, salones y casas): velocidad x1/x2/x3 (se recuerda), de pie o sentado, «Ir a…»
@@ -39,6 +39,11 @@ npm run dev
   ahí (en una mesa: sentarse), mapa que se abre grande para elegir a dónde ir, sensibilidad al mirar y
   vista más amplia en el celular vertical. En escritorio: `1` `2` `3` velocidad, `C` sentarse, doble
   clic para ir.
+- **Visita guiada** (▶ en el recorrido, en su tarjeta de inicio y botón principal de la portada del
+  cliente): camina sola esquivando muros y mesas y se detiene a mirar. Salón: entrada, el salón,
+  barra / dulces / pastel, una mesa de atrás, una junto a la pista, la mesa principal y la pista. Casa:
+  acceso, sala, comedor, cocina, recámaras, baños y servicio, terraza y jardín, con el área de cada
+  cuarto. Pausa, siguiente y terminar; mirar o caminar la pone en pausa; x1/x2/x3 también la acelera.
 - **Compartir:** enlace `/v/…` de solo vista con portada de la marca, vista previa para WhatsApp,
   WhatsApp del negocio y comentarios del cliente (💬 en el diseñador).
 - Borradores del aviso de privacidad y los términos en `docs/legal/` (pendientes de revisión legal).

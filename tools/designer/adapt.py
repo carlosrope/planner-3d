@@ -416,7 +416,7 @@ sub(
 sub(
     "    camera.position.set(wx(4200), 1.6, wz(8755)); camera.lookAt(wx(7000), 1.5, wz(8755));   // 入户门外",
     "    const W0 = PLANTA.walk || {from:[OX, OY], to:[OX, OY - 3000]};   // afuera de la puerta principal\n"
-    "    camera.position.set(wx(W0.from[0]), 1.6, wz(W0.from[1])); camera.lookAt(wx(W0.to[0]), 1.5, wz(W0.to[1]));",
+    "    if (!keep){ camera.position.set(wx(W0.from[0]), 1.6, wz(W0.from[1])); camera.lookAt(wx(W0.to[0]), 1.5, wz(W0.to[1])); }",
 )
 # Sombras para toda la casa (el original cubre un departamento de ~15 m)
 sub(
@@ -634,12 +634,12 @@ sub(
     "  snap: () => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); },",
 )
 
-# "Ver desde esta mesa": la cámara a la altura de una persona sentada, mirando un punto del plano
+# "Ver desde esta mesa": abre el recorrido sentado en ese lugar (sitAt, sección Recorrido); tour() = visita guiada
 sub(
     "  snap: () => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); },",
     "  snap: () => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); },\n"
-    "  viewFrom: (x, y, tx, ty) => { if (!active) return; if (opt.mode === 'walk') setMode('orbit');\n"
-    "    flyTo(pose(new THREE.Vector3(wx(tx), 1.1, wz(ty)), new THREE.Vector3(wx(x), 1.4, wz(y))), 1400); },",
+    "  viewFrom: (x, y, tx, ty) => sitAt([x, y], [tx, ty]),\n"
+    "  tour: () => startTour(),",
 )
 
 # ---------------------------------------------------------------------------
@@ -680,10 +680,29 @@ sub(
 #whFade.on{opacity:1}
 #view3d.walking #hint3d{top:auto;bottom:110px;white-space:normal;width:max-content;max-width:calc(100% - 32px);text-align:center;line-height:1.35}
 #hint3d.gone{opacity:0}
+#view3d.touchwalk .wh-side,#view3d.touring .wh-side{bottom:84px}
+#view3d.walking.touchwalk #hint3d{bottom:176px}
+/* Visita guiada: tarjeta con el lugar, pausa, siguiente y terminar */
+#walkOverlay .btn{margin-top:14px}
+#whTourBtn svg,.wt-btn svg{width:18px;height:18px;fill:currentColor}
+#whTour{position:absolute;left:12px;right:12px;bottom:16px;max-width:480px;margin:0 auto;display:flex;align-items:center;gap:6px;padding:8px 8px 8px 14px;
+  border-radius:14px;background:rgba(255,253,249,.96);box-shadow:0 6px 22px rgba(0,0,0,.22);transition:bottom .25s}
+#view3d.touchwalk:not(.touring) #whTour{bottom:172px}
+.wt-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.wt-txt b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wt-txt small{color:var(--muted);font-size:11px}
+.wt-btn{flex:none;display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:10px;background:#f2ece2;color:var(--ink);
+  font:inherit;font-size:16px;cursor:pointer}
+#wtPlay{background:var(--accent);color:#fff}
+#view3d.touring #joy,#view3d.touring #walkExit,#view3d.touring #whEye,#view3d.tourcard #hint3d{visibility:hidden}
 @media (pointer:coarse){
   .wh-side{bottom:84px}
   #view3d.walking #hint3d{bottom:176px}
 }""",
+)
+sub(
+    '        <p id="wo3"></p></div></div>',
+    '        <p id="wo3"></p>\n        <button class="btn primary" id="woTour"></button></div></div>',
 )
 sub(
     '      <button class="btn primary" id="walkExit" data-en="Exit walk">退出漫游</button>',
@@ -695,7 +714,7 @@ sub(
 # La vista sigue al dedo (y al mouse sin capturar): arrastrar a la derecha mira a la derecha
 sub(
     "  eul.y += dx * .005; eul.x = THREE.MathUtils.clamp(eul.x + dy * .005, -1.35, 1.35);",
-    "  const k = .005 * walk.look;   // la vista sigue al dedo, igual que el mouse con el puntero capturado\n"
+    "  if (tour && !tour.paused && tour.phase !== 'end') tourPause();   // tomar el control pausa la visita\n  const k = .005 * walk.look;   // la vista sigue al dedo, igual que el mouse con el puntero capturado\n"
     "  eul.y -= dx * k; eul.x = THREE.MathUtils.clamp(eul.x - dy * k, -1.35, 1.35);",
 )
 sub(
@@ -706,6 +725,7 @@ sub(
     "const HINT_WALK = () => tr('WASD 移动 · 鼠标转向 · 1 2 3 速度 · C 坐下 · 双击走过去 · Esc 暂停', 'WASD moves · mouse looks · 1 2 3 speed · C sits · double-click to go · Esc pauses',\n"
     "  'WASD para moverte · el mouse mira · 1 2 3 velocidad · C para sentarte · doble clic para ir · Esc pausa');",
 )
+sub("function setMode(m){\n", "function setMode(m, keep){   // keep: el recorrido empieza donde está la cámara\n")
 # En el celular la ayuda es la del control desde antes de empezar (el original ponía la del teclado)
 sub(
     "opt.mode === 'orbit' ? HINT_ORBIT() : touchWalk ? HINT_TOUCHWALK() : HINT_WALK(); }",
@@ -715,7 +735,11 @@ sub(
     "  $('#walkOverlay').style.display = 'none'; $('#joy').style.display = 'block'; $('#walkExit').style.display = 'block';\n"
     "  syncHint3d();\n}",
     "  $('#walkOverlay').style.display = 'none'; $('#joy').style.display = 'block'; $('#walkExit').style.display = 'block';\n"
-    "  syncHint3d(); flashHint();\n}",
+    "  syncHint3d(); flashHint(); $('#view3d').classList.add('touchwalk');\n}",
+)
+sub(
+    "  $('#joy').style.display = 'none'; $('#walkExit').style.display = 'none';\n}",
+    "  $('#joy').style.display = 'none'; $('#walkExit').style.display = 'none'; $('#view3d').classList.remove('touchwalk');\n}",
 )
 sub(
     "walkCtl.addEventListener('lock', () => { $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'block'; });",
@@ -759,6 +783,7 @@ sub(
 }""",
     r"""function stepWalk(dt){
   if (glide){ stepGlide(); walkMapTick(); return; }
+  if (tour && !tour.paused && tour.phase !== 'end' && stepTour(dt)){ walkMapTick(); return; }
   const p = camera.position;
   p.y += (eyeH() - p.y) * Math.min(1, dt*6);                // sentarse o pararse sin brinco
   if (!walkCtl.isLocked && !touchWalk){ walkMapTick(); return; }
@@ -791,6 +816,7 @@ const eyeH = () => walk.sit ? 1.2 : 1.6;                       // altura de los 
 const planXY = v => [v.x*1000 + OX, v.z*1000 + OY];           // posición 3D → plano (mm)
 const FLAT = ['rug', 'dancefloor', 'staff'];                   // se puede pisar
 const ROUND = ['rtable', 'roundtable', 'cocktail', 'cake', 'plant', 'platform360', 'candelabra', 'flowerstand', 'staff'];
+const TABLES = ['rtable', 'itable', 'headtable'];             // mesas de invitados (con sillas)
 let glide = null, lastTap = null, spots = [], mapKey = '', bigOpen = false;
 
 function setSpeed(v){ walk.speed = v; saveWalk(); syncWalkHud(); }
@@ -801,7 +827,7 @@ function flashHint(){
   flashHint.t = setTimeout(() => { if (opt.mode === 'walk') h.classList.add('gone'); }, 6000);
 }
 function walkHud(on){
-  glide = null; lastTap = null; bigMap(false); clearTimeout(flashHint.t);
+  tourEnd(); glide = null; lastTap = null; bigMap(false); clearTimeout(flashHint.t);
   $('#whFade').classList.remove('on'); $('#hint3d').classList.toggle('gone', on);
   $('#walkHud').hidden = !on; $('#view3d').classList.toggle('walking', on); walkFov(on);
   if ($('#whPop')) $('#whPop').hidden = true;
@@ -825,11 +851,14 @@ function inPoly([x, y], poly){
   }
   return c;
 }
-function inFurn(x, y){
+// ¿(x, y) cae en un mueble? m = holgura (mm); mt = holgura de las mesas con sus sillas
+function inFurn(x, y, m = 250, mt = m){
   return opt.furn && state.furniture.some(f => {
     if (FLAT.includes(f.type)) return false;
-    const a = (f.rot || 0)*Math.PI/180, dx = x - f.cx, dy = y - f.cy;
-    return Math.abs(dx*Math.cos(a) + dy*Math.sin(a)) < f.w/2 + 250 && Math.abs(-dx*Math.sin(a) + dy*Math.cos(a)) < f.d/2 + 250;
+    const k = TABLES.includes(f.type) ? mt : m, dx = x - f.cx, dy = y - f.cy;
+    if (ROUND.includes(f.type)) return Math.hypot(dx, dy) < Math.min(f.w, f.d)/2 + k;
+    const a = (f.rot || 0)*Math.PI/180;
+    return Math.abs(dx*Math.cos(a) + dy*Math.sin(a)) < f.w/2 + k && Math.abs(-dx*Math.sin(a) + dy*Math.cos(a)) < f.d/2 + k;
   });
 }
 const freeAt = (x, y) => !blocked(wx(x), wz(y), .3) && !inFurn(x, y);
@@ -874,6 +903,7 @@ function walkTap(e){
   if (prev && now - prev.t < 350 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 40){ lastTap = null; goScreen(e.clientX, e.clientY); }
 }
 function goScreen(x, y){
+  tourPause();
   const h = pick({clientX:x, clientY:y}), here = planXY(camera.position), seen = (px, py) => clearPath(here, [px, py]);
   const t = h?.fid && spots.find(s => s.table?.id === h.fid);
   if (t) return goSpot(t);                                   // dos toques en una mesa: sentarse ahí
@@ -899,24 +929,25 @@ function buildWalkGo(){
   }).join('');
 }
 function goSpot(s){
+  tourPause();
   if (s.room) return goRoom(s.room);
   if (s.sit) return walkTo(s.p, s.to, true, true);          // el lugar exacto, como «Ver desde esta mesa»
   walkTo(nearFree(...s.p) || s.p, s.to, false);
 }
-// Un cuarto: se entra por el lado más cercano a donde estás, mirando al centro (como en una visita)
-function goRoom(r){
+// Un cuarto: se entra por el lado más cercano a `from` (mm), mirando al centro (como en una visita)
+function roomSpot(r, [hx, hy]){
   const xs = r.poly.map(p => p[0]), ys = r.poly.map(p => p[1]), inside = (x, y) => inPoly([x, y], r.poly);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   let c = [(x0 + x1)/2, (y0 + y1)/2];
   if (!inside(...c)) c = r.at && inside(...r.at) ? r.at : nearFree(c[0], c[1], inside) || c;
-  const [hx, hy] = planXY(camera.position), step = Math.max(300, Math.min(x1 - x0, y1 - y0)/12), cand = [];
+  const step = Math.max(300, Math.min(x1 - x0, y1 - y0)/12), cand = [];
   for (let x = x0 + step/2; x < x1; x += step) for (let y = y0 + step/2; y < y1; y += step)
     if (inside(x, y) && freeAt(x, y)) cand.push([x, y, Math.hypot(x - hx, y - hy)]);
   cand.sort((a, b) => a[2] - b[2]);
   const p = cand.find(([x, y]) => Math.hypot(x - c[0], y - c[1]) > 900 && clearPath([x, y], c));
-  if (p) walkTo(p, c, false);
-  else walkTo(nearFree(c[0], c[1], inside) || c, null, false);
+  return p ? {p: p.slice(0, 2), to: c} : {p: nearFree(c[0], c[1], inside) || c, to: null};
 }
+function goRoom(r){ const s = roomSpot(r, planXY(camera.position)); walkTo(s.p, s.to, false); }
 
 // Mapa: chico en la esquina; al tocarlo se abre grande para elegir a dónde ir (o una mesa para sentarse)
 const SMALL_MAP = () => COARSE ? [96, 128] : [150, 190];
@@ -941,7 +972,7 @@ function drawMap(cv, m, big){
     const [x, y] = P(f.cx, f.cy), w = f.w*m.k, d = f.d*m.k;
     g.save(); g.translate(x, y); g.rotate((f.rot || 0)*Math.PI/180); g.beginPath();
     if (ROUND.includes(f.type)) g.arc(0, 0, Math.min(w, d)/2, 0, 2*Math.PI); else g.rect(-w/2, -d/2, w, d);
-    g.fillStyle = FLAT.includes(f.type) ? '#e2d6c2' : ['rtable', 'itable', 'headtable'].includes(f.type) ? '#c8a988' : '#d2c8ba'; g.fill();
+    g.fillStyle = FLAT.includes(f.type) ? '#e2d6c2' : TABLES.includes(f.type) ? '#c8a988' : '#d2c8ba'; g.fill();
     g.restore();
   });
   g.fillStyle = '#4a443d';
@@ -987,6 +1018,7 @@ function bigMap(on){
   if (on){ $('#whPop').hidden = true; walkMapTick(true); }
 }
 function mapGo(cv, e){
+  tourPause();
   const m = bigFit(), r = cv.getBoundingClientRect(), x = (e.clientX - r.left)/m.k + m.x0, y = (e.clientY - r.top)/m.k + m.y0;
   bigMap(false);
   const t = spots.find(s => s.table && Math.hypot(x - s.table.cx, y - s.table.cy) < s.table.r);
@@ -1009,6 +1041,7 @@ function renderWalkHud(){
   $('#walkHud').innerHTML = `
     <div class="wh-top">
       <label class="wh-pill">${esc(tr('前往…', 'Go to…', 'Ir a…'))} ▾<select id="whGo" aria-label="${esc(tr('前往', 'Go to', 'Ir a'))}"></select></label>
+      <button class="wh-pill" id="whTourBtn" aria-label="${esc(tr('导览', 'Guided tour', 'Visita guiada'))}">${ICON.play}</button>
       <button class="wh-pill" id="whCfg" aria-label="${esc(tr('设置', 'Settings', 'Ajustes'))}">⚙&#xFE0E;</button>
     </div>
     <div id="whPop" hidden>
@@ -1022,13 +1055,20 @@ function renderWalkHud(){
       <div class="wh-seg" id="whEye">${seg([['eye', 'stand', tr('站立', 'Standing', 'De pie')], ['eye', 'sit', tr('坐下', 'Seated', 'Sentado')]])}</div>
       <div class="wh-seg" id="whSpeed" role="group" aria-label="${esc(tr('速度', 'Speed', 'Velocidad'))}">${seg([['sp', 1, 'x1'], ['sp', 2, 'x2'], ['sp', 3, 'x3']])}</div>
     </div>
+    <div id="whTour" hidden>
+      <div class="wt-txt"><b id="wtName"></b><small id="wtStep"></small></div>
+      <button class="wt-btn" id="wtPlay"></button>
+      <button class="wt-btn" id="wtNext" aria-label="${esc(tr('下一个', 'Next', 'Siguiente'))}">${ICON.next}</button>
+      <button class="wt-btn" id="wtStop" aria-label="${esc(tr('结束', 'End tour', 'Terminar la visita'))}">✕</button>
+    </div>
     <div id="whBig" hidden>
       <p>${esc(EXT ? tr('点击要去的位置 · 点餐桌坐下', 'Tap where you want to go · tap a table to sit there', 'Toca a dónde quieres ir · toca una mesa para sentarte')
         : tr('点击要去的位置', 'Tap where you want to go', 'Toca a dónde quieres ir'))}</p>
       <canvas></canvas>
       <button class="btn" id="whClose">${esc(tr('关闭', 'Close', 'Cerrar'))}</button>
     </div>`;
-  bigMap(false);
+  $('#woTour').innerHTML = `${ICON.play} ${esc(tr('导览', 'Guided tour', 'Visita guiada'))}`;
+  bigMap(false); tourCard();
   if (opt.mode === 'walk'){ buildWalkGo(); syncWalkHud(); walkMapTick(true); }
 }
 function bindWalkHud(){
@@ -1043,6 +1083,10 @@ function bindWalkHud(){
     else if (b.id === 'whCfg') $('#whPop').hidden = !$('#whPop').hidden;
     else if (b.id === 'whMap') bigMap(true);
     else if (b.id === 'whClose') bigMap(false);
+    else if (b.id === 'whTourBtn') startTour();
+    else if (b.id === 'wtPlay') tour?.phase === 'end' ? startTour() : tour?.paused ? tourResume() : tourPause();
+    else if (b.id === 'wtNext') tourNext();
+    else if (b.id === 'wtStop') tourEnd();
     else if (b.parentElement?.id === 'whBig') mapGo(b, e);
   });
   hud.addEventListener('change', e => {
@@ -1054,6 +1098,246 @@ function bindWalkHud(){
     if (!active || opt.mode !== 'walk' || !walkCtl.isLocked) return;
     const r = renderer.domElement.getBoundingClientRect(); goScreen(r.left + r.width/2, r.top + r.height/2);
   });
+  $('#woTour').onclick = e => { e.stopPropagation(); startTour(); };
+}
+
+// «Ver desde esta mesa»: la cámara baja volando hasta el lugar y queda en el recorrido, sentada, para mirar alrededor
+async function sitAt(p, to){
+  if (!active || anim) return;
+  if (opt.mode === 'walk'){ tourEnd(); if (!touchWalk){ walkCtl.unlock(); startTouchWalk(); } return walkTo(p, to, true, true); }
+  fly = null; orbit.enabled = false; showLabels(false);
+  const A = curPose(), B = pose(new THREE.Vector3(wx(to[0]), 1, wz(to[1])), new THREE.Vector3(wx(p[0]), 1.2, wz(p[1])));
+  await animate(1400, t => camTween(A, B, ease(t)));
+  setMode('walk', true); setSit(true, true); startTouchWalk();
+}
+
+/* ---------- Visita guiada: camina sola por lo principal, se detiene y mira; pausa, siguiente y terminar ---------- */
+const ICON = {
+  play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
+  next: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14l9-7zM16 5h2.5v14H16z"/></svg>',
+  again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1.5L7 6l5 4.5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>',
+};
+const SHOW = ['bar', 'dessert', 'cake', 'booth', 'platform360'];   // en salones: lo que más se luce
+let tour = null, grids = {};
+
+// Las paradas, en orden. Salón: entrada, el salón, barra / dulces / pastel, una mesa de atrás, una junto a la
+// pista, la mesa principal y la pista. Casa (con su área), como en una visita inmobiliaria: acceso, sala,
+// comedor y cocina; luego recámaras; luego baños y servicio; al final terraza y jardín. Dentro de cada grupo,
+// del más cercano al más lejano. Los pasillos no son parada: se cruzan caminando.
+const ROOM_KIND = [/acceso|recibidor|vest[ií]bulo|sala|estancia|comedor|cocina|family|tv|estudio/i,
+  /ba[ñn]o|lavad|servicio|bodega|cl[oó]set|vestidor|m[aá]quinas/i, /pasillo|circulaci[oó]n/i];
+function tourStops(){
+  const W0 = PLANTA.walk || {from:[OX, OY], to:[OX, OY - 3000]}, stops = [];
+  const add = (name, p, to, sit = false) => stops.push({name, p, to, sit}), last = () => stops[stops.length - 1].p;
+  const d2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]), mid = r => roomSpot(r, last());
+  const ctr = r => { const xs = r.poly.map(q => q[0]), ys = r.poly.map(q => q[1]); return [(Math.min(...xs) + Math.max(...xs))/2, (Math.min(...ys) + Math.max(...ys))/2]; };
+  const stairs = r => STAIRS.some(st => st.steps.some(([x0, y0, x1, y1]) => inPoly([(x0 + x1)/2, (y0 + y1)/2], r.poly)));
+  const rooms = ROOMS.filter(r => !r.void && area(r.poly) >= 1.5 && !stairs(r));
+  add(PLANTA.entry ? tr('入口', 'Entrance', 'Entrada') : tr('起点', 'Start', 'Inicio'), W0.from, W0.to);
+  if (EXT?.walkSpots){
+    const main = rooms.slice().sort((a, b) => area(b.poly) - area(a.poly))[0];
+    if (main){ const s = mid(main); add(nm(state.rooms[main.id].name), s.p, s.to); }
+    const c = [(WALL_BOX.x0 + WALL_BOX.x1)/2, (WALL_BOX.y0 + WALL_BOX.y1)/2], left = state.furniture.filter(f => SHOW.includes(f.type));
+    for (let n = 0; n < 3 && left.length; n++){
+      left.sort((a, b) => d2([a.cx, a.cy], last()) - d2([b.cx, b.cy], last()));
+      const f = left.shift(), L = d2([f.cx, f.cy], c) || 1, R = Math.max(f.w, f.d)/2 + 1500;
+      const p = nearFree(f.cx + (c[0] - f.cx)/L*R, f.cy + (c[1] - f.cy)/L*R);
+      if (p) add(nm(f.name), p, [f.cx, f.cy]);
+    }
+    const spots = EXT.walkSpots(state), dance = spots.find(s => !s.r), tables = spots.filter(s => s.r);
+    const ref = dance ? [dance.x, dance.y] : c, far = s => d2([s.cx, s.cy], ref), head = s => getF(s.id)?.type === 'headtable';
+    const plain = tables.filter(s => !head(s)).sort((a, b) => far(b) - far(a));
+    const seat = (s, extra) => add(extra ? `${s.label} · ${extra}` : s.label, [s.x, s.y], [s.tx, s.ty], true);
+    if (plain.length > 1) seat(plain[0], tr('后排', 'from the back', 'desde atrás'));
+    if (plain.length) seat(plain[plain.length - 1], tr('舞池旁', 'by the dance floor', 'junto a la pista'));
+    tables.filter(head).forEach(s => seat(s));
+    if (dance) add(dance.label, [dance.x, dance.y], [dance.tx, dance.ty]);
+  } else {
+    const outside = rooms.filter(r => r.outdoor && ['grass', 'deck'].includes(state.rooms[r.id].mat) && !inPoly(W0.from, r.poly)
+      && d2(roomSpot(r, W0.from).p, W0.from) > 3000);
+    const kind = r => { const n = state.rooms[r.id].name; return ROOM_KIND[0].test(n) ? 0 : ROOM_KIND[1].test(n) ? 2 : 1; };
+    const indoor = rooms.filter(r => !r.outdoor && !ROOM_KIND[2].test(state.rooms[r.id].name));
+    for (const group of [0, 1, 2].map(k => indoor.filter(r => kind(r) === k)).concat([outside])){
+      const left = group.slice();
+      while (left.length){
+        left.sort((a, b) => d2(ctr(a), last()) - d2(ctr(b), last()));
+        const r = left.shift(), s = mid(r);
+        add(`${nm(state.rooms[r.id].name)} · ${area(r.poly).toFixed(1)} m²`, s.p, s.to);
+      }
+    }
+  }
+  return stops;
+}
+
+// Caminos a pie (mm): A* en una rejilla de 25 cm que esquiva muros, escalones y muebles (las mesas un poco
+// reducidas para pasar entre sillas). Si no hay camino con muebles se busca solo con muros.
+function makeGrid(furn){
+  const G = 250, B = WALL_BOX, pad = 4000, x0 = B.x0 - pad, y0 = B.y0 - pad;
+  const nx = Math.ceil((B.x1 - B.x0 + 2*pad)/G) + 1, ny = Math.ceil((B.y1 - B.y0 + 2*pad)/G) + 1, memo = new Int8Array(nx*ny);
+  const at = (x, y) => { const i = Math.round((x - x0)/G), j = Math.round((y - y0)/G); return i < 0 || j < 0 || i >= nx || j >= ny ? -1 : j*nx + i; };
+  const pt = k => [x0 + (k % nx)*G, y0 + Math.floor(k/nx)*G];
+  const step = (x, y) => STAIRS.some(st => st.steps.some(([a, b, c, d]) => x > a - 200 && x < c + 200 && y > b - 200 && y < d + 200));
+  const wall = (x, z) => colliders.some(([a, b, c, d]) => x > a - .18 && x < c + .18 && z > b - .18 && z < d + .18);   // cabe por puertas de 75 cm
+  const free = k => {
+    if (k < 0) return false;
+    if (!memo[k]){ const [x, y] = pt(k); memo[k] = wall(wx(x), wz(y)) || step(x, y) || (furn && inFurn(x, y, 120, -150)) ? 2 : 1; }
+    return memo[k] === 1;
+  };
+  return {G, nx, ny, at, pt, free};
+}
+function astar(g, s, e){
+  const {nx, ny} = g, N = nx*ny, cost = new Float32Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+  const ok = k => k === s || k === e || g.free(k), ex = e % nx, ey = Math.floor(e/nx), heap = [];
+  const h = k => { const dx = Math.abs(k % nx - ex), dy = Math.abs(Math.floor(k/nx) - ey); return Math.max(dx, dy) + .414*Math.min(dx, dy); };
+  const push = (f, k) => { heap.push([f, k]); for (let i = heap.length - 1; i;){ const j = (i - 1) >> 1; if (heap[j][0] <= heap[i][0]) break; [heap[i], heap[j]] = [heap[j], heap[i]]; i = j; } };
+  const pop = () => {
+    const top = heap[0], end = heap.pop();
+    if (heap.length){ heap[0] = end; for (let i = 0;;){ const l = 2*i + 1, r = l + 1; let m = i;
+      if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+      if (m === i) break; [heap[i], heap[m]] = [heap[m], heap[i]]; i = m; } }
+    return top;
+  };
+  cost[s] = 0; push(h(s), s);
+  for (let n = 0; heap.length && n < 400000; n++){
+    const k = pop()[1];
+    if (done[k]) continue;
+    if (k === e){ const out = []; for (let c = e; c !== -1; c = prev[c]) out.push(c); return out.reverse(); }
+    done[k] = 1;
+    const x = k % nx, y = (k - x)/nx;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++){
+      const X = x + dx, Y = y + dy, q = Y*nx + X;
+      if ((!dx && !dy) || X < 0 || Y < 0 || X >= nx || Y >= ny || done[q] || !ok(q)) continue;
+      if (dx && dy && (!ok(y*nx + X) || !ok(Y*nx + x))) continue;   // sin cortar esquinas
+      const c = cost[k] + (dx && dy ? 1.414 : 1);
+      if (c < cost[q]){ cost[q] = c; prev[q] = k; push(c + h(q), q); }
+    }
+  }
+  return null;
+}
+function findPath(a, b){
+  for (const furn of [true, false]){
+    const g = grids[furn] ||= makeGrid(furn), s = g.at(...a), e = g.at(...b);
+    if (s < 0 || e < 0) return null;
+    const cells = astar(g, s, e);
+    if (!cells) continue;
+    // Se jala la cuerda: de cada punto, el más lejano que se ve en línea recta
+    const pts = cells.map(k => g.pt(k)), clear = (p, q) => {
+      const n = Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1])/(g.G/2));
+      for (let i = 1; i < n; i++){ const k = g.at(p[0] + (q[0] - p[0])*i/n, p[1] + (q[1] - p[1])*i/n); if (k !== s && k !== e && !g.free(k)) return false; }
+      return true;
+    };
+    pts[0] = a; pts[pts.length - 1] = b;
+    const out = [pts[0]];
+    for (let i = 0; i < pts.length - 1;){ let j = pts.length - 1; while (j > i + 1 && !clear(pts[i], pts[j])) j--; out.push(pts[j]); i = j; }
+    return out;
+  }
+  return null;
+}
+
+function startTour(){
+  if (!active || anim) return;
+  if (opt.mode !== 'walk') setMode('walk');
+  if (!touchWalk){ walkCtl.unlock(); startTouchWalk(); }
+  bigMap(false);
+  doors.forEach(d => d.open = true);                       // en la visita las puertas están abiertas
+  grids = {};
+  tour = {stops: tourStops(), i: 0, phase: 'go', paused: false};
+  tourCard();
+}
+function tourPause(){ if (tour && !tour.paused && tour.phase !== 'end'){ tour.paused = true; tourCard(); } }
+function tourResume(){
+  if (!tour) return;
+  tour.paused = false;
+  if (tour.phase === 'hold') tour.i++;                     // ya estaba en esa parada: sigue a la siguiente
+  if (tour.i >= tour.stops.length) return tourFinish();
+  tour.phase = 'go'; tourCard();
+}
+function tourNext(){
+  if (!tour || tour.phase === 'end') return;
+  tour.i++; tour.paused = false;
+  if (tour.i >= tour.stops.length) return tourFinish();
+  const s = tour.stops[tour.i];
+  walkTo(s.p, s.to, s.sit, s.sit);
+  Object.assign(tour, {phase: 'hold', held: 0, q1: null}); tourCard();
+}
+function tourFinish(){ Object.assign(tour, {phase: 'end', paused: false}); tourCard(); }
+function tourEnd(){ tour = null; tourCard(); }
+function tourCard(){
+  const c = $('#whTour'), v = $('#view3d');
+  v.classList.toggle('tourcard', !!tour); v.classList.toggle('touring', !!tour && !tour.paused && tour.phase !== 'end');
+  if (!c) return;
+  c.hidden = !tour;
+  if (!tour) return;
+  const end = tour.phase === 'end', s = tour.stops[Math.min(tour.i, tour.stops.length - 1)];
+  $('#wtName').textContent = end ? tr('参观结束', 'End of the tour', 'Fin de la visita') : s.name;
+  $('#wtStep').textContent = end ? tr('可以自己逛逛', 'Walk around on your own or watch it again', 'Recorre por tu cuenta o vuélvela a ver')
+    : `${tour.i + 1} ${tr('/', 'of', 'de')} ${tour.stops.length}`;
+  $('#wtPlay').innerHTML = end ? ICON.again : tour.paused ? ICON.play : ICON.pause;
+  $('#wtPlay').setAttribute('aria-label', end ? tr('重新播放', 'Watch again', 'Volver a ver')
+    : tour.paused ? tr('继续', 'Resume', 'Seguir') : tr('暂停', 'Pause', 'Pausa'));
+  $('#wtNext').hidden = end;
+}
+// Un cuadro de la visita: ir caminando, voltear a ver, quedarse mirando un momento. false = el usuario tomó el control
+function stepTour(dt){
+  const T = tour, s = T.stops[T.i], cam = camera, p = cam.position, now = performance.now();
+  if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some(k => keys[k]) || Math.hypot(joy.x, joy.y) > .05){
+    tourPause(); return false;
+  }
+  p.y += (eyeH() - p.y) * Math.min(1, dt*6);
+  if (T.phase === 'go'){
+    tourCard();
+    const here = planXY(p);
+    if (Math.hypot(s.p[0] - here[0], s.p[1] - here[1]) < 400){ tourTurn(); return true; }
+    const path = T.i ? findPath(here, s.p) : null;          // a la entrada (lejos) se llega con fundido
+    if (!path){ walkTo(s.p, s.to, s.sit, s.sit); Object.assign(T, {phase: 'hold', held: 0, q1: null}); return true; }
+    setSit(false);
+    const P = path.map(([x, y]) => new THREE.Vector2(wx(x), wz(y))), L = [0];
+    for (let k = 1; k < P.length; k++) L.push(L[k - 1] + P[k].distanceTo(P[k - 1]));
+    Object.assign(T, {phase: 'walk', P, L, d: 0});
+    return true;
+  }
+  if (T.phase === 'walk'){
+    const total = T.L[T.L.length - 1], at = d => {
+      let k = 1; while (k < T.L.length - 1 && T.L[k] < d) k++;
+      return T.P[k - 1].clone().lerp(T.P[k], clamp01((d - T.L[k - 1])/((T.L[k] - T.L[k - 1]) || 1)));
+    };
+    T.d = Math.min(total, T.d + 1.7*walk.speed*dt);
+    const q = at(T.d), ahead = at(Math.min(total, T.d + 1.6));
+    p.x = q.x; p.z = q.y;
+    if (ahead.distanceTo(q) > .05){   // mira hacia donde va, girando suave
+      eul.setFromQuaternion(cam.quaternion);
+      let dy = Math.atan2(q.x - ahead.x, q.y - ahead.y) - eul.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      eul.y += dy*Math.min(1, dt*3); eul.x += (-.06 - eul.x)*Math.min(1, dt*3); eul.z = 0;
+      cam.quaternion.setFromEuler(eul);
+    }
+    if (T.d >= total) tourTurn();
+    return true;
+  }
+  if (T.phase === 'turn'){
+    const t = clamp01((now - T.t0)/900);
+    cam.quaternion.slerpQuaternions(T.q0, T.q1, ease(t));
+    if (t >= 1) Object.assign(T, {phase: 'hold', held: 0});
+    return true;
+  }
+  if (T.phase === 'hold'){   // se queda mirando y voltea un poco a cada lado
+    if (!T.q1) T.q1 = cam.quaternion.clone();
+    const H = 3.6/Math.sqrt(walk.speed);
+    T.held += dt;
+    cam.quaternion.copy(new THREE.Quaternion().setFromAxisAngle(UP_Y, Math.sin(Math.min(1, T.held/H)*Math.PI*2)*.16).multiply(T.q1));
+    if (T.held >= H){ T.i++; if (T.i >= T.stops.length) tourFinish(); else { T.phase = 'go'; tourCard(); } }
+    return true;
+  }
+  return false;
+}
+function tourTurn(){
+  const T = tour, s = T.stops[T.i];
+  setSit(s.sit, s.sit);
+  const eye = new THREE.Vector3(camera.position.x, eyeH(), camera.position.z);
+  T.q0 = camera.quaternion.clone();
+  T.q1 = s.to ? new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(eye,
+    new THREE.Vector3(wx(s.to[0]), s.sit ? 1 : 1.45, wz(s.to[1])), camera.up)) : T.q0.clone();
+  Object.assign(T, {phase: 'turn', t0: performance.now()});
 }""",
 )
 sub(
@@ -1061,7 +1345,8 @@ sub(
     "  if (opt.mode === 'walk' && e.code === 'KeyE'){ const h = pick(); if (h?.door && h.dist < 2.5) h.door.open = !h.door.open; }\n"
     "  if (opt.mode === 'walk' && /^Digit[123]$/.test(e.code)) setSpeed(+e.code[5]);\n"
     "  if (opt.mode === 'walk' && e.code === 'KeyC') setSit(!walk.sit);\n"
-    "  if (bigOpen && e.code === 'Escape') bigMap(false);\n});",
+    "  if (bigOpen && e.code === 'Escape') bigMap(false);\n"
+    "  if (tour && e.code === 'Space'){ e.preventDefault(); tour.phase === 'end' ? startTour() : tour.paused ? tourResume() : tourPause(); }\n});",
 )
 sub(
     """    : [tr('点击开始，从入户门进入', 'Click to start at the front door'),
