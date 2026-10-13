@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
+import type { Section } from "@/lib/domain";
 import { createSamples } from "./actions";
 
 function SamplesButton() {
@@ -16,14 +17,26 @@ function SamplesButton() {
   );
 }
 
+const STEP_ONE: Record<"ambos" | "salones" | "casas", string> = {
+  ambos: "Crea un evento en un salón o un proyecto de casa.",
+  salones: "Crea un evento en uno de los salones del catálogo.",
+  casas: "Crea un proyecto con uno de los modelos de casa.",
+};
+const SAMPLES: Record<"ambos" | "salones" | "casas", string> = {
+  ambos: "Carga una boda con 220 invitados sentados y dos propuestas, unos XV años y una casa amueblada y sin muebles.",
+  salones: "Carga una boda con 220 invitados sentados y dos propuestas, y unos XV años.",
+  casas: "Carga una casa amueblada y sin muebles.",
+};
+
 /** Primera vez en la cuenta: cómo funciona, ejemplos listos para mostrar y la marca del negocio. */
-export function Welcome() {
+export function Welcome({ modules }: { modules: Section[] }) {
+  const which = modules.length > 1 ? "ambos" : (modules[0] ?? "ambos");
   return (
     <section className="mb-6 rounded-2xl bg-stone-900 p-5 text-white">
       <h2 className="text-xl font-semibold">Te damos la bienvenida</h2>
       <ol className="mt-3 space-y-2 text-sm text-stone-200">
         <li>
-          <b className="text-white">1.</b> Crea un evento en un salón o un proyecto de casa.
+          <b className="text-white">1.</b> {STEP_ONE[which]}
         </li>
         <li>
           <b className="text-white">2.</b> Acomoda mesas o muebles con el dedo, acomoda a los invitados y revísalo en 3D.
@@ -33,8 +46,7 @@ export function Welcome() {
         </li>
       </ol>
       <p className="mt-4 text-sm text-stone-300">
-        ¿Quieres verlo funcionando ya? Carga una boda con 220 invitados sentados y dos propuestas, unos XV años y una casa
-        amueblada y sin muebles.
+        ¿Quieres verlo funcionando ya? {SAMPLES[which]}
       </p>
       <form action={createSamples} className="mt-3">
         <SamplesButton />

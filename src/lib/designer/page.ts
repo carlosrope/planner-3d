@@ -1,6 +1,7 @@
 import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { PROLINK_WHATSAPP } from "../prolink";
 import { withoutVendors, type DesignerPlan, type PropertyDetails } from "./types";
 
 // Arma la página del diseñador (src/designer/disenador.html, adaptación de
@@ -106,10 +107,22 @@ const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "
 const json = (v: unknown) => JSON.stringify(v).replace(/</g, "\\u003c");
 const inline = (code: string) => `<script>\n${code}\n</script>\n`;
 
+/** Aviso del 3D público de un lugar del catálogo (o de su revisión por el dueño): lo pinta src/designer/demo.js. */
+export type VenueNotice = {
+  name: string;
+  /** WhatsApp del lugar (o de su dueño), si lo hay. */
+  whatsapp: string | null;
+  /** A dónde lleva "Planear mi evento aquí". */
+  planHref: string;
+  /** El dueño lo abrió desde su enlace de revisión: vuelve ahí para confirmar. */
+  reviewHref: string | null;
+};
+
 export async function designerResponse(
   plan: DesignerPlan,
   host?: HostData,
   meta?: { image?: string; description?: string; url?: string; siteName?: string },
+  options?: { demo?: boolean; venue?: VenueNotice },
 ) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
@@ -120,6 +133,11 @@ export async function designerResponse(
     head += inline(await file("eventos/eventos.js"));
   }
   if (host) head += inline(`window.__HOST_DATA__ = ${json(host)};\n${await file("host.js")}`);
+  // Demostración sin cuenta: aviso de que el plano es de ejemplo, con el WhatsApp de ProLink.
+  if (options?.demo || options?.venue) {
+    const notice = { kind: plan.kind ?? "casa", whatsapp: PROLINK_WHATSAPP, venue: options.venue ?? null };
+    head += inline(`window.__DEMO__ = ${json(notice)};\n${await file("demo.js")}`);
+  }
   // Título y vista previa del enlace (WhatsApp, iMessage).
   const title = escapeHtml(plan.title);
   const description = escapeHtml(

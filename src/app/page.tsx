@@ -29,6 +29,18 @@ export default function Home() {
         </PageLink>
         <div className="grid grid-cols-2 gap-3">
           <Link
+            href="/salones"
+            className="flex h-12 items-center justify-center rounded-xl border border-stone-300 bg-white font-medium active:bg-stone-100"
+          >
+            Salones en 3D
+          </Link>
+          <Link
+            href="/casas"
+            className="flex h-12 items-center justify-center rounded-xl border border-stone-300 bg-white font-medium active:bg-stone-100"
+          >
+            Modelos de casa
+          </Link>
+          <Link
             href="/entrar"
             className="flex h-12 items-center justify-center rounded-xl border border-stone-300 bg-white font-medium active:bg-stone-100"
           >
@@ -41,6 +53,12 @@ export default function Home() {
             Crear cuenta
           </Link>
         </div>
+        <p className="text-center text-sm text-stone-500">
+          ¿Tienes un salón o vendes casas?{" "}
+          <Link href="/alta" className="underline">
+            Registra tu lugar
+          </Link>
+        </p>
       </div>
     </main>
   );

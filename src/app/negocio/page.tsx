@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getOrgBrand, requireOrg, requireUser } from "@/lib/dal";
 import { BrandForm } from "./BrandForm";
+import { PlanSection } from "./PlanSection";
 
 export const metadata: Metadata = { title: "Mi negocio" };
 
@@ -17,9 +18,14 @@ export default function NegocioPage() {
 }
 
 async function NegocioContent() {
-  const user = await requireUser();
+  const user = await requireUser("/negocio");
   const org = await requireOrg(user);
   const brand = await getOrgBrand(org.id);
   if (!brand) return null;
-  return <BrandForm brand={brand} />;
+  return (
+    <>
+      <BrandForm brand={brand} />
+      <PlanSection org={org} />
+    </>
+  );
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getVenueForOrg, listVenues, requireOrg, requireUser } from "@/lib/dal";
+import { getVenueForOrg, listVenues, moduleActive, requireOrg, requireUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { event, layout } from "@/lib/db/schema";
 import { SALON_EVENT_KINDS, sectionOf } from "@/lib/domain";
@@ -46,6 +46,9 @@ export async function createEvent(_prev: CreateEventState, formData: FormData): 
     return { error: "Revisa los datos: el nombre y el lugar son obligatorios (y en un salón, el tipo y los invitados)." };
   }
   const data = parsed.data;
+  if (!moduleActive(org, data.section === "casas" ? "casa" : "salon")) {
+    return { error: "Tu plan no incluye esta sección o ya terminó. Escríbenos por WhatsApp para activarla." };
+  }
 
   const found = await getVenueForOrg(org.id, data.venueId);
   if (!found || sectionOf(found.kind) !== data.section) return { error: "Ese lugar no está disponible para tu cuenta." };
@@ -86,7 +89,11 @@ export async function createSamples(): Promise<void> {
     const found = places.find((v) => v.kind === kind);
     return found ? await getVenueForOrg(org.id, found.id) : null;
   };
-  const [salon, casa] = await Promise.all([pick("salon"), pick("casa")]);
+  // Solo ejemplos de los módulos activos de la cuenta.
+  const [salon, casa] = await Promise.all([
+    moduleActive(org, "salon") ? pick("salon") : null,
+    moduleActive(org, "casa") ? pick("casa") : null,
+  ]);
   const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
   const salonDoc = (plan: DesignerPlan, guests: number, kind: "boda" | "xv", template: Template): DesignDoc => {

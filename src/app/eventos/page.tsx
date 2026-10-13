@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { listEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
-import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, SECTIONS, sectionOf, type Section } from "@/lib/domain";
+import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isOwnerKind, sectionOf, type Section } from "@/lib/domain";
 import { NewEventForm } from "./NewEventForm";
 import { SignOutButton } from "./SignOutButton";
 import { SamplesLink, Welcome } from "./Welcome";
@@ -21,11 +21,13 @@ export default function EventosPage({ searchParams }: PageProps<"/eventos">) {
 }
 
 const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const fechaPlan = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long" });
+const WHATSAPP_PROLINK = "https://wa.me/526681305828?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20Espacios%203D";
 
 const COPY: Record<Section, { empty: string; title: string; hint: string }> = {
   salones: {
-    empty: "Todavía no tienes eventos en salón. Crea el primero abajo.",
-    title: "Nuevo evento en salón",
+    empty: "Todavía no tienes eventos. Crea el primero abajo.",
+    title: "Nuevo evento",
     hint: "Se arma un plano inicial con pista, mesa principal y las mesas que necesitas según los invitados.",
   },
   casas: {
@@ -38,21 +40,41 @@ const COPY: Record<Section, { empty: string; title: string; hint: string }> = {
 async function EventosContent({ searchParams }: { searchParams: PageProps<"/eventos">["searchParams"] }) {
   const user = await requireUser();
   const org = await requireOrg(user);
-  const { seccion } = await searchParams;
-  const section: Section = seccion === "casas" ? "casas" : "salones";
+  const { seccion, lugar } = await searchParams;
+  // Solo las secciones de los módulos contratados; si el plan venció, se ven los proyectos pero no se crean ni se abren.
+  const active = activeModules(org);
+  const expired = active.length === 0;
+  const visible: Section[] = expired ? org.modules : active;
   const [events, venues] = await Promise.all([listEvents(org.id), listVenues(org.id)]);
+  // ?lugar=: viene del catálogo ("Planear mi evento aquí"): se preselecciona el lugar y se abre su sección.
+  const wanted = typeof lugar === "string" ? venues.find((v) => v.id === lugar || v.slug === lugar) : undefined;
+  const asked = wanted ? sectionOf(wanted.kind) : seccion === "casas" ? "casas" : undefined;
+  const section: Section = asked && visible.includes(asked) ? asked : (visible[0] ?? "salones");
   const mine = events.filter((e) => sectionOf(e.venueKind) === section);
   const places = venues.filter((v) => sectionOf(v.kind) === section);
   const count = (s: Section) => events.filter((e) => sectionOf(e.venueKind) === s).length;
+  const planLine = org.planEndsAt
+    ? `${PLAN_LABELS[org.plan]} · ${expired ? "terminó el" : "hasta el"} ${fechaPlan.format(org.planEndsAt)}`
+    : PLAN_LABELS[org.plan];
 
   return (
     <>
       <header className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-stone-500">{org.name}</p>
+          <p className="text-sm text-stone-500">
+            {org.name} · <span className={expired ? "text-red-600" : ""}>{planLine}</span>
+          </p>
           <h1 className="text-2xl font-semibold">Proyectos</h1>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {isOwnerKind(org.kind) && (
+            <Link
+              href="/lugares"
+              className="flex h-10 items-center rounded-xl border border-stone-300 px-3 text-sm font-medium active:bg-stone-100"
+            >
+              Mis lugares
+            </Link>
+          )}
           <Link
             href="/negocio"
             className="flex h-10 items-center rounded-xl border border-stone-300 px-3 text-sm font-medium active:bg-stone-100"
@@ -63,10 +85,28 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         </div>
       </header>
 
-      {events.length === 0 && <Welcome />}
+      {expired && (
+        <section className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900">
+          <h2 className="text-lg font-semibold">Tu plan terminó</h2>
+          <p className="mt-1 text-sm">
+            Tus proyectos siguen guardados, pero ya no se pueden abrir ni crear nuevos. Escríbenos y lo activamos el mismo día.
+          </p>
+          <a
+            href={WHATSAPP_PROLINK}
+            target="_blank"
+            rel="noopener"
+            className="mt-3 inline-flex h-11 items-center rounded-xl bg-red-700 px-4 text-sm font-medium text-white active:bg-red-800"
+          >
+            Activar mi plan por WhatsApp
+          </a>
+        </section>
+      )}
 
+      {events.length === 0 && !expired && <Welcome modules={active} />}
+
+      {visible.length > 1 && (
       <nav className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-stone-200/70 p-1" aria-label="Secciones">
-        {(Object.keys(SECTIONS) as Section[]).map((s) => (
+        {visible.map((s) => (
           <Link
             key={s}
             href={s === "salones" ? "/eventos" : "/eventos?seccion=casas"}
@@ -81,6 +121,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
           </Link>
         ))}
       </nav>
+      )}
 
       <section className="mb-8 space-y-2">
         {mine.length === 0 ? (
@@ -113,12 +154,14 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         )}
       </section>
 
-      <section className="rounded-2xl border border-stone-200 bg-white p-4">
-        <h2 className="mb-1 text-lg font-semibold">{COPY[section].title}</h2>
-        <p className="mb-4 text-sm text-stone-500">{COPY[section].hint}</p>
-        <NewEventForm key={section} section={section} venues={places} />
-      </section>
-      {events.length > 0 && <SamplesLink />}
+      {!expired && (
+        <section className="rounded-2xl border border-stone-200 bg-white p-4">
+          <h2 className="mb-1 text-lg font-semibold">{COPY[section].title}</h2>
+          <p className="mb-4 text-sm text-stone-500">{COPY[section].hint}</p>
+          <NewEventForm key={`${section}-${wanted?.id ?? ""}`} section={section} venues={places} defaultVenueId={wanted?.id} />
+        </section>
+      )}
+      {events.length > 0 && !expired && <SamplesLink />}
     </>
   );
 }

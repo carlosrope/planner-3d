@@ -1,0 +1,19 @@
+{
+  "id": "salon-prueba",
+  "kind": "salon",
+  "name": "Salón de prueba (DXF sintético)",
+  "source": "../../planos/_dxf/salon-prueba.dxf",
+  "lot": { "width": 28, "depth": 44 },
+  "layers": { "walls": { "A-MUROS": "muro" } },
+  "levels": [
+    {
+      "id": "salon",
+      "name": "Salón",
+      "window": [-1, -1, 29, 45],
+      "origin": [0, 44],
+      "elevation": 0,
+      "height": 5.0,
+      "rooms": []
+    }
+  ]
+}

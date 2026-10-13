@@ -1,4 +1,4 @@
-"""Importa las plantas de una casa desde un DXF arquitectónico a JSON para Planner 3D.
+"""Importa las plantas de una casa o de un salón de eventos desde un DXF arquitectónico a JSON para Planner 3D.
 
 Flujo completo:
     dwg2dxf -o plano.dxf plano.dwg            # LibreDWG (herramienta local, no se distribuye)
@@ -182,8 +182,18 @@ def build_level(raw, level, lot):
     }
 
 
+def apply_layer_overrides(config):
+    """Capas del CAD del cliente que no siguen la nomenclatura A-MUROS (salones, despachos chicos).
+    config["layers"] = {"walls": {"CAPA": "muro"}, "lines": {"CAPA": "puerta"}, "openings": {"CAPA": "puerta"}}."""
+    layers = config.get("layers", {})
+    WALL_LAYERS.update({k.upper(): v for k, v in layers.get("walls", {}).items()})
+    LINE_LAYERS.update({k.upper(): v for k, v in layers.get("lines", {}).items()})
+    OPENING_LAYERS.update({k.upper(): v for k, v in layers.get("openings", {}).items()})
+
+
 def main(config_path: str, output_path: str):
     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    apply_layer_overrides(config)
     source = Path(config_path).parent / config["source"]
     doc = ezdxf.readfile(source)
     raw = []
@@ -191,6 +201,7 @@ def main(config_path: str, output_path: str):
     lot = config["lot"]
     result = {
         "id": config["id"],
+        "kind": config.get("kind", "casa"),
         "name": config["name"],
         "source": Path(config["source"]).name,
         "width": lot["width"],

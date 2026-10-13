@@ -10,9 +10,12 @@ const field = "h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text
 export function NewEventForm({
   section,
   venues,
+  defaultVenueId,
 }: {
   section: Section;
   venues: { id: string; name: string; city: string }[];
+  /** Lugar preseleccionado (viene del catálogo con ?lugar=). */
+  defaultVenueId?: string;
 }) {
   const [state, action, pending] = useActionState(createEvent, null);
   const salon = section === "salones";
@@ -49,7 +52,7 @@ export function NewEventForm({
       )}
       <label className={`space-y-1 ${salon ? "" : "sm:col-span-2"}`}>
         <span className="text-sm text-stone-600">{salon ? "Salón" : "Modelo de casa"}</span>
-        <select name="venueId" required className={field}>
+        <select name="venueId" required defaultValue={defaultVenueId} className={field}>
           {venues.map((v) => (
             <option key={v.id} value={v.id}>
               {v.name} · {v.city}

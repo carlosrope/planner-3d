@@ -5,5 +5,5 @@ export const metadata: Metadata = { title: "Crear cuenta" };
 
 export default function RegistroPage() {
   // En el dominio de prueba (SIGNUP_CODE definido) solo se registra quien tenga el código.
-  return <AuthForm mode="registro" inviteRequired={Boolean(process.env.SIGNUP_CODE)} />;
+  return <AuthForm mode="registro" inviteRequired={Boolean(process.env.SIGNUP_CODE || process.env.SIGNUP_CODES)} />;
 }

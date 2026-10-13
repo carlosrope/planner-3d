@@ -8,7 +8,16 @@ import { authClient } from "@/lib/auth-client";
 const input =
   "h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base outline-none focus:border-stone-800";
 
-export function AuthForm({ mode, inviteRequired = false }: { mode: "entrar" | "registro"; inviteRequired?: boolean }) {
+export function AuthForm({
+  mode,
+  inviteRequired = false,
+  next,
+}: {
+  mode: "entrar" | "registro";
+  inviteRequired?: boolean;
+  /** A dónde ir después de entrar (por omisión, Proyectos). */
+  next?: string;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,7 +51,7 @@ export function AuthForm({ mode, inviteRequired = false }: { mode: "entrar" | "r
       );
       return;
     }
-    router.push("/eventos");
+    router.push(next ?? "/eventos");
     router.refresh();
   };
 

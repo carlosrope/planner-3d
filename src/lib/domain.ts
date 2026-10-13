@@ -14,16 +14,84 @@ export const EVENT_KIND_LABELS: Record<EventKind, string> = {
 /** Tipos de evento en un salón (la casa tiene su propia sección). */
 export const SALON_EVENT_KINDS = ["boda", "xv", "graduacion", "corporativo", "otro"] as const satisfies readonly EventKind[];
 
-/** Las dos secciones de la app: eventos en salón (wedding planners) y casas (inmobiliarias). */
+/** Las dos secciones de la app: eventos (salones) y casas (inmobiliarias). Cada una es un módulo que la cuenta contrata. */
 export const SECTIONS = {
-  salones: { label: "Eventos en salón", venueKind: "salon" },
+  salones: { label: "Eventos", venueKind: "salon" },
   casas: { label: "Casas", venueKind: "casa" },
 } as const;
 export type Section = keyof typeof SECTIONS;
+export const ALL_SECTIONS = Object.keys(SECTIONS) as Section[];
 export const sectionOf = (venueKind: string): Section => (venueKind === "casa" ? "casas" : "salones");
+
+/** Plan comercial de la cuenta. `prueba` vence en `planEndsAt`; los demás no vencen solos. */
+export const PLANS = ["prueba", "eventos", "casas", "ambos"] as const;
+export type Plan = (typeof PLANS)[number];
+export const PLAN_LABELS: Record<Plan, string> = {
+  prueba: "Prueba",
+  eventos: "Eventos",
+  casas: "Casas",
+  ambos: "Eventos y casas",
+};
+/** Módulos que incluye cada plan (la prueba puede ser de uno o de los dos: se guardan en `modules`). */
+export const PLAN_MODULES: Record<Exclude<Plan, "prueba">, readonly Section[]> = {
+  eventos: ["salones"],
+  casas: ["casas"],
+  ambos: ["salones", "casas"],
+};
+export const isSection = (value: unknown): value is Section => typeof value === "string" && value in SECTIONS;
+export const isPlan = (value: unknown): value is Plan => typeof value === "string" && (PLANS as readonly string[]).includes(value);
+
+/** Módulos que la cuenta puede usar ahora: los contratados, mientras el plan no haya vencido. */
+export function activeModules(org: { modules: readonly Section[]; planEndsAt: Date | null }, now = new Date()): Section[] {
+  if (org.planEndsAt && org.planEndsAt.getTime() <= now.getTime()) return [];
+  return ALL_SECTIONS.filter((s) => org.modules.includes(s));
+}
 
 /** Tipo de lugar: salón de eventos o casa (inmobiliaria). */
 export type VenueKind = "salon" | "casa";
+export const VENUE_KIND_LABELS: Record<VenueKind, string> = { salon: "Salón de eventos", casa: "Modelo de casa" };
+export const isVenueKind = (value: unknown): value is VenueKind => value === "salon" || value === "casa";
+
+/**
+ * Estado de un lugar del catálogo: el dueño lo registra (`conversion`: ProLink arma el plano), revisa su enlace
+ * (`revision`), lo confirma (`publicado`: aparece en el catálogo público y para las planners) o pide retirarlo.
+ */
+export const VENUE_STATUSES = ["conversion", "revision", "publicado", "retirado"] as const;
+export type VenueStatus = (typeof VENUE_STATUSES)[number];
+export const VENUE_STATUS_LABELS: Record<VenueStatus, string> = {
+  conversion: "En conversión",
+  revision: "Por confirmar",
+  publicado: "Publicado",
+  retirado: "Retirado",
+};
+export const isVenueStatus = (value: unknown): value is VenueStatus =>
+  typeof value === "string" && (VENUE_STATUSES as readonly string[]).includes(value);
+
+/** Un pago por transferencia: el cliente sube el comprobante y ProLink lo confirma o lo rechaza. */
+export const PAYMENT_STATUSES = ["pendiente", "confirmado", "rechazado"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  pendiente: "Por revisar",
+  confirmado: "Confirmado",
+  rechazado: "Rechazado",
+};
+/** Periodo que cubre un pago. */
+export const PAYMENT_PERIODS = ["mes", "anio"] as const;
+export type PaymentPeriod = (typeof PAYMENT_PERIODS)[number];
+export const PAYMENT_PERIOD_LABELS: Record<PaymentPeriod, string> = { mes: "Un mes", anio: "Un año" };
+export const isPaymentPeriod = (value: unknown): value is PaymentPeriod => value === "mes" || value === "anio";
+
+/** Días que faltan para que termine el plan (negativo si ya venció; null si no vence). */
+export function planDaysLeft(planEndsAt: Date | null, now = new Date()): number | null {
+  return planEndsAt ? Math.ceil((planEndsAt.getTime() - now.getTime()) / 86_400_000) : null;
+}
+
+/** Fin del plan después de un pago: se suma al fin vigente si todavía no llega, o a hoy si ya venció. */
+export function planEndAfterPayment(current: Date | null, period: PaymentPeriod, now = new Date()): Date {
+  const from = current && current.getTime() > now.getTime() ? new Date(current) : new Date(now);
+  from.setMonth(from.getMonth() + (period === "anio" ? 12 : 1));
+  return from;
+}
 
 /** Capas del plano que puede ver cada enlace compartido (según su rol). */
 export const LAYERS = ["mobiliario", "decoracion", "staff", "proveedores", "tecnica", "rutas", "zonas"] as const;
@@ -38,7 +106,18 @@ export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   cancelado: "Cancelado",
 };
 
-export type OrgKind = "planner" | "venue";
+/** Tipo de negocio: planner u organizador, salón de eventos, inmobiliaria o asesor, desarrolladora o constructora. */
+export const ORG_KINDS = ["planner", "venue", "agency", "developer"] as const;
+export type OrgKind = (typeof ORG_KINDS)[number];
+export const ORG_KIND_LABELS: Record<OrgKind, string> = {
+  planner: "Planner u organizador de eventos",
+  venue: "Salón de eventos",
+  agency: "Inmobiliaria o asesor",
+  developer: "Desarrolladora o constructora",
+};
+export const isOrgKind = (value: unknown): value is OrgKind => typeof value === "string" && (ORG_KINDS as readonly string[]).includes(value);
+/** Negocios que son dueños de lugares: registran salones o modelos y tienen panel de lugares. */
+export const isOwnerKind = (kind: OrgKind) => kind === "venue" || kind === "developer";
 export type MemberRole = "owner" | "assistant" | "staff";
 
 export const SHARE_ROLES = ["cliente", "staff", "proveedor", "salon"] as const;

@@ -3,9 +3,10 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireOrg, requireUser } from "@/lib/dal";
+import { createPayment, requireOrg, requireUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { organization } from "@/lib/db/schema";
+import { normalizeWhatsapp } from "@/lib/whatsapp";
 
 export type BrandState = { ok?: boolean; error?: string } | null;
 
@@ -19,14 +20,6 @@ const brand = z.object({
   whatsapp: z.string().trim().max(30),
 });
 
-/** WhatsApp en formato internacional: 10 dígitos de México → 52 + número. */
-function normalizeWhatsapp(raw: string): string | null | undefined {
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.length === 10) return `52${digits}`;
-  if (digits.length >= 11 && digits.length <= 15) return digits;
-  return undefined;
-}
 
 export async function updateBrand(_prev: BrandState, formData: FormData): Promise<BrandState> {
   const user = await requireUser();
@@ -52,6 +45,32 @@ export async function updateBrand(_prev: BrandState, formData: FormData): Promis
     })
     .where(eq(organization.id, org.id));
   revalidatePath("/eventos");
+  revalidatePath("/negocio");
+  return { ok: true };
+}
+
+export type PaymentState = { ok?: boolean; error?: string } | null;
+
+const paymentBody = z.object({
+  plan: z.enum(["eventos", "casas", "ambos"]),
+  period: z.enum(["mes", "anio"]),
+  amount: z.coerce.number().int().min(1).max(1_000_000),
+});
+
+/** El negocio sube el comprobante de su transferencia; ProLink lo confirma desde la administración. */
+export async function submitPayment(_prev: PaymentState, formData: FormData): Promise<PaymentState> {
+  const user = await requireUser("/negocio");
+  const org = await requireOrg(user);
+  const parsed = paymentBody.safeParse({ plan: formData.get("plan"), period: formData.get("period"), amount: formData.get("amount") });
+  const receipt = formData.get("receipt");
+  if (!parsed.success || !(receipt instanceof File) || receipt.size === 0) return { error: "Elige el plan, el periodo, el monto y el comprobante." };
+  if (receipt.size > 5 * 1024 * 1024) return { error: "El comprobante puede pesar hasta 5 MB." };
+  if (!/^(image\/|application\/pdf$)/.test(receipt.type)) return { error: "El comprobante debe ser una imagen o un PDF." };
+  const created = await createPayment(org.id, {
+    ...parsed.data,
+    receipt: { name: receipt.name.slice(0, 120), mimeType: receipt.type, data: Buffer.from(await receipt.arrayBuffer()) },
+  });
+  if (!created) return { error: "Ya tienes comprobantes por revisar. Espera a que los confirmemos." };
   revalidatePath("/negocio");
   return { ok: true };
 }

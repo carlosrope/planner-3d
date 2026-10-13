@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  customType,
   date,
   index,
   integer,
@@ -10,7 +12,20 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { EventKind, EventStatus, Layer, MemberRole, OrgKind, ShareRole, VenueKind } from "../domain";
+import type {
+  EventKind,
+  EventStatus,
+  Layer,
+  MemberRole,
+  OrgKind,
+  PaymentPeriod,
+  PaymentStatus,
+  Plan,
+  Section,
+  ShareRole,
+  VenueKind,
+  VenueStatus,
+} from "../domain";
 import type { DesignDoc, DesignerPlan, PropertyDetails } from "../designer/types";
 
 const id = () =>
@@ -18,6 +33,8 @@ const id = () =>
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID());
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
+/** Archivo binario (planos, fotos y comprobantes se guardan en la base; no hay almacenamiento de archivos aparte). */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
 const updatedAt = () =>
   timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -102,6 +119,15 @@ export const organization = pgTable("organization", {
   brandColor: text("brand_color"),
   /** WhatsApp de contacto para los clientes, solo dígitos con lada de país (52…). */
   whatsapp: text("whatsapp"),
+  /** Módulos contratados: las secciones que ve la cuenta (`salones`, `casas`). */
+  modules: jsonb("modules")
+    .$type<Section[]>()
+    .notNull()
+    .default(sql`'["salones","casas"]'::jsonb`),
+  /** Plan comercial; `prueba` vence en `planEndsAt`. */
+  plan: text("plan").$type<Plan>().notNull().default("ambos"),
+  /** Fin del plan; vacío = no vence. Al vencer, la cuenta ve sus proyectos pero no puede crear ni editar. */
+  planEndsAt: timestamp("plan_ends_at", { withTimezone: true }),
   createdAt: createdAt(),
 });
 
@@ -127,10 +153,32 @@ export const venue = pgTable("venue", {
   /** Salón de eventos o casa (inmobiliaria): decide en qué sección aparece y qué se diseña. */
   kind: text("kind").$type<VenueKind>().notNull().default("salon"),
   city: text("city").notNull().default("Los Mochis"),
+  /** Dirección legible del catálogo (/lugares/[slug]); vacío en lugares viejos: se usa el id. */
+  slug: text("slug").unique(),
+  /** Ciclo del lugar: en conversión → por confirmar → publicado (o retirado). */
+  status: text("status").$type<VenueStatus>().notNull().default("publicado"),
   /** El salón dueño del modelo, si es cliente. */
   ownerOrgId: text("owner_org_id").references(() => organization.id, { onDelete: "set null" }),
   /** Disponible para todas las planners (catálogo local). */
   isPublic: boolean("is_public").notNull().default(false),
+  /** Ficha pública: aforo (salones), m² construidos (casas), dirección y descripción. */
+  capacity: integer("capacity"),
+  areaM2: real("area_m2"),
+  address: text("address"),
+  description: text("description"),
+  /** Contacto del dueño que registró el lugar (WhatsApp solo dígitos con lada de país). */
+  contactName: text("contact_name"),
+  contactPhone: text("contact_phone"),
+  contactEmail: text("contact_email"),
+  /** Lo que el dueño nos dijo al registrarlo (columnas, zonas, lo que hay que saber). */
+  notes: text("notes"),
+  /** Enlace privado para que el dueño revise y confirme su lugar (/revisar/[token]). */
+  reviewToken: text("review_token").unique(),
+  /** Correcciones que pidió el dueño al revisar. */
+  reviewNotes: text("review_notes"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  /** Veces que se abrió el 3D público del lugar. */
+  viewCount: integer("view_count").notNull().default(0),
   modelUrl: text("model_url"),
   /** Sin uso: era el plano del editor anterior (ya se quitó). Queda vacío ({}) porque la columna es obligatoria. */
   spec: jsonb("spec").$type<Record<string, unknown>>().notNull(),
@@ -140,6 +188,68 @@ export const venue = pgTable("venue", {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/** Archivos que el dueño sube al registrar su lugar: el plano (CAD, PDF o foto del croquis) y las fotos. */
+export const venueFile = pgTable(
+  "venue_file",
+  {
+    id: id(),
+    venueId: text("venue_id")
+      .notNull()
+      .references(() => venue.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"plano" | "foto">().notNull(),
+    name: text("name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    data: bytea("data").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("venue_file_venue_idx").on(t.venueId)],
+);
+
+/** Solicitud de informes que deja alguien desde la ficha pública del lugar. */
+export const venueInquiry = pgTable(
+  "venue_inquiry",
+  {
+    id: id(),
+    venueId: text("venue_id")
+      .notNull()
+      .references(() => venue.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    phone: text("phone").notNull(),
+    eventDate: date("event_date"),
+    guests: integer("guests"),
+    message: text("message").notNull().default(""),
+    seenAt: timestamp("seen_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("venue_inquiry_venue_idx").on(t.venueId)],
+);
+
+/** Pago por transferencia: el negocio sube su comprobante y ProLink lo confirma (activa el plan) o lo rechaza. */
+export const payment = pgTable(
+  "payment",
+  {
+    id: id(),
+    orgId: text("org_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    plan: text("plan").$type<Plan>().notNull(),
+    period: text("period").$type<PaymentPeriod>().notNull(),
+    /** Pesos, como lo escribió el cliente. */
+    amount: integer("amount").notNull(),
+    receiptName: text("receipt_name").notNull(),
+    receiptType: text("receipt_type").notNull(),
+    receipt: bytea("receipt").notNull(),
+    status: text("status").$type<PaymentStatus>().notNull().default("pendiente"),
+    /** Nota de ProLink al confirmar o rechazar. */
+    note: text("note"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("payment_org_idx").on(t.orgId)],
+);
 
 /** Planners a las que un salón les comparte su modelo. */
 export const venueAccess = pgTable(

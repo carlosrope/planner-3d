@@ -1,1 +1,4 @@
 ezdxf==1.4.4
+numpy
+contourpy
+matplotlib

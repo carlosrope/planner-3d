@@ -491,13 +491,35 @@ def build_level(level, cfg, lot_w, lot_d):
     }
 
 
+def setup_mm(setup):
+    """Zonas de montaje de un salón (metros → mm): zona de mesas y lugares de los fijos (starter.ts)."""
+    out = {"tables": [mm(v) for v in setup["tables"]]}
+    for key in ("stage", "dance", "head", "dj", "bar", "dessert", "cake"):
+        spot = setup.get(key)
+        if not spot:
+            continue
+        entry = {"cx": mm(spot["cx"]), "cy": mm(spot["cy"])}
+        for dim in ("w", "d"):
+            if dim in spot:
+                entry[dim] = mm(spot[dim])
+        if "rot" in spot:
+            entry["rot"] = spot["rot"]
+        out[key] = entry
+    return out
+
+
 def main(house_path, cfg_path, out_path):
     house = json.loads(Path(house_path).read_text(encoding="utf-8"))
     cfg = json.loads(Path(cfg_path).read_text(encoding="utf-8"))
+    kind = cfg.get("kind", house.get("kind", "casa"))
     W, D = house["width"], house["depth"]
     levels = []
     for level in house["levels"]:
-        lv = build_level(level, cfg["levels"][level["id"]], W, D)
+        level_cfg = cfg["levels"][level["id"]]
+        if kind == "salon":
+            # Un salón principal mide cientos de m²; el tope de "cuarto desbordado" de las casas (80) no aplica.
+            level_cfg.setdefault("maxRoom", 3000)
+        lv = build_level(level, level_cfg, W, D)
         for n in lv.pop("notes"):
             print(f"  aviso [{level['id']}]: {n}")
         levels.append(lv)
@@ -507,13 +529,19 @@ def main(house_path, cfg_path, out_path):
         )
     out = {
         "id": cfg["id"],
-        "kind": "casa",
+        "kind": kind,
         "title": cfg["title"],
         "subtitle": cfg["subtitle"],
         "lot": [mm(W), mm(D)],
         "bounds": {"x": -1850, "y": -1750, "w": mm(W) + 3700, "h": mm(D) + 3500},
         "levels": levels,
     }
+    if kind == "salon":
+        if "setup" not in cfg:
+            raise SystemExit("Un salón necesita `setup` (zona de mesas y fijos, en metros) en la configuración del diseñador.")
+        out["setup"] = setup_mm(cfg["setup"])
+        if "guests" in cfg:
+            out["guests"] = cfg["guests"]
     Path(out_path).write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 

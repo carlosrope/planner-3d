@@ -57,6 +57,20 @@
       "when": 1791649367262,
       "tag": "0007_ficha-de-casa",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791843436527,
+      "tag": "0008_modulos-y-planes",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791848288295,
+      "tag": "0009_lugares-alta-y-pagos",
+      "breakpoints": true
     }
   ]
 }

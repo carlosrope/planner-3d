@@ -1,0 +1,40 @@
+{
+  "id": "salon-prueba",
+  "kind": "salon",
+  "title": "Salón de prueba",
+  "subtitle": "Salón de 28 × 44 m importado desde DXF · medidas en mm",
+  "guests": 240,
+  "levels": {
+    "salon": {
+      "extraDoors": [
+        { "rect": [12.5, 43.7, 14.0, 44.0], "h": [12.5, 43.7], "c": [1, 0], "o": [0, -1], "len": 1.5, "name": "Acceso principal", "entry": true },
+        { "rect": [14.0, 43.7, 15.5, 44.0], "h": [15.5, 43.7], "c": [-1, 0], "o": [0, -1], "len": 1.5, "name": "Acceso principal" },
+        { "rect": [25.0, 43.7, 26.0, 44.0], "h": [25.0, 43.7], "c": [1, 0], "o": [0, -1], "len": 1.0, "name": "Acceso de servicio" },
+        { "rect": [1.5, 34.0, 2.4, 34.2], "h": [1.5, 34.2], "c": [1, 0], "o": [0, 1], "len": 0.9, "name": "Baño de mujeres" },
+        { "rect": [5.5, 34.0, 6.4, 34.2], "h": [5.5, 34.2], "c": [1, 0], "o": [0, 1], "len": 0.9, "name": "Baño de hombres" },
+        { "rect": [12.5, 34.0, 14.0, 34.2], "h": [12.5, 34.0], "c": [1, 0], "o": [0, -1], "len": 1.5, "name": "Entrada al salón" },
+        { "rect": [14.0, 34.0, 15.5, 34.2], "h": [15.5, 34.0], "c": [-1, 0], "o": [0, -1], "len": 1.5, "name": "Entrada al salón" },
+        { "rect": [22.5, 34.0, 23.5, 34.2], "h": [22.5, 34.2], "c": [1, 0], "o": [0, 1], "len": 1.0, "name": "Puerta de cocina" },
+        { "rect": [0.0, 16.0, 0.3, 17.8], "h": [0.0, 16.0], "c": [0, 1], "o": [-1, 0], "len": 1.8, "name": "Salida de emergencia" },
+        { "rect": [27.7, 10.0, 28.0, 11.8], "h": [28.0, 10.0], "c": [0, 1], "o": [1, 0], "len": 1.8, "name": "Salida de emergencia" }
+      ],
+      "rooms": [
+        { "id": "salon", "name": "Salón principal", "at": [4.2, 1.5], "mat": "marble" },
+        { "id": "banos-m", "name": "Baño de mujeres", "at": [2.0, 39.0], "mat": "tile600" },
+        { "id": "banos-h", "name": "Baño de hombres", "at": [6.0, 39.0], "mat": "tile600" },
+        { "id": "recepcion", "name": "Recepción", "at": [14.0, 40.2], "mat": "tile800" },
+        { "id": "cocina", "name": "Cocina", "at": [24.0, 39.0], "mat": "antislip" }
+      ]
+    }
+  },
+  "setup": {
+    "tables": [1.1, 5.2, 26.9, 33.2],
+    "stage": { "cx": 14.0, "cy": 2.3, "w": 8.0, "d": 4.0 },
+    "dance": { "cx": 14.0, "cy": 8.6, "w": 7.0, "d": 6.0 },
+    "head": { "cx": 14.0, "cy": 12.6 },
+    "dj": { "cx": 20.0, "cy": 1.6 },
+    "bar": { "cx": 27.2, "cy": 29.0, "rot": 90 },
+    "dessert": { "cx": 0.7, "cy": 29.0, "rot": 270 },
+    "cake": { "cx": 2.3, "cy": 25.5 }
+  }
+}

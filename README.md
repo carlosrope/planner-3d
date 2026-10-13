@@ -21,6 +21,19 @@ npm run dev
 - `http://localhost:3000/disenador/salon-demo`: el diseñador con el salón de demostración y una boda de 240 invitados (mesas, pista, escenario, lista de mobiliario, 3D con recorrido). Sin cuenta: guarda en el navegador.
 - `http://localhost:3000/disenador/chardonnay`: el diseñador de casas para inmobiliarias (Casa Chardonnay): plano 2D, catálogo de muebles, pisos con precio, quitar muros, medir, 3D con recorrido. `?planta=pa` abre la planta alta.
 - `http://localhost:3000/registro`: crea una cuenta y después un evento (salón) o un proyecto de casa; se abre el diseñador con guardado en la base de datos, distribuciones A/B/C y el botón **Compartir** (enlace `/v/…` de solo vista para el cliente).
+- `http://localhost:3000/salones` y `/casas`: catálogo público de lugares publicados (por ciudad en `/salones/los-mochis`), con ficha en `/lugares/[slug]`, 3D de solo vista en `/lugares/[slug]/3d`, QR en `/lugares/[slug]/qr.svg` y letrero para imprimir en `/lugares/[slug]/letrero`.
+- `http://localhost:3000/alta`: el dueño de un salón o de un modelo de casa manda su plano (CAD, PDF o foto del croquis), fotos, aforo y contacto; el lugar queda **en conversión**.
+- `http://localhost:3000/admin` (correos de `ADMIN_EMAILS`): lugares (carga el JSON del diseñador, cambia estado y dueño, manda el enlace de revisión), cuentas (tipo, plan, módulos, fecha de fin) y pagos por transferencia (confirmar activa el plan).
+
+### Ciclo de un lugar del catálogo
+
+1. **Alta** (`/alta`, sin cuenta): el dueño sube plano y fotos → estado *en conversión*. Si entra con una cuenta de salón o desarrolladora, el lugar queda ligado a su negocio.
+2. **Conversión** (ProLink): `tools/cad-import` genera el JSON del diseñador y se carga en `/admin/lugares/[id]` → estado *por confirmar*; desde ahí se manda por WhatsApp el enlace privado `/revisar/[token]`.
+3. **Revisión** (dueño, sin cuenta): abre su lugar en 3D, lo confirma (→ *publicado*) o pide correcciones (→ *en conversión* con sus notas).
+4. **Publicado**: aparece en el catálogo (si está abierto a todas las planners), tiene enlace, QR y letrero, recibe solicitudes de informes (se guardan y abren el WhatsApp del lugar) y cualquier planner puede crear eventos ahí.
+5. **Panel del dueño** (`/lugares`, cuentas de salón o desarrolladora): enlace y QR, solicitudes, eventos planeados ahí, planners invitadas por correo y reporte de los últimos 6 meses.
+
+**Plan y cobro** (`/negocio` → *Tu plan*): plan, módulos y fecha de fin; datos de SPEI (`SPEI_BANK`, `SPEI_CLABE`, `SPEI_HOLDER`) y subida del comprobante; ProLink lo confirma en `/admin/pagos` y el plan se alarga un mes o un año. Los precios no se muestran en la app: viven en prolink365.com.mx.
 
 ### Qué hace el diseñador (salones y casas)
 
@@ -80,7 +93,7 @@ Para probar la versión de producción en el iPhone: `npm run build && npm run s
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` / `dev:lan` | Servidor de desarrollo (solo esta Mac / visible en la red local) |
-| `npm run build` / `start:lan` | Versión de producción |
+| `npm run build` / `start:lan` | Versión de producción (`npm start` aplica las migraciones pendientes antes de arrancar; así se despliega en Railway) |
 | `npm test` | Pruebas del diseñador (montaje inicial, documento guardado) y de salones (invitados, proveedores) |
 | `npm run typecheck` / `lint` | Tipos y estilo |
 | `npm run db:generate` | Genera una migración después de cambiar `src/lib/db/schema.ts` |
@@ -95,7 +108,11 @@ src/
     eventos/[id]/    Diseñador del evento con guardado en el servidor.
     disenador/[casa]/ Diseñador de demostración (salón o casa) sin cuenta.
     v/[token]/       Enlace de solo vista para el cliente (y su imagen de vista previa).
-    negocio/         Marca del negocio (nombre, logo, color, WhatsApp).
+    negocio/         Marca del negocio (nombre, logo, color, WhatsApp) y Tu plan (SPEI y comprobantes).
+    alta/            Alta pública de un salón o modelo (plano, fotos, contacto).
+    revisar/[token]/ El dueño revisa su lugar en 3D y lo confirma o pide correcciones.
+    salones/, casas/ Catálogo público por ciudad; lugares/[slug]/ ficha, 3D, foto, QR, letrero y panel del dueño.
+    admin/           Administración de ProLink: lugares, cuentas y pagos (ADMIN_EMAILS).
     api/             Distribuciones, compartir, comentarios y plantillas de montaje.
   designer/          disenador.html (generado), host.js (guardado, A/B/C, compartir, portada),
                      eventos/ (catálogo, modelos 2D/3D, salones y proveedores),
