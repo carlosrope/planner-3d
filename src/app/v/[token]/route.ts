@@ -1,4 +1,4 @@
-import { getOrgBrand, getSharedEvent, listComments } from "@/lib/dal";
+import { getEffectiveBrand, getSharedEvent, listComments } from "@/lib/dal";
 import { brandOf, designerResponse, hostFor, publicOrigin } from "@/lib/designer/page";
 import { withStarter } from "@/lib/designer/starter";
 
@@ -14,7 +14,7 @@ export async function GET(request: Request, ctx: RouteContext<"/v/[token]">) {
   // ?visita: el enlace abre directo la visita guiada (lo arranca host.js)
   const tour = url.searchParams.has("visita");
   const full = withStarter(plan, { guests: data.event.guestCount ?? 0, kind: data.event.kind });
-  const [org, comments] = await Promise.all([getOrgBrand(data.event.orgId), listComments(data.event.id)]);
+  const [org, comments] = await Promise.all([getEffectiveBrand(data.event.orgId), listComments(data.event.id)]);
   const brand = brandOf(org);
   const what = tour ? "visita guiada en 3D" : "plano y recorrido 3D";
   const description = brand.name

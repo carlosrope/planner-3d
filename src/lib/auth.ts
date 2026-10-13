@@ -4,11 +4,38 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
-import { account, membership, organization, session, user, verification } from "./db/schema";
-import { FULL_ACCESS, orgValuesFor, parseInvites, type Invite } from "./invites";
+import { and, eq, isNull } from "drizzle-orm";
+import { account, membership, organization, referralCode, session, user, venue, verification } from "./db/schema";
+import { activeModules, sectionOf } from "./domain";
+import { FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, type Invite } from "./invites";
+import { normalizeReferralCode } from "./referrals";
 import { lanOrigins } from "./lan";
 
 const invites = parseInvites(process.env.SIGNUP_CODES, process.env.SIGNUP_CODE);
+
+/** Código de referido sin usar, de un lugar que sigue en el catálogo y de un negocio con el plan vigente. */
+async function referralFor(raw: string): Promise<Invite | null> {
+  const code = normalizeReferralCode(raw);
+  if (!code) return null;
+  const [row] = await db
+    .select({
+      id: referralCode.id,
+      eventDate: referralCode.eventDate,
+      usedAt: referralCode.usedAt,
+      venueKind: venue.kind,
+      venueStatus: venue.status,
+      modules: organization.modules,
+      planEndsAt: organization.planEndsAt,
+    })
+    .from(referralCode)
+    .innerJoin(venue, eq(venue.id, referralCode.venueId))
+    .innerJoin(organization, eq(organization.id, referralCode.orgId))
+    .where(eq(referralCode.code, code))
+    .limit(1);
+  if (!row || row.usedAt || row.venueStatus === "retirado") return null;
+  if (!activeModules(row).includes(sectionOf(row.venueKind))) return null;
+  return referralInvite(row);
+}
 const inviteRequired = invites.size > 0;
 /** Invitación de cada registro en curso, por correo, para crearle su negocio al terminar. */
 const pendingInvites = new Map<string, Invite>();
@@ -22,9 +49,11 @@ export const auth = betterAuth({
   hooks: {
     // Con SIGNUP_CODES o SIGNUP_CODE definidos, crear cuenta pide un código de invitación; el código decide
     // el tipo de negocio, el plan, los módulos y, en una prueba, cuándo vence.
+    // Un código de referido (de un salón o una planner) también abre cuenta, con o sin SIGNUP_CODES.
     before: createAuthMiddleware(async (ctx) => {
-      if (ctx.path !== "/sign-up/email" || !inviteRequired) return;
-      const invite = invites.get(ctx.headers?.get("x-invite-code")?.trim() ?? "");
+      if (ctx.path !== "/sign-up/email") return;
+      const raw = ctx.headers?.get("x-invite-code")?.trim() ?? "";
+      const invite = invites.get(raw) ?? (raw ? await referralFor(raw) : null) ?? (inviteRequired ? null : FULL_ACCESS);
       if (!invite) {
         throw new APIError("FORBIDDEN", { message: "Código de invitación inválido.", code: "INVALID_INVITE_CODE" });
       }
@@ -47,6 +76,12 @@ export const auth = betterAuth({
             .values({ name: created.name, ...orgValuesFor(invite) })
             .returning({ id: organization.id });
           await db.insert(membership).values({ orgId: org.id, userId: created.id, role: "owner" });
+          if (invite.referral) {
+            await db
+              .update(referralCode)
+              .set({ usedByOrgId: org.id, usedAt: new Date() })
+              .where(and(eq(referralCode.id, invite.referral.codeId), isNull(referralCode.usedAt)));
+          }
         },
       },
     },

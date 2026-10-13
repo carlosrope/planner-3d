@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { adminListOrgs, requireAdmin } from "@/lib/dal";
-import { ALL_SECTIONS, ORG_KINDS, ORG_KIND_LABELS, PLANS, PLAN_LABELS, SECTIONS, planDaysLeft } from "@/lib/domain";
+import { ALL_SECTIONS, ORG_KINDS, ORG_KIND_LABELS, PLANS, PLAN_LABELS, SECTIONS, TIERS, TIER_LABELS, isLitePlan, planDaysLeft } from "@/lib/domain";
 import { AdminNav } from "../AdminNav";
 import { updateOrgPlan } from "../actions";
 
@@ -36,12 +36,12 @@ async function Cuentas() {
               <div>
                 <p className="font-semibold">{o.name}</p>
                 <p className="text-sm text-stone-500">
-                  {o.emails || "sin usuarios"} · {o.events} eventos · {o.venues} lugares · desde {fecha.format(o.createdAt)}
+                  {o.emails || "sin usuarios"} · {o.events} eventos · {o.venues} lugares · {o.referrals} códigos dados · desde {fecha.format(o.createdAt)}
                   {o.pendingPayments > 0 && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{o.pendingPayments} pago por revisar</span>}
                 </p>
               </div>
               <p className="text-sm">
-                {PLAN_LABELS[o.plan]} · {o.modules.map((m) => SECTIONS[m].label).join(" y ") || "sin módulos"} ·{" "}
+                {PLAN_LABELS[o.plan]}{isLitePlan(o.plan) || o.plan === "prueba" ? "" : ` ${TIER_LABELS[o.tier]}`} · {o.modules.map((m) => SECTIONS[m].label).join(" y ") || "sin módulos"} ·{" "}
                 {o.planEndsAt ? ((planDaysLeft(o.planEndsAt) ?? 1) <= 0 ? <span className="text-red-700">venció el {fecha.format(o.planEndsAt)}</span> : `hasta el ${fecha.format(o.planEndsAt)}`) : "sin vencimiento"}
               </p>
             </div>
@@ -58,6 +58,13 @@ async function Cuentas() {
                 {PLANS.map((p) => (
                   <option key={p} value={p}>
                     {PLAN_LABELS[p]}
+                  </option>
+                ))}
+              </select>
+              <select name="tier" defaultValue={o.tier} className={field}>
+                {TIERS.map((t) => (
+                  <option key={t} value={t}>
+                    {TIER_LABELS[t]}
                   </option>
                 ))}
               </select>

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getOrgBrand, requireOrg, requireUser } from "@/lib/dal";
+import { getOrgBrand, listVenues, requireOrg, requireUser } from "@/lib/dal";
+import { isLitePlan } from "@/lib/domain";
 import { BrandForm } from "./BrandForm";
 import { PlanSection } from "./PlanSection";
+import { ReferralSection } from "./ReferralSection";
 
 export const metadata: Metadata = { title: "Mi negocio" };
 
@@ -22,10 +24,15 @@ async function NegocioContent() {
   const org = await requireOrg(user);
   const brand = await getOrgBrand(org.id);
   if (!brand) return null;
+  // Personal y Con código no llevan logo (el enlace va sin marca o con la del salón) ni reparten códigos.
+  const lite = isLitePlan(org.plan);
+  // Los códigos son para quienes rentan un salón: solo salones.
+  const venues = lite ? [] : (await listVenues(org.id)).filter((v) => v.kind === "salon");
   return (
     <>
-      <BrandForm brand={brand} />
+      {!lite && <BrandForm brand={brand} />}
       <PlanSection org={org} />
+      {!lite && <ReferralSection org={org} venues={venues} />}
     </>
   );
 }

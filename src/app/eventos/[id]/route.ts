@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, getEditableEvent, getOrgBrand, listComments } from "@/lib/dal";
+import { getCurrentUser, getEditableEvent, getEffectiveBrand, listComments } from "@/lib/dal";
 import { brandOf, designerResponse, hostFor } from "@/lib/designer/page";
-import { sectionOf } from "@/lib/domain";
+import { isLitePlan, sectionOf } from "@/lib/domain";
 import { withStarter } from "@/lib/designer/starter";
 
 // Diseñador del evento con guardado en el servidor y distribuciones A/B/C.
@@ -19,6 +19,8 @@ export async function GET(request: Request, ctx: RouteContext<"/eventos/[id]">) 
   const plan = withStarter(venue.plan, { guests: event.guestCount ?? 0, kind: event.kind });
   const back =
     sectionOf(venue.kind) === "casas" ? { href: "/eventos?seccion=casas", label: "Casas" } : { href: "/eventos", label: "Eventos" };
-  const [org, comments] = await Promise.all([getOrgBrand(event.orgId), listComments(event.id)]);
-  return designerResponse({ ...plan, title: event.title }, hostFor("edit", event, layouts, wanted, brandOf(org), comments, back));
+  const [brand, comments] = await Promise.all([getEffectiveBrand(event.orgId), listComments(event.id)]);
+  const host = hostFor("edit", event, layouts, wanted, brandOf(brand), comments, back);
+  // Personal y Con código: sin hojas ni marcadores de proveedores.
+  return designerResponse({ ...plan, title: event.title }, { ...host, lite: isLitePlan(data.org.plan) });
 }

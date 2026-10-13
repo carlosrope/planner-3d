@@ -99,6 +99,26 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
           : "En el 3D puedes cambiar muebles y pisos; para guardar tus propuestas y compartirlas necesitas una cuenta."}
       </p>
 
+      {salon && (
+        <form action="/registro" method="get" className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+          <h2 className="font-semibold">¿Vas a hacer tu evento aquí?</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            Si ya apartaste el salón, pídele tu código: con él armas tu evento en 3D sin costo, acomodas a tus invitados y lo compartes con tu familia.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <input
+              name="codigo"
+              required
+              autoComplete="off"
+              autoCapitalize="characters"
+              placeholder="Código, por ejemplo PALMAS-7K3M"
+              className="h-12 min-w-0 flex-1 rounded-xl border border-stone-300 bg-white px-3 text-base uppercase outline-none focus:border-stone-800"
+            />
+            <button className="h-12 shrink-0 rounded-xl bg-stone-900 px-4 font-medium text-white">Entrar</button>
+          </div>
+        </form>
+      )}
+
       {v.description && <p className="mt-5 whitespace-pre-line text-stone-700">{v.description}</p>}
 
       <section className="mt-8 rounded-2xl border border-stone-200 bg-white p-4 sm:p-5">

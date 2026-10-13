@@ -48,6 +48,8 @@ export type HostData = {
   comments: HostComment[];
   /** Casas: ficha de la propiedad. */
   details: PropertyDetails | null;
+  /** Planes Personal y Con código: sin proveedores (hojas ni marcadores). */
+  lite?: boolean;
 };
 
 export type HostComment = {
@@ -129,7 +131,7 @@ export async function designerResponse(
   if (plan.kind === "salon") {
     head += inline(`window.__EVENTOS__ = ${await file("eventos/catalogo.json")};`);
     head += inline(await file("eventos/modelos.js"));
-    head += inline(await file("eventos/proveedores.js"));
+    if (!host?.lite) head += inline(await file("eventos/proveedores.js"));
     head += inline(await file("eventos/eventos.js"));
   }
   if (host) head += inline(`window.__HOST_DATA__ = ${json(host)};\n${await file("host.js")}`);
@@ -137,6 +139,12 @@ export async function designerResponse(
   if (options?.demo || options?.venue) {
     const notice = { kind: plan.kind ?? "casa", whatsapp: PROLINK_WHATSAPP, venue: options.venue ?? null };
     head += inline(`window.__DEMO__ = ${json(notice)};\n${await file("demo.js")}`);
+  }
+  // Guía en pantalla la primera vez (demo, 3D público del lugar y edición); no en el enlace de solo
+  // vista del cliente ni cuando el dueño revisa la conversión de su plano.
+  if (host?.mode !== "view" && !options?.venue?.reviewHref) {
+    const mode = host ? "edit" : options?.venue ? "lugar" : "demo";
+    head += inline(`window.__GUIA__ = ${json({ kind: plan.kind ?? "casa", mode })};\n${await file("guia.js")}`);
   }
   // Título y vista previa del enlace (WhatsApp, iMessage).
   const title = escapeHtml(plan.title);

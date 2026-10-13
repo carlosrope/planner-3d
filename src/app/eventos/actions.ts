@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getVenueForOrg, listVenues, moduleActive, requireOrg, requireUser } from "@/lib/dal";
+import { attachReferralEvent, countEvents, getReferralOrigin, getVenueForOrg, listVenues, moduleActive, requireOrg, requireUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { event, layout } from "@/lib/db/schema";
-import { SALON_EVENT_KINDS, sectionOf } from "@/lib/domain";
+import { SALON_EVENT_KINDS, isLitePlan, sectionOf } from "@/lib/domain";
 import { sampleGuests, seatGuests } from "@/lib/designer/samples";
 import { starterDesign, starterFurniture, type Template } from "@/lib/designer/starter";
 import type { DesignDoc, DesignerPlan } from "@/lib/designer/types";
@@ -50,6 +50,16 @@ export async function createEvent(_prev: CreateEventState, formData: FormData): 
     return { error: "Tu plan no incluye esta sección o ya terminó. Escríbenos por WhatsApp para activarla." };
   }
 
+  // Con código: un solo evento, en el lugar del código. Personal: un evento activo a la vez.
+  const origin = await getReferralOrigin(org);
+  if (org.plan === "invitado") {
+    if (!origin) return { error: "Tu cuenta no tiene un lugar asignado. Escríbenos por WhatsApp." };
+    if (origin.venueId !== data.venueId) return { error: `Tu código es para ${origin.venueName}.` };
+    if ((await countEvents(org.id)) > 0) return { error: "Tu código cubre un solo evento, y ya lo tienes. Ábrelo desde la lista." };
+  } else if (org.plan === "personal" && (await countEvents(org.id, true)) > 0) {
+    return { error: "El plan Personal incluye un evento activo a la vez. Marca el anterior como realizado o cancelado para crear otro." };
+  }
+
   const found = await getVenueForOrg(org.id, data.venueId);
   if (!found || sectionOf(found.kind) !== data.section) return { error: "Ese lugar no está disponible para tu cuenta." };
   if (!found.plan) return { error: "Ese lugar todavía no tiene plano para el diseñador." };
@@ -74,6 +84,7 @@ export async function createEvent(_prev: CreateEventState, formData: FormData): 
     await tx.insert(layout).values({ eventId: created.id, name: "A", recommended: true, doc, updatedBy: user.id });
     return created.id;
   });
+  if (org.referralCodeId) await attachReferralEvent(org.referralCodeId, eventId);
   redirect(`/eventos/${eventId}`);
 }
 
@@ -84,6 +95,8 @@ export async function createEvent(_prev: CreateEventState, formData: FormData): 
 export async function createSamples(): Promise<void> {
   const user = await requireUser();
   const org = await requireOrg(user);
+  // Personal y Con código tienen un solo evento: sin ejemplos.
+  if (isLitePlan(org.plan)) return;
   const places = await listVenues(org.id);
   const pick = async (kind: "salon" | "casa") => {
     const found = places.find((v) => v.kind === kind);

@@ -20,7 +20,7 @@ npm run dev
 
 - `http://localhost:3000/disenador/salon-demo`: el diseñador con el salón de demostración y una boda de 240 invitados (mesas, pista, escenario, lista de mobiliario, 3D con recorrido). Sin cuenta: guarda en el navegador.
 - `http://localhost:3000/disenador/chardonnay`: el diseñador de casas para inmobiliarias (Casa Chardonnay): plano 2D, catálogo de muebles, pisos con precio, quitar muros, medir, 3D con recorrido. `?planta=pa` abre la planta alta.
-- `http://localhost:3000/registro`: crea una cuenta y después un evento (salón) o un proyecto de casa; se abre el diseñador con guardado en la base de datos, distribuciones A/B/C y el botón **Compartir** (enlace `/v/…` de solo vista para el cliente).
+- `http://localhost:3000/registro` (o `/registro?codigo=…` con un código de referido): crea una cuenta y después un evento (salón) o un proyecto de casa; se abre el diseñador con guardado en la base de datos, distribuciones A/B/C y el botón **Compartir** (enlace `/v/…` de solo vista para el cliente).
 - `http://localhost:3000/salones` y `/casas`: catálogo público de lugares publicados (por ciudad en `/salones/los-mochis`), con ficha en `/lugares/[slug]`, 3D de solo vista en `/lugares/[slug]/3d`, QR en `/lugares/[slug]/qr.svg` y letrero para imprimir en `/lugares/[slug]/letrero`.
 - `http://localhost:3000/alta`: el dueño de un salón o de un modelo de casa manda su plano (CAD, PDF o foto del croquis), fotos, aforo y contacto; el lugar queda **en conversión**.
 - `http://localhost:3000/admin` (correos de `ADMIN_EMAILS`): lugares (carga el JSON del diseñador, cambia estado y dueño, manda el enlace de revisión), cuentas (tipo, plan, módulos, fecha de fin) y pagos por transferencia (confirmar activa el plan).
@@ -32,6 +32,8 @@ npm run dev
 3. **Revisión** (dueño, sin cuenta): abre su lugar en 3D, lo confirma (→ *publicado*) o pide correcciones (→ *en conversión* con sus notas).
 4. **Publicado**: aparece en el catálogo (si está abierto a todas las planners), tiene enlace, QR y letrero, recibe solicitudes de informes (se guardan y abren el WhatsApp del lugar) y cualquier planner puede crear eventos ahí.
 5. **Panel del dueño** (`/lugares`, cuentas de salón o desarrolladora): enlace y QR, solicitudes, eventos planeados ahí, planners invitadas por correo y reporte de los últimos 6 meses.
+
+**Códigos de referido** (`/negocio` → *Códigos para tus clientes* y panel del lugar; `src/lib/referrals.ts`, tabla `referral_code`): el dueño de un salón (o la planner) genera un código por cliente (nombre y fecha del evento) y se lo manda por WhatsApp con el enlace `/registro?codigo=…`; el cliente crea su cuenta con plan **Con código** (`invitado`: solo ese lugar, un solo evento, vigente hasta 30 días después de la fecha o 90 días sin fecha; el enlace del cliente lleva la marca de quien dio el código; sin proveedores) y el código queda marcado como usado con su evento. Tope por mes según `referralQuota`: salón o desarrolladora 50, planner o inmobiliaria 5; nivel **Ilimitado** (`organization.tier`) sin tope. Plan **Personal** (`personal`): un evento activo a la vez, sin logo, sin proveedores, sin códigos. La ficha pública del salón tiene el campo del código.
 
 **Plan y cobro** (`/negocio` → *Tu plan*): plan, módulos y fecha de fin; datos de SPEI (`SPEI_BANK`, `SPEI_CLABE`, `SPEI_HOLDER`) y subida del comprobante; ProLink lo confirma en `/admin/pagos` y el plan se alarga un mes o un año. Los precios no se muestran en la app: viven en prolink365.com.mx.
 

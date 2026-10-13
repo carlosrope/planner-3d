@@ -7,6 +7,7 @@ import { getOwnedVenue, requireOrg, requireUser } from "@/lib/dal";
 import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, VENUE_STATUS_LABELS } from "@/lib/domain";
 import { siteOrigin } from "@/lib/prolink";
 import { formatWhatsapp, waLink } from "@/lib/whatsapp";
+import { ReferralSection } from "@/app/negocio/ReferralSection";
 import { CopyField } from "./CopyField";
 import { AccessForms, SeenButton } from "./PanelForms";
 
@@ -153,6 +154,8 @@ async function Panel({ params }: { params: PageProps<"/lugares/[slug]/panel">["p
           </table>
         )}
       </section>
+
+      {v.status === "publicado" && v.hasPlan && <ReferralSection org={org} venues={[{ id: v.id, name: v.name }]} venueId={v.id} />}
 
       <section className="mt-4 rounded-2xl border border-stone-200 bg-white p-4">
         <h2 className="text-lg font-semibold">Planners con acceso</h2>

@@ -71,6 +71,13 @@
       "when": 1791848288295,
       "tag": "0009_lugares-alta-y-pagos",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791927097241,
+      "tag": "0010_codigos-de-referido",
+      "breakpoints": true
     }
   ]
 }

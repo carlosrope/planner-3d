@@ -1762,6 +1762,119 @@ sub(
 )
 sub("  renderer.render(scene, camera);\n  labelRenderer.render(scene, camera);\n}", "  renderer.render(scene, camera);\n  if (rec) recFrame(now);\n  labelRenderer.render(scene, camera);\n}")
 
+
+# ---------------------------------------------------------------------------
+# Indicaciones claras (13 de octubre): la píldora del 3D se ve unos segundos con un icono por gesto y
+# se oculta sola; la barra del mueble seleccionado agrupa sus botones con icono y texto.
+
+GESTO = {   # iconos de gesto (trazo del color del texto)
+    "dedo": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a2 2 0 1 1 4 0v6"/><path d="M13 10a2 2 0 1 1 4 0v2a2 2 0 1 1 4 0v3a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L5 14a1.8 1.8 0 0 1 3-2l1 1.5"/></svg>',
+    "pellizco": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a2 2 0 1 1 4 0V12"/><path d="M12 12V7.5a2 2 0 1 1 4 0V13"/><path d="M8 13a2 2 0 0 0-3.4 2L7 19a5 5 0 0 0 4.5 3h1.5a5 5 0 0 0 5-5v-4"/><path d="M3 3l3 3M3 6V3h3M21 3l-3 3m3-3v3h-3"/></svg>',
+    "arrastre": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12V5a2 2 0 1 1 4 0v7"/><path d="M14 11a2 2 0 1 1 4 0v4a6 6 0 0 1-6 6h-1a5 5 0 0 1-4.2-2.3L4 15a1.8 1.8 0 0 1 2.9-2l1.5 1.7"/><path d="M3 8h4M5 6l2 2-2 2"/><path d="M21 8h-1"/></svg>',
+    "mouse": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 3v6M9 9h6"/></svg>',
+    "rueda": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><rect x="11" y="6" width="2" height="4" rx="1" fill="currentColor"/><path d="M3 9l-1 3 1 3M21 9l1 3-1 3"/></svg>',
+}
+ACCION = {   # iconos de la barra del mueble seleccionado
+    "rotL": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a8 8 0 1 1 2.3 7.7"/><path d="M4 4v6h6"/></svg>',
+    "rotR": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10a8 8 0 1 0-2.3 7.7"/><path d="M20 4v6h-6"/></svg>',
+    "dup": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
+    "prop": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.5"/><circle cx="9" cy="17" r="2.5"/></svg>',
+    "del": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+    "ok": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+}
+
+# La píldora del 3D: un icono por gesto y texto corto; se oculta a los 6 s y vuelve con el botón de la guía.
+sub(
+    "const HINT_ORBIT = () => COARSE ? tr('单指旋转 · 双指缩放 / 平移 · 点选家具后可拖动摆放 · 点门开关', '1 finger orbits · 2 fingers zoom / pan · select furniture to drag it · tap doors to open')\n"
+    "  : tr('左键旋转 · 右键平移 · 滚轮缩放 · 选中家具后拖动可摆放 · 点击门开关', 'Left-drag orbits · right-drag pans · scroll zooms · select furniture to drag it · click doors to open');",
+    "const GESTO = " + json.dumps(GESTO) + ";\n"
+    "const chip = (icon, text) => `<span class=\"hc\">${GESTO[icon]}<span>${text}</span></span>`;\n"
+    "const HINT_ORBIT = () => COARSE\n"
+    "  ? chip('dedo', tr('单指旋转', '1 finger turns', '1 dedo gira')) + chip('pellizco', tr('双指缩放 / 平移', '2 fingers zoom or pan', '2 dedos acercan o mueven')) + chip('arrastre', tr('拖动家具摆放', 'drag furniture to place it', 'arrastra una mesa para moverla'))\n"
+    "  : chip('mouse', tr('左键旋转', 'drag to turn', 'arrastra para girar')) + chip('rueda', tr('滚轮缩放', 'scroll to zoom', 'rueda para acercar')) + chip('arrastre', tr('拖动家具摆放', 'drag furniture to place it', 'arrastra una mesa para moverla'));",
+)
+sub(
+    "function syncHint3d(){ $('#hint3d').textContent = opt.mode === 'orbit' ? HINT_ORBIT() : touchWalk || COARSE ? HINT_TOUCHWALK() : HINT_WALK(); }",
+    "function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : esc(touchWalk || COARSE ? HINT_TOUCHWALK() : HINT_WALK()); }",
+)
+sub(
+    "  if (opt.mode === 'walk'){ walkHud(false); freeMouse(); stopTouchWalk(); $('#hint3d').textContent = HINT_ORBIT();",
+    "  if (opt.mode === 'walk'){ walkHud(false); freeMouse(); stopTouchWalk(); $('#hint3d').innerHTML = HINT_ORBIT();",
+)
+# Se oculta sola en cualquier modo (antes solo en el recorrido) y aparece al entrar al 3D
+sub(
+    "  flashHint.t = setTimeout(() => { if (opt.mode === 'walk') h.classList.add('gone'); }, 6000);",
+    "  flashHint.t = setTimeout(() => h.classList.add('gone'), 6000);",
+)
+sub(
+    "  if (m === '3d'){ if (ui.tool !== 'select') setTool('select'); ui.mA = null; document.body.classList.add('m3d'); await window.View3D.enter(); }",
+    "  if (m === '3d'){ if (ui.tool !== 'select') setTool('select'); ui.mA = null; document.body.classList.add('m3d'); await window.View3D.enter(); window.View3D.flashHint?.(); }",
+)
+sub("window.View3D = {", "window.View3D = {\n  flashHint,")
+sub(
+    "#hint3d{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:rgba(43,40,36,.82);color:#fff;border-radius:20px;\n"
+    "  padding:5px 14px;font-size:12px;z-index:2;pointer-events:none;white-space:nowrap;transition:opacity .4s}",
+    "#hint3d{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:rgba(43,40,36,.88);color:#fff;border-radius:20px;\n"
+    "  padding:8px 16px;font-size:13px;z-index:2;pointer-events:none;white-space:nowrap;transition:opacity .4s;display:flex;align-items:center;gap:16px}\n"
+    "#hint3d .hc{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}\n"
+    "#hint3d .hc svg{width:24px;height:24px;flex-shrink:0}",
+)
+sub(
+    "  #hint3d{white-space:normal;width:max-content;max-width:calc(100% - 24px);text-align:center;line-height:1.35;top:8px;padding:5px 12px}",
+    "  #hint3d{flex-direction:column;align-items:flex-start;gap:6px;width:max-content;max-width:calc(100% - 24px);top:8px;padding:10px 14px}",
+)
+
+# Barra del mueble seleccionado: nombre y «Listo» arriba; abajo, botones con icono y texto en grupos
+# (girar · duplicar y propiedades · eliminar).
+sub(
+    """  fab.innerHTML = f
+    ? `<span class="name">${esc(nm(f.name))}</span><button class="btn" data-a="rotL">↺</button><button class="btn" data-a="rotR">↻ ${tr('旋转','Rotate')}</button>
+       <button class="btn" data-a="dup">${tr('复制','Duplicate')}</button><button class="btn danger" data-a="del">${tr('删除','Delete')}</button><span class="sep"></span>
+       <button class="btn narrow-only" data-a="prop">${tr('属性','Properties')}</button><button class="btn" data-a="done">${tr('完成','Done')}</button>`
+    : `<span class="name">${esc(nm(state.rooms[r.id].name))}</span><button class="btn narrow-only" data-a="prop">${tr('地面 / 属性','Floor / Properties')}</button><button class="btn" data-a="done">${tr('完成','Done')}</button>`;""",
+    """  const ACCION = """ + json.dumps(ACCION) + """;
+  const ib = (a, label, cls = '') => `<button class="ib ${cls}" data-a="${a}">${ACCION[a]}<span>${label}</span></button>`;
+  const head = name => `<div class="fabHead"><span class="name">${esc(name)}</span><button class="btn primary" data-a="done">${ACCION.ok} ${tr('完成','Done')}</button></div>`;
+  fab.innerHTML = f
+    ? `${head(nm(f.name))}<div class="fabRow">${ib('rotL', tr('左转', 'Turn left', 'Girar izq.'))}${ib('rotR', tr('右转', 'Turn right', 'Girar der.'))}<span class="sep"></span>
+       ${ib('dup', tr('复制','Duplicate'))}${ib('prop', tr('属性','Properties'), 'narrow-only')}<span class="sep"></span>${ib('del', tr('删除','Delete'), 'danger')}</div>`
+    : `${head(nm(state.rooms[r.id].name))}<div class="fabRow">${ib('prop', tr('地面 / 属性','Floor / Properties'), 'narrow-only')}</div>`;""",
+)
+sub(
+    "#fab{position:absolute;left:50%;bottom:16px;transform:translate(-50%,12px);display:flex;align-items:center;gap:4px;padding:5px;",
+    "#fab{position:absolute;left:50%;bottom:16px;transform:translate(-50%,12px);display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:10px 12px;",
+)
+sub(
+    "#fab .name{padding:0 8px 0 6px;font-weight:600;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n"
+    "#fab .btn{border:1px solid transparent}\n"
+    "#fab .sep{width:1px;align-self:stretch;margin:4px 2px;background:var(--line)}",
+    "#fab .fabHead{display:flex;align-items:center;justify-content:space-between;gap:12px}\n"
+    "#fab .name{font-weight:700;font-size:15px;max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n"
+    "#fab .fabHead .btn{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 12px;border-radius:10px;font-weight:600}\n"
+    "#fab .fabHead .btn svg{width:18px;height:18px}\n"
+    "#fab .fabRow{display:flex;align-items:stretch;justify-content:center;gap:2px}\n"
+    "#fab .ib{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:64px;padding:8px 6px;border:0;border-radius:12px;\n"
+    "  background:transparent;color:var(--ink);font:500 12px/1 inherit;cursor:pointer;white-space:nowrap}\n"
+    "#fab .ib svg{width:26px;height:26px}\n"
+    "#fab .ib:hover{background:var(--bg)}#fab .ib:active{background:var(--line)}\n"
+    "#fab .ib.danger{color:#b3372a}\n"
+    "#fab .ib.narrow-only{display:none}\n"
+    "#fab .sep{width:1px;align-self:stretch;margin:6px 4px;background:var(--line)}",
+)
+sub(
+    "  #fab{flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100vw - 20px);row-gap:2px}\n"
+    "  #fab .name{flex-basis:100%;max-width:none;text-align:center;padding:2px 8px 0}\n"
+    "  #fab .sep{display:none}\n"
+    "  #fab .btn{padding:8px 10px}",
+    "  #fab{width:max-content;max-width:calc(100vw - 16px);bottom:10px}\n"
+    "  #fab .fabRow{gap:0}\n"
+    "  #fab .ib{min-width:58px;padding:8px 4px;font-size:11px}\n"
+    "  #fab .ib.narrow-only{display:flex!important}\n"
+    "  #fab .sep{margin:6px 1px}",
+)
+sub("  .btn.narrow-only,#fab .btn.narrow-only{display:inline-block!important}", "  .btn.narrow-only{display:inline-block!important}")
+
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

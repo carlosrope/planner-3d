@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createPayment, requireOrg, requireUser } from "@/lib/dal";
+import { createPayment, createReferralCode, requireOrg, requireUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { organization } from "@/lib/db/schema";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
@@ -52,7 +52,7 @@ export async function updateBrand(_prev: BrandState, formData: FormData): Promis
 export type PaymentState = { ok?: boolean; error?: string } | null;
 
 const paymentBody = z.object({
-  plan: z.enum(["eventos", "casas", "ambos"]),
+  plan: z.enum(["eventos", "casas", "ambos", "personal"]),
   period: z.enum(["mes", "anio"]),
   amount: z.coerce.number().int().min(1).max(1_000_000),
 });
@@ -73,4 +73,26 @@ export async function submitPayment(_prev: PaymentState, formData: FormData): Pr
   if (!created) return { error: "Ya tienes comprobantes por revisar. Espera a que los confirmemos." };
   revalidatePath("/negocio");
   return { ok: true };
+}
+
+export type ReferralState = { code?: string; error?: string } | null;
+
+const referralBody = z.object({
+  venueId: z.string().min(1).max(64),
+  guestName: z.string().trim().min(2).max(80),
+  eventDate: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
+});
+
+/** Genera un código de referido para un cliente (desde Mi negocio o desde el panel del lugar). */
+export async function createReferral(_prev: ReferralState, formData: FormData): Promise<ReferralState> {
+  const user = await requireUser("/negocio");
+  const org = await requireOrg(user);
+  const parsed = referralBody.safeParse({ venueId: formData.get("venueId"), guestName: formData.get("guestName"), eventDate: formData.get("eventDate") ?? "" });
+  if (!parsed.success) return { error: "Escribe el nombre del cliente y elige el lugar." };
+  const d = parsed.data;
+  const result = await createReferralCode(org, d.venueId, d.guestName, d.eventDate || null);
+  if ("error" in result) return { error: result.error };
+  revalidatePath("/negocio");
+  revalidatePath("/lugares", "layout");
+  return { code: result.code };
 }

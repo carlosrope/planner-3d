@@ -13,7 +13,7 @@ import {
   type IntakeFile,
 } from "@/lib/dal";
 import type { DesignerPlan } from "@/lib/designer/types";
-import { ORG_KINDS, PLANS, VENUE_STATUSES, isSection } from "@/lib/domain";
+import { ORG_KINDS, PLANS, TIERS, VENUE_STATUSES, isSection } from "@/lib/domain";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 
 // Acciones de la administración de ProLink. Todas piden requireAdmin.
@@ -133,6 +133,7 @@ export async function updateOrgPlan(formData: FormData): Promise<void> {
       orgId: id,
       kind: z.enum(ORG_KINDS),
       plan: z.enum(PLANS),
+      tier: z.enum(TIERS),
       modules: z.array(z.string()),
       planEndsAt: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
     })
@@ -140,6 +141,7 @@ export async function updateOrgPlan(formData: FormData): Promise<void> {
       orgId: formData.get("orgId"),
       kind: formData.get("kind"),
       plan: formData.get("plan"),
+      tier: formData.get("tier"),
       modules: formData.getAll("modules"),
       planEndsAt: formData.get("planEndsAt") ?? "",
     });
@@ -148,6 +150,7 @@ export async function updateOrgPlan(formData: FormData): Promise<void> {
   await adminUpdateOrg(d.orgId, {
     kind: d.kind,
     plan: d.plan,
+    tier: d.tier,
     modules: d.modules.filter(isSection),
     // Fin del día (hora de México) para que el último día cuente completo.
     planEndsAt: d.planEndsAt ? new Date(`${d.planEndsAt}T23:59:59-07:00`) : null,

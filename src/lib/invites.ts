@@ -1,4 +1,4 @@
-import { ALL_SECTIONS, PLAN_MODULES, isOrgKind, isPlan, isSection, type OrgKind, type Plan, type Section } from "./domain";
+import { ALL_SECTIONS, PLAN_MODULES, isOrgKind, isPlan, isSection, referralPlanEnd, sectionOf, type OrgKind, type Plan, type Section } from "./domain";
 
 /**
  * Códigos de invitación para crear cuenta.
@@ -10,7 +10,14 @@ import { ALL_SECTIONS, PLAN_MODULES, isOrgKind, isPlan, isSection, type OrgKind,
  *
  * Sin ninguno de los dos, cualquiera puede registrarse con acceso completo (solo en desarrollo).
  */
-export type Invite = { kind: OrgKind; plan: Plan; modules: Section[]; days: number | null };
+export type Invite = {
+  kind: OrgKind;
+  plan: Plan;
+  modules: Section[];
+  days: number | null;
+  /** Código de referido de un salón o una planner: la cuenta dura hasta 30 días después del evento. */
+  referral?: { codeId: string; eventDate: string | null };
+};
 
 export const FULL_ACCESS: Invite = { kind: "planner", plan: "ambos", modules: [...ALL_SECTIONS], days: null };
 
@@ -27,7 +34,7 @@ export function parseInvites(codesJson: string | undefined, legacyCode: string |
   if (!parsed || typeof parsed !== "object") throw new Error("SIGNUP_CODES debe ser un objeto {codigo: {...}}.");
   for (const [code, raw] of Object.entries(parsed as Record<string, unknown>)) {
     const o = (raw ?? {}) as Record<string, unknown>;
-    const plan: Plan = isPlan(o.plan) ? o.plan : "prueba";
+    const plan: Plan = isPlan(o.plan) && o.plan !== "invitado" ? o.plan : "prueba";
     // En una prueba se respetan los módulos pedidos; si no hay ninguno válido, se abren los dos.
     const asked = plan === "prueba" && Array.isArray(o.modules) ? o.modules.filter(isSection) : [];
     const modules: Section[] = plan === "prueba" ? (asked.length ? asked : [...ALL_SECTIONS]) : [...PLAN_MODULES[plan]];
@@ -47,6 +54,16 @@ export function orgValuesFor(invite: Invite, now = new Date()) {
     kind: invite.kind,
     plan: invite.plan,
     modules: invite.modules,
-    planEndsAt: invite.days ? new Date(now.getTime() + invite.days * 86_400_000) : null,
+    planEndsAt: invite.referral
+      ? referralPlanEnd(invite.referral.eventDate, now)
+      : invite.days
+        ? new Date(now.getTime() + invite.days * 86_400_000)
+        : null,
+    referralCodeId: invite.referral?.codeId ?? null,
   };
+}
+
+/** Invitación que abre un código de referido: cuenta "Con código", solo el módulo del lugar. */
+export function referralInvite(ref: { id: string; eventDate: string | null; venueKind: string }): Invite {
+  return { kind: "planner", plan: "invitado", modules: [sectionOf(ref.venueKind)], days: null, referral: { codeId: ref.id, eventDate: ref.eventDate } };
 }

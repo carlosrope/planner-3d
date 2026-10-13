@@ -1,5 +1,5 @@
-import { listPayments, type Org } from "@/lib/dal";
-import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, planDaysLeft } from "@/lib/domain";
+import { getReferralOrigin, listPayments, type Org } from "@/lib/dal";
+import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, TIER_LABELS, activeModules, isLitePlan, planDaysLeft, referralQuota } from "@/lib/domain";
 import { PRICES_URL, PROLINK_WHATSAPP, spei } from "@/lib/prolink";
 import { waLink } from "@/lib/whatsapp";
 import { PaymentForm } from "./PaymentForm";
@@ -9,8 +9,9 @@ const fechaCorta = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "sh
 
 /** Tu plan: qué incluye, cuándo vence, cómo pagar por transferencia y los comprobantes enviados. */
 export async function PlanSection({ org }: { org: Org }) {
-  const payments = await listPayments(org.id);
+  const [payments, origin] = await Promise.all([listPayments(org.id), getReferralOrigin(org)]);
   const bank = spei();
+  const quota = referralQuota(org);
   const active = activeModules(org);
   const expired = active.length === 0;
   const daysLeft = planDaysLeft(org.planEndsAt);
@@ -21,8 +22,21 @@ export async function PlanSection({ org }: { org: Org }) {
     <section className="mt-8 space-y-4">
       <h2 className="text-xl font-semibold">Tu plan</h2>
       <div className={`rounded-2xl border p-4 ${expired ? "border-red-200 bg-red-50" : soon ? "border-amber-200 bg-amber-50" : "border-stone-200 bg-white"}`}>
-        <p className="text-lg font-semibold">{PLAN_LABELS[org.plan]}</p>
-        <p className="text-sm text-stone-600">Incluye: {modules || "ningún módulo"}.</p>
+        <p className="text-lg font-semibold">
+          {PLAN_LABELS[org.plan]}
+          {!isLitePlan(org.plan) && org.plan !== "prueba" ? ` ${TIER_LABELS[org.tier]}` : ""}
+        </p>
+        {origin ? (
+          <p className="text-sm text-stone-600">
+            Tu evento en {origin.venueName} lo cubre el plan de {origin.issuerName}: un evento, con el diseñador completo y enlace para compartir.
+          </p>
+        ) : org.plan === "personal" ? (
+          <p className="text-sm text-stone-600">Un evento activo a la vez, con el diseñador completo y enlace para compartir (sin logo ni hojas de proveedores).</p>
+        ) : (
+          <p className="text-sm text-stone-600">
+            Incluye: {modules || "ningún módulo"}.{quota === null ? " Códigos para tus clientes sin tope." : quota > 0 ? ` ${quota} códigos para tus clientes al mes.` : ""}
+          </p>
+        )}
         <p className="mt-1 text-sm">
           {org.planEndsAt
             ? expired
@@ -38,6 +52,7 @@ export async function PlanSection({ org }: { org: Org }) {
         </p>
       </div>
 
+      {org.plan !== "invitado" && (
       <div className="rounded-2xl border border-stone-200 bg-white p-4">
         <h3 className="font-semibold">Pagar o renovar por transferencia</h3>
         {bank ? (
@@ -65,6 +80,7 @@ export async function PlanSection({ org }: { org: Org }) {
         </p>
         <PaymentForm currentPlan={org.plan} />
       </div>
+      )}
 
       {payments.length > 0 && (
         <div className="rounded-2xl border border-stone-200 bg-white p-4">

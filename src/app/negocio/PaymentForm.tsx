@@ -5,7 +5,7 @@ import { PAYMENT_PERIODS, PAYMENT_PERIOD_LABELS, PLAN_LABELS, type Plan } from "
 import { submitPayment } from "./actions";
 
 const field = "h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base outline-none focus:border-stone-800";
-const PLANS_FOR_SALE: Plan[] = ["eventos", "casas", "ambos"];
+const PLANS_FOR_SALE: Plan[] = ["eventos", "casas", "ambos", "personal"];
 
 export function PaymentForm({ currentPlan }: { currentPlan: Plan }) {
   const [state, action, pending] = useActionState(submitPayment, null);

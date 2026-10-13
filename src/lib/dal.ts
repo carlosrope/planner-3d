@@ -12,6 +12,7 @@ import {
   membership,
   organization,
   payment,
+  referralCode,
   shareLink,
   user,
   venue,
@@ -24,18 +25,20 @@ import {
   activeModules,
   PLAN_MODULES,
   planEndAfterPayment,
+  referralQuota,
   sectionOf,
   type OrgKind,
   type PaymentPeriod,
   type Plan,
   type Section,
+  type Tier,
   type VenueKind,
   type VenueStatus,
 } from "./domain";
+import { monthStart, newReferralCode, referralLeft } from "./referrals";
 import { slugify, uniqueSlug } from "./slug";
 
-/** Letras y dígitos que no se confunden al leerlos (sin I/l/1 ni O/0), para enlaces que se dictan. */
-export const TOKEN_CHARS = "23456789abcdefghjkmnpqrstuvwxyz";
+import { TOKEN_CHARS } from "./tokens";
 export const newToken = (length = 20) => Array.from(randomBytes(length), (b) => TOKEN_CHARS[b % TOKEN_CHARS.length]).join("");
 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
@@ -74,6 +77,8 @@ const orgFields = {
   modules: organization.modules,
   plan: organization.plan,
   planEndsAt: organization.planEndsAt,
+  tier: organization.tier,
+  referralCodeId: organization.referralCodeId,
 };
 export type Org = Pick<typeof organization.$inferSelect, keyof typeof orgFields>;
 
@@ -102,11 +107,15 @@ const memberOfEventOrg = (userId: string) =>
 
 const published = eq(venue.status, "publicado");
 
-/** Lugares donde el negocio puede crear proyectos: los publicados del catálogo, los suyos (en cualquier estado) y los que le compartieron. */
+/**
+ * Lugares donde el negocio puede crear proyectos: los publicados del catálogo, los suyos (en cualquier estado),
+ * los que le compartieron y, si entró con un código de referido, el lugar de ese código.
+ */
 const venueVisibleTo = (orgId: string) =>
   or(
     and(published, eq(venue.isPublic, true)),
     eq(venue.ownerOrgId, orgId),
+    sql`exists (select 1 from referral_code rc join organization o on o.referral_code_id = rc.id where o.id = ${orgId} and rc.venue_id = venue.id)`,
     and(
       published,
       exists(
@@ -118,12 +127,21 @@ const venueVisibleTo = (orgId: string) =>
     ),
   );
 
-export async function listVenues(orgId: string) {
+export async function listVenues(orgId: string, onlyVenueId?: string | null) {
   return db
     .select({ id: venue.id, slug: venue.slug, name: venue.name, city: venue.city, kind: venue.kind })
     .from(venue)
-    .where(and(venueVisibleTo(orgId), isNotNull(venue.plan)))
+    .where(and(venueVisibleTo(orgId), isNotNull(venue.plan), onlyVenueId ? eq(venue.id, onlyVenueId) : undefined))
     .orderBy(asc(venue.name));
+}
+
+/** Cuántos eventos tiene el negocio (todos, o solo los que siguen vivos: borrador o confirmado). */
+export async function countEvents(orgId: string, onlyActive = false) {
+  const [row] = await db
+    .select({ n: count() })
+    .from(event)
+    .where(and(eq(event.orgId, orgId), onlyActive ? or(eq(event.status, "borrador"), eq(event.status, "confirmado")) : undefined));
+  return Number(row?.n ?? 0);
 }
 
 export async function getVenueForOrg(orgId: string, venueId: string) {
@@ -156,7 +174,7 @@ export async function listEvents(orgId: string) {
 /** Evento, salón y sus distribuciones, solo si el usuario es miembro del negocio dueño y el módulo está activo. */
 export async function getEditableEvent(eventId: string, userId: string) {
   const [row] = await db
-    .select({ event, venue, org: { modules: organization.modules, planEndsAt: organization.planEndsAt } })
+    .select({ event, venue, org: { plan: organization.plan, modules: organization.modules, planEndsAt: organization.planEndsAt } })
     .from(event)
     .innerJoin(venue, eq(event.venueId, venue.id))
     .innerJoin(membership, memberOfEventOrg(userId))
@@ -237,6 +255,25 @@ export async function getOrgBrand(orgId: string) {
     .where(eq(organization.id, orgId))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * Marca que lleva el diseño de un negocio: la suya; si entró con código, la de quien se lo dio (el salón o la
+ * planner); en el plan Personal, solo el nombre, sin logo ni color.
+ */
+export async function getEffectiveBrand(orgId: string) {
+  const [org] = await db
+    .select({ plan: organization.plan, referralCodeId: organization.referralCodeId })
+    .from(organization)
+    .where(eq(organization.id, orgId))
+    .limit(1);
+  if (!org) return null;
+  if (org.plan === "invitado" && org.referralCodeId) {
+    const [code] = await db.select({ orgId: referralCode.orgId }).from(referralCode).where(eq(referralCode.id, org.referralCodeId)).limit(1);
+    if (code) return getOrgBrand(code.orgId);
+  }
+  const own = await getOrgBrand(orgId);
+  return own && org.plan === "personal" ? { ...own, logoUrl: null, brandColor: null } : own;
 }
 
 /** Imagen de vista previa de un enlace compartido (JPEG en data URL), si existe. */
@@ -670,6 +707,115 @@ export async function createPayment(
 }
 
 // ---------------------------------------------------------------------------
+// Códigos de referido
+
+const referralFields = {
+  id: referralCode.id,
+  code: referralCode.code,
+  venueId: referralCode.venueId,
+  venueName: venue.name,
+  venueSlug: venue.slug,
+  guestName: referralCode.guestName,
+  eventDate: referralCode.eventDate,
+  usedAt: referralCode.usedAt,
+  eventId: referralCode.eventId,
+  createdAt: referralCode.createdAt,
+};
+
+/** Códigos que dio el negocio (todos, o solo los de un lugar), los más recientes primero. */
+export async function listReferralCodes(orgId: string, venueId?: string) {
+  return db
+    .select(referralFields)
+    .from(referralCode)
+    .innerJoin(venue, eq(venue.id, referralCode.venueId))
+    .where(and(eq(referralCode.orgId, orgId), venueId ? eq(referralCode.venueId, venueId) : undefined))
+    .orderBy(desc(referralCode.createdAt))
+    .limit(200);
+}
+
+/** Cuántos códigos puede dar todavía este mes (null = sin tope) y cuántos ya dio. */
+export async function referralAllowance(org: Pick<Org, "id" | "kind" | "plan" | "tier" | "planEndsAt" | "modules">) {
+  const quota = activeModules(org).length ? referralQuota(org) : 0;
+  const [row] = await db
+    .select({ n: count() })
+    .from(referralCode)
+    .where(and(eq(referralCode.orgId, org.id), gt(referralCode.createdAt, monthStart())));
+  const used = Number(row?.n ?? 0);
+  return { quota, used, left: referralLeft(quota, used) };
+}
+
+/** Genera un código para un cliente en un lugar que el negocio puede usar; respeta el tope del mes. */
+export async function createReferralCode(org: Org, venueId: string, guestName: string, eventDate: string | null) {
+  const { left } = await referralAllowance(org);
+  if (left === 0) return { error: "Ya diste todos los códigos de este mes." as const };
+  const [place] = await db
+    .select({ id: venue.id, name: venue.name })
+    .from(venue)
+    .where(and(eq(venue.id, venueId), venueVisibleTo(org.id), isNotNull(venue.plan)))
+    .limit(1);
+  if (!place) return { error: "Ese lugar no está disponible para tu cuenta." as const };
+  // Si el código generado ya existe (muy raro), se intenta otra vez.
+  for (let i = 0; i < 5; i++) {
+    const code = newReferralCode(place.name, (n) => new Uint8Array(randomBytes(n)));
+    const [created] = await db
+      .insert(referralCode)
+      .values({ code, orgId: org.id, venueId: place.id, guestName, eventDate })
+      .onConflictDoNothing({ target: referralCode.code })
+      .returning({ id: referralCode.id, code: referralCode.code });
+    if (created) return { code: created.code };
+  }
+  return { error: "No se pudo generar el código. Intenta de nuevo." as const };
+}
+
+/** Un código sin usar, con su lugar y quién lo dio; null si no existe, ya se usó o el plan de quien lo dio terminó. */
+export async function getReferralInvite(code: string) {
+  const [row] = await db
+    .select({
+      id: referralCode.id,
+      code: referralCode.code,
+      guestName: referralCode.guestName,
+      eventDate: referralCode.eventDate,
+      usedAt: referralCode.usedAt,
+      venue: { id: venue.id, slug: venue.slug, name: venue.name, kind: venue.kind, status: venue.status },
+      issuer: { id: organization.id, name: organization.name, kind: organization.kind, modules: organization.modules, planEndsAt: organization.planEndsAt },
+    })
+    .from(referralCode)
+    .innerJoin(venue, eq(venue.id, referralCode.venueId))
+    .innerJoin(organization, eq(organization.id, referralCode.orgId))
+    .where(eq(referralCode.code, code))
+    .limit(1);
+  if (!row || row.usedAt || row.venue.status === "retirado") return null;
+  if (!activeModules(row.issuer).includes(sectionOf(row.venue.kind))) return null;
+  return row;
+}
+
+/** Marca el código como usado por la cuenta que acaba de crearse. */
+export async function redeemReferralCode(codeId: string, orgId: string) {
+  await db
+    .update(referralCode)
+    .set({ usedByOrgId: orgId, usedAt: new Date() })
+    .where(and(eq(referralCode.id, codeId), isNull(referralCode.usedAt)));
+}
+
+/** El lugar y quien dio el código con el que entró la cuenta (plan "Con código"). */
+export async function getReferralOrigin(org: Pick<Org, "plan" | "referralCodeId">) {
+  if (org.plan !== "invitado" || !org.referralCodeId) return null;
+  const [row] = await db
+    .select({ venueId: venue.id, venueName: venue.name, venueSlug: venue.slug, venueKind: venue.kind, issuerName: organization.name, eventId: referralCode.eventId })
+    .from(referralCode)
+    .innerJoin(venue, eq(venue.id, referralCode.venueId))
+    .innerJoin(organization, eq(organization.id, referralCode.orgId))
+    .where(eq(referralCode.id, org.referralCodeId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Liga el evento que armó el cliente a su código. */
+export async function attachReferralEvent(codeId: string, eventId: string) {
+  await db.update(referralCode).set({ eventId }).where(and(eq(referralCode.id, codeId), isNull(referralCode.eventId)));
+}
+
+// ---------------------------------------------------------------------------
 // Administración de ProLink (solo ADMIN_EMAILS; las páginas llaman antes a requireAdmin)
 
 const ownerName = organization.name;
@@ -803,18 +949,21 @@ export async function adminListOrgs() {
       whatsapp: organization.whatsapp,
       createdAt: organization.createdAt,
       emails: sql<string>`(select coalesce(string_agg(u.email, ', ' order by m.created_at), '') from membership m join "user" u on u.id = m.user_id where m.org_id = organization.id)`,
+      tier: organization.tier,
+      referralCodeId: organization.referralCodeId,
       events: sql<number>`(select count(*) from event e where e.org_id = organization.id)`,
+      referrals: sql<number>`(select count(*) from referral_code rc where rc.org_id = organization.id)`,
       venues: sql<number>`(select count(*) from venue v where v.owner_org_id = organization.id)`,
       pendingPayments: sql<number>`(select count(*) from payment p where p.org_id = organization.id and p.status = 'pendiente')`,
     })
     .from(organization)
     .orderBy(desc(organization.createdAt));
-  return rows.map((r) => ({ ...r, events: Number(r.events), venues: Number(r.venues), pendingPayments: Number(r.pendingPayments) }));
+  return rows.map((r) => ({ ...r, events: Number(r.events), venues: Number(r.venues), pendingPayments: Number(r.pendingPayments), referrals: Number(r.referrals) }));
 }
 
 export async function adminUpdateOrg(
   orgId: string,
-  patch: { kind: OrgKind; plan: Plan; modules: Section[]; planEndsAt: Date | null },
+  patch: { kind: OrgKind; plan: Plan; modules: Section[]; planEndsAt: Date | null; tier: Tier },
 ) {
   const [row] = await db.update(organization).set(patch).where(eq(organization.id, orgId)).returning({ id: organization.id });
   return row ?? null;
@@ -866,7 +1015,7 @@ export async function adminResolvePayment(paymentId: string, status: "confirmado
         .update(organization)
         .set({
           plan: p.plan,
-          modules: p.plan === "prueba" ? undefined : [...PLAN_MODULES[p.plan]],
+          modules: p.plan === "prueba" || p.plan === "invitado" ? undefined : [...PLAN_MODULES[p.plan]],
           planEndsAt: planEndAfterPayment(org?.planEndsAt ?? null, p.period),
         })
         .where(eq(organization.id, p.orgId));

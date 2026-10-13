@@ -23,6 +23,7 @@ import type {
   Plan,
   Section,
   ShareRole,
+  Tier,
   VenueKind,
   VenueStatus,
 } from "../domain";
@@ -128,8 +129,41 @@ export const organization = pgTable("organization", {
   plan: text("plan").$type<Plan>().notNull().default("ambos"),
   /** Fin del plan; vacío = no vence. Al vencer, la cuenta ve sus proyectos pero no puede crear ni editar. */
   planEndsAt: timestamp("plan_ends_at", { withTimezone: true }),
+  /** Pro (códigos con tope al mes) o Ilimitado. */
+  tier: text("tier").$type<Tier>().notNull().default("pro"),
+  /** Cuenta creada con un código de referido: el código que la abrió (dice el lugar y quién la invitó). */
+  referralCodeId: text("referral_code_id"),
   createdAt: createdAt(),
 });
+
+/**
+ * Código de referido: el dueño de un salón (o una planner) lo genera para un cliente que renta el salón;
+ * con él, el cliente crea su cuenta y arma un solo evento en ese lugar sin pagar.
+ */
+export const referralCode = pgTable(
+  "referral_code",
+  {
+    id: id(),
+    /** Legible y de un solo uso, por ejemplo PALMAS-7K3M. */
+    code: text("code").notNull().unique(),
+    /** Quien lo dio: el negocio del salón o la planner. */
+    orgId: text("org_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    venueId: text("venue_id")
+      .notNull()
+      .references(() => venue.id, { onDelete: "cascade" }),
+    /** Para quién es (nombre del cliente y fecha del evento, como los apuntó quien lo dio). */
+    guestName: text("guest_name").notNull(),
+    eventDate: date("event_date"),
+    /** La cuenta que lo usó y el evento que armó. */
+    usedByOrgId: text("used_by_org_id").references(() => organization.id, { onDelete: "set null" }),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    eventId: text("event_id").references(() => event.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("referral_code_org_idx").on(t.orgId), index("referral_code_venue_idx").on(t.venueId)],
+);
 
 export const membership = pgTable(
   "membership",

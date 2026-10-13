@@ -24,20 +24,54 @@ export const ALL_SECTIONS = Object.keys(SECTIONS) as Section[];
 export const sectionOf = (venueKind: string): Section => (venueKind === "casa" ? "casas" : "salones");
 
 /** Plan comercial de la cuenta. `prueba` vence en `planEndsAt`; los demás no vencen solos. */
-export const PLANS = ["prueba", "eventos", "casas", "ambos"] as const;
+export const PLANS = ["prueba", "eventos", "casas", "ambos", "personal", "invitado"] as const;
 export type Plan = (typeof PLANS)[number];
 export const PLAN_LABELS: Record<Plan, string> = {
   prueba: "Prueba",
   eventos: "Eventos",
   casas: "Casas",
   ambos: "Eventos y casas",
+  personal: "Personal",
+  invitado: "Con código",
 };
-/** Módulos que incluye cada plan (la prueba puede ser de uno o de los dos: se guardan en `modules`). */
-export const PLAN_MODULES: Record<Exclude<Plan, "prueba">, readonly Section[]> = {
+/** Módulos que incluye cada plan (la prueba y el código pueden ser de uno o de los dos: se guardan en `modules`). */
+export const PLAN_MODULES: Record<Exclude<Plan, "prueba" | "invitado">, readonly Section[]> = {
   eventos: ["salones"],
   casas: ["casas"],
   ambos: ["salones", "casas"],
+  personal: ["salones"],
 };
+/**
+ * Nivel del plan: Pro (con un tope de códigos de referido al mes) o Ilimitado (códigos sin tope).
+ * Precios solo en prolink365.com.mx.
+ */
+export const TIERS = ["pro", "ilimitado"] as const;
+export type Tier = (typeof TIERS)[number];
+export const TIER_LABELS: Record<Tier, string> = { pro: "Pro", ilimitado: "Ilimitado" };
+export const isTier = (value: unknown): value is Tier => value === "pro" || value === "ilimitado";
+/**
+ * Planes chicos: Personal (quien organiza por su cuenta: un evento activo, sin logo, sin hojas de proveedores,
+ * sin códigos) y Con código (cliente de un salón o de una planner: un solo evento en ese lugar, lo cubre el plan
+ * de quien dio el código). Ninguno de los dos paga por su cuenta ni reparte códigos.
+ */
+export const isLitePlan = (plan: Plan) => plan === "personal" || plan === "invitado";
+/**
+ * Códigos de referido que puede dar una cuenta cada mes: el dueño de un salón o desarrolladora 50 (Pro) o sin
+ * tope (Ilimitado); la planner o inmobiliaria 5 (Pro) o sin tope. `null` = sin tope; 0 = no reparte códigos.
+ */
+export function referralQuota(org: { kind: OrgKind; plan: Plan; tier: Tier }): number | null {
+  if (org.plan === "prueba" || isLitePlan(org.plan)) return 0;
+  if (org.tier === "ilimitado") return null;
+  return isOwnerKind(org.kind) ? 50 : 5;
+}
+/** Días que dura la cuenta de un cliente con código después de la fecha de su evento (o desde que entra, sin fecha). */
+export const REFERRAL_DAYS_AFTER_EVENT = 30;
+export const REFERRAL_DAYS_WITHOUT_DATE = 90;
+/** Fin del plan de un cliente con código: 30 días después de su evento o 90 días desde hoy si no dio fecha. */
+export function referralPlanEnd(eventDate: string | null, now = new Date()): Date {
+  const base = eventDate ? new Date(`${eventDate}T23:59:59-07:00`) : now;
+  return new Date(base.getTime() + (eventDate ? REFERRAL_DAYS_AFTER_EVENT : REFERRAL_DAYS_WITHOUT_DATE) * 86_400_000);
+}
 export const isSection = (value: unknown): value is Section => typeof value === "string" && value in SECTIONS;
 export const isPlan = (value: unknown): value is Plan => typeof value === "string" && (PLANS as readonly string[]).includes(value);
 

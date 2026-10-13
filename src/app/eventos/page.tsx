@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
-import { listEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
-import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isOwnerKind, sectionOf, type Section } from "@/lib/domain";
+import { getReferralOrigin, listEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
+import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isLitePlan, isOwnerKind, sectionOf, type Section } from "@/lib/domain";
 import { NewEventForm } from "./NewEventForm";
 import { SignOutButton } from "./SignOutButton";
 import { SamplesLink, Welcome } from "./Welcome";
@@ -45,7 +45,12 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
   const active = activeModules(org);
   const expired = active.length === 0;
   const visible: Section[] = expired ? org.modules : active;
-  const [events, venues] = await Promise.all([listEvents(org.id), listVenues(org.id)]);
+  // Con código: solo el lugar del código y un solo evento. Personal: un evento activo a la vez.
+  const origin = await getReferralOrigin(org);
+  const [events, venues] = await Promise.all([listEvents(org.id), listVenues(org.id, origin?.venueId)]);
+  const lite = isLitePlan(org.plan);
+  const limitReached =
+    org.plan === "invitado" ? events.length > 0 : org.plan === "personal" ? events.some((e) => e.status === "borrador" || e.status === "confirmado") : false;
   // ?lugar=: viene del catálogo ("Planear mi evento aquí"): se preselecciona el lugar y se abre su sección.
   const wanted = typeof lugar === "string" ? venues.find((v) => v.id === lugar || v.slug === lugar) : undefined;
   const asked = wanted ? sectionOf(wanted.kind) : seccion === "casas" ? "casas" : undefined;
@@ -53,9 +58,10 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
   const mine = events.filter((e) => sectionOf(e.venueKind) === section);
   const places = venues.filter((v) => sectionOf(v.kind) === section);
   const count = (s: Section) => events.filter((e) => sectionOf(e.venueKind) === s).length;
+  const planName = origin ? `Con código de ${origin.issuerName}` : PLAN_LABELS[org.plan];
   const planLine = org.planEndsAt
-    ? `${PLAN_LABELS[org.plan]} · ${expired ? "terminó el" : "hasta el"} ${fechaPlan.format(org.planEndsAt)}`
-    : PLAN_LABELS[org.plan];
+    ? `${planName} · ${expired ? "terminó el" : "hasta el"} ${fechaPlan.format(org.planEndsAt)}`
+    : planName;
 
   return (
     <>
@@ -102,7 +108,16 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         </section>
       )}
 
-      {events.length === 0 && !expired && <Welcome modules={active} />}
+      {events.length === 0 && !expired && !lite && <Welcome modules={active} />}
+      {events.length === 0 && !expired && origin && (
+        <section className="mb-6 rounded-2xl bg-stone-900 p-5 text-white">
+          <h2 className="text-xl font-semibold">Tu evento en {origin.venueName}</h2>
+          <p className="mt-2 text-sm text-stone-200">
+            Ponle nombre, di cuántos invitados tendrás y Plantea arma el primer acomodo de mesas. Después mueves lo que quieras, acomodas a tus
+            invitados por mesa, lo ves en 3D y lo compartes con tu familia por WhatsApp.
+          </p>
+        </section>
+      )}
 
       {visible.length > 1 && (
       <nav className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-stone-200/70 p-1" aria-label="Secciones">
@@ -154,14 +169,21 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         )}
       </section>
 
-      {!expired && (
+      {!expired && limitReached && (
+        <p className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
+          {org.plan === "invitado"
+            ? "Tu código cubre un solo evento: ábrelo arriba para seguir trabajando en él."
+            : "El plan Personal incluye un evento activo a la vez. Marca el anterior como realizado o cancelado para crear otro."}
+        </p>
+      )}
+      {!expired && !limitReached && (
         <section className="rounded-2xl border border-stone-200 bg-white p-4">
           <h2 className="mb-1 text-lg font-semibold">{COPY[section].title}</h2>
           <p className="mb-4 text-sm text-stone-500">{COPY[section].hint}</p>
           <NewEventForm key={`${section}-${wanted?.id ?? ""}`} section={section} venues={places} defaultVenueId={wanted?.id} />
         </section>
       )}
-      {events.length > 0 && !expired && <SamplesLink />}
+      {events.length > 0 && !expired && !lite && <SamplesLink />}
     </>
   );
 }

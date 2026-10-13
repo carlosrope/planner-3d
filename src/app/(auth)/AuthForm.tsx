@@ -11,10 +11,16 @@ const input =
 export function AuthForm({
   mode,
   inviteRequired = false,
+  inviteValue,
+  notice,
   next,
 }: {
   mode: "entrar" | "registro";
   inviteRequired?: boolean;
+  /** Código ya validado (de referido): se manda sin pedirlo. */
+  inviteValue?: string;
+  /** Aviso arriba del formulario (de quién es el código, o que ya no sirve). */
+  notice?: string;
   /** A dónde ir después de entrar (por omisión, Proyectos). */
   next?: string;
 }) {
@@ -58,6 +64,7 @@ export function AuthForm({
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-6 py-12">
       <h1 className="mb-6 text-2xl font-semibold">{registering ? "Crear cuenta" : "Entrar"}</h1>
+      {notice && <p className={`mb-4 rounded-xl p-3 text-sm ${inviteValue ? "bg-emerald-50 text-emerald-900" : "bg-amber-50 text-amber-900"}`}>{notice}</p>}
       <form onSubmit={submit} className="space-y-3">
         {registering && (
           <input name="name" required autoComplete="name" placeholder="Tu nombre" className={input} />
@@ -72,9 +79,13 @@ export function AuthForm({
           placeholder="Contraseña (mínimo 8 caracteres)"
           className={input}
         />
-        {registering && inviteRequired && (
-          <input name="invite" required autoComplete="off" placeholder="Código de invitación" className={input} />
-        )}
+        {registering && inviteValue ? (
+          <input type="hidden" name="invite" value={inviteValue} />
+        ) : registering && inviteRequired ? (
+          <input name="invite" required autoComplete="off" placeholder="Código de invitación o del salón" className={input} />
+        ) : registering ? (
+          <input name="invite" autoComplete="off" placeholder="Código del salón (si te dieron uno)" className={input} />
+        ) : null}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           disabled={busy}
