@@ -21,7 +21,7 @@
     texto = salon
       ? `${V.name} en 3D. Mueve las mesas para probar ideas; nada se guarda.`
       : `${V.name} en 3D. Cambia muebles y pisos para probar; nada se guarda.`;
-    const msg = encodeURIComponent(`Hola, vi ${V.name} en 3D en Espacios 3D y quiero informes.`);
+    const msg = encodeURIComponent(`Hola, vi ${V.name} en 3D en Plantea y quiero informes.`);
     botones =
       `<a class="wa" href="${escape(V.planHref)}">${salon ? 'Planear mi evento aquí' : 'Planear con este modelo'}</a>` +
       (V.whatsapp ? `<a class="entrar" href="https://wa.me/${escape(V.whatsapp)}?text=${msg}" target="_blank" rel="noopener">WhatsApp</a>` : '');
@@ -30,8 +30,8 @@
       ? 'Este es un salón de ejemplo. ¿Quieres el tuyo en 3D para tus eventos?'
       : 'Esta es una casa de ejemplo. ¿Quieres tus modelos en 3D para venderlos?';
     const mensaje = encodeURIComponent(
-      salon ? 'Hola, vi el salón de ejemplo en Espacios 3D y quiero el mío en 3D.'
-            : 'Hola, vi la casa de ejemplo en Espacios 3D y quiero mis modelos en 3D.',
+      salon ? 'Hola, vi el salón de ejemplo en Plantea y quiero el mío en 3D.'
+            : 'Hola, vi la casa de ejemplo en Plantea y quiero mis modelos en 3D.',
     );
     botones =
       `<a class="wa" href="https://wa.me/${escape(D.whatsapp)}?text=${mensaje}" target="_blank" rel="noopener">Escríbenos</a>` +

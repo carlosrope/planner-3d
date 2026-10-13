@@ -43,7 +43,7 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
   if (!created) return { error: "No se pudo registrar la solicitud. Escríbele al lugar por WhatsApp." };
   const to = v.contactPhone ?? v.owner?.whatsapp ?? null;
   const lines = [
-    `Hola, vi ${v.name} en 3D en Espacios 3D y quiero informes.`,
+    `Hola, vi ${v.name} en 3D en Plantea y quiero informes.`,
     `Soy ${d.name}.`,
     d.eventDate ? `Fecha: ${fecha.format(new Date(d.eventDate))}.` : "",
     d.guests !== "" ? `Invitados: ${d.guests}.` : "",

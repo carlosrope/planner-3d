@@ -1,4 +1,4 @@
-# Planner 3D
+# Plantea (antes Planner 3D / Espacios 3D)
 
 Planos 2D y 3D de salones reales para wedding planners, planners de XV años y salones de eventos, y de casas para inmobiliarias, en Los Mochis. El plan completo está en [docs/plan-desarrollo.md](docs/plan-desarrollo.md).
 

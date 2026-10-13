@@ -23,7 +23,7 @@ export async function GET(request: Request, ctx: RouteContext<"/lugares/[slug]/3
     {
       description: found.kind === "salon" ? `Recorre ${found.name} en 3D y prueba el montaje de tu evento.` : `Recorre ${found.name} en 3D.`,
       url: `${origin}/lugares/${key}/3d`,
-      siteName: "Espacios 3D",
+      siteName: "Plantea",
     },
     {
       venue: {

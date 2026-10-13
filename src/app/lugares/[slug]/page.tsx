@@ -81,7 +81,7 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
         </PageLink>
         {whatsapp && (
           <a
-            href={waLink(whatsapp, `Hola, vi ${v.name} en 3D en Espacios 3D y quiero informes.`)}
+            href={waLink(whatsapp, `Hola, vi ${v.name} en 3D en Plantea y quiero informes.`)}
             target="_blank"
             rel="noopener"
             className="flex h-12 items-center justify-center rounded-xl bg-[#25d366] font-medium text-white"
@@ -112,7 +112,7 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
       <p className="mt-8 text-center text-sm text-stone-500">
         Hecho con{" "}
         <a href={`${PROLINK_SITE}/espacios-3d.html`} className="underline" target="_blank" rel="noopener">
-          Espacios 3D · ProLink365
+          Plantea · por ProLink365
         </a>
         {" · "}
         <Link href="/alta" className="underline">

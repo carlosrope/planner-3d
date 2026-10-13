@@ -6,8 +6,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Planner 3D", template: "%s · Planner 3D" },
-  description: "Planos 2D y 3D de salones para wedding planners, XV años y salones de eventos.",
+  title: { default: "Plantea", template: "%s · Plantea" },
+  description: "Plantea tu evento o tu casa en 3D antes de vivirlo: planos 2D y recorridos 3D de salones y casas reales.",
 };
 
 export const viewport: Viewport = {

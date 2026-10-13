@@ -24,14 +24,14 @@ async function Gracias({ searchParams }: { searchParams: PageProps<"/alta/gracia
   const salon = (found?.kind ?? "salon") === "salon";
   return (
     <div className="space-y-5 rounded-2xl border border-stone-200 bg-white p-6">
-      <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Espacios 3D</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Plantea</p>
       <h1 className="text-2xl font-semibold">¡Listo! Registramos {name}.</h1>
       <p className="text-stone-600">
         Ya tenemos tu plano y tus fotos. Armamos el plano 2D y el recorrido 3D y en menos de 7 días te escribimos por
         WhatsApp con un enlace para que revises {salon ? "tu salón" : "tu modelo"} y lo confirmes.
       </p>
       <a
-        href={waLink(PROLINK_WHATSAPP, `Hola, acabo de registrar ${name} en Espacios 3D.`)}
+        href={waLink(PROLINK_WHATSAPP, `Hola, acabo de registrar ${name} en Plantea.`)}
         target="_blank"
         rel="noopener"
         className="flex h-12 items-center justify-center rounded-xl bg-[#25d366] font-medium text-white"

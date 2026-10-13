@@ -54,7 +54,7 @@ export async function PlanSection({ org }: { org: Org }) {
         ) : (
           <p className="mt-2 text-sm text-stone-600">
             Pide los datos de la cuenta por{" "}
-            <a href={waLink(PROLINK_WHATSAPP, `Hola, quiero pagar el plan de ${org.name} en Espacios 3D.`)} target="_blank" rel="noopener" className="underline">
+            <a href={waLink(PROLINK_WHATSAPP, `Hola, quiero pagar el plan de ${org.name} en Plantea.`)} target="_blank" rel="noopener" className="underline">
               WhatsApp
             </a>
             .

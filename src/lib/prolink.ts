@@ -3,7 +3,7 @@
 /** WhatsApp de ProLink365 (solo dígitos con lada de país). */
 export const PROLINK_WHATSAPP = process.env.PROLINK_WHATSAPP ?? "526681305828";
 export const PROLINK_SITE = "https://prolink365.com.mx";
-/** Los planes y precios de Espacios 3D viven solo en el sitio de ProLink; la app no muestra precios. */
+/** Los planes y precios de Plantea (antes Espacios 3D) viven solo en el sitio de ProLink; la app no muestra precios. */
 export const PRICES_URL = `${PROLINK_SITE}/espacios-3d.html#planes`;
 
 /** Datos para pagar por transferencia; sin ellos, Tu plan pide los datos por WhatsApp. */

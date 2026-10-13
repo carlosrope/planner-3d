@@ -27,11 +27,11 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
   const slug = v.slug ?? v.id;
   const salon = v.kind === "salon";
   const what = salon ? "tu salón" : "tu modelo";
-  const ask = waLink(PROLINK_WHATSAPP, `Hola, tengo una duda sobre ${v.name} en Espacios 3D.`);
+  const ask = waLink(PROLINK_WHATSAPP, `Hola, tengo una duda sobre ${v.name} en Plantea.`);
 
   return (
     <>
-      <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Espacios 3D · revisión</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Plantea · revisión</p>
       <h1 className="mt-1 text-2xl font-semibold">{v.name}</h1>
       <p className="mt-1 text-stone-500">
         {v.city} · <span className="font-medium text-stone-700">{VENUE_STATUS_LABELS[v.status]}</span>

@@ -118,7 +118,7 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
           {v.contactPhone && (
             <>
               {" · "}
-              <a href={waLink(v.contactPhone, `Hola ${v.contactName ?? ""}, te escribimos de Espacios 3D por ${v.name}.`)} target="_blank" rel="noopener" className="underline">
+              <a href={waLink(v.contactPhone, `Hola ${v.contactName ?? ""}, te escribimos de Plantea por ${v.name}.`)} target="_blank" rel="noopener" className="underline">
                 {formatWhatsapp(v.contactPhone)}
               </a>
             </>

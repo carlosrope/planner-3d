@@ -204,7 +204,7 @@ export function AltaForm({ owner }: { owner: { name: string; contact: string } |
       <label className="flex gap-3 rounded-xl border border-stone-200 bg-white p-3 text-sm">
         <input type="checkbox" name="agreement" required className="mt-1 h-5 w-5" />
         <span>
-          Autorizo a ProLink365 a convertir y publicar el plano, las fotos y el 3D de este lugar en Espacios 3D. Puedo pedir
+          Autorizo a ProLink365 a convertir y publicar el plano, las fotos y el 3D de este lugar en Plantea. Puedo pedir
           que se retire con 30 días de aviso. No hay exclusividad.
         </span>
       </label>

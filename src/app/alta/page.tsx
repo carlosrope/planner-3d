@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function AltaPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-16 pt-6">
-      <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Espacios 3D</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Plantea</p>
       <h1 className="mt-1 text-2xl font-semibold">Pon tu salón o tu modelo de casa en 3D</h1>
       <p className="mt-2 text-stone-600">
         Mándanos tu plano (CAD, PDF o una foto del croquis con medidas) y unas fotos. Lo convertimos a un plano 2D y

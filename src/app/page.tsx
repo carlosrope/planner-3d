@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-8 px-6 py-12">
       <div className="space-y-3">
-        <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Planner 3D · Los Mochis</p>
+        <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Plantea · Los Mochis</p>
         <h1 className="text-3xl font-semibold leading-tight text-stone-900">
           El plano de tu evento, en tu teléfono.
         </h1>

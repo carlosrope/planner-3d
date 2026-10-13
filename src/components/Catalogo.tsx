@@ -28,7 +28,7 @@ export async function Catalogo({ kind, citySlug }: { kind: VenueKind; citySlug?:
   const cityName = citySlug ? (cities.find((c) => c.slug === citySlug)?.city ?? cityFromSlug(citySlug)) : null;
   return (
     <main className="mx-auto max-w-4xl px-4 pb-16 pt-6">
-      <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Espacios 3D</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Plantea</p>
       <h1 className="mt-1 text-2xl font-semibold">
         {copy.title}
         {cityName ? ` en ${cityName}` : ""}
