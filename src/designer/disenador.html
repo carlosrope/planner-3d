@@ -138,7 +138,9 @@ main.is3d .scalebar{opacity:0}
 main.is3d #view3d{opacity:1;visibility:visible;transition:opacity .45s ease}
 #view3d canvas{display:block;outline:none}
 #walkOverlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(30,28,25,.35);z-index:3;cursor:pointer}
-#walkOverlay>div{background:var(--panel);border-radius:14px;padding:22px 28px;text-align:center;max-width:360px}
+#walkOverlay>div{position:relative;background:var(--panel);border-radius:14px;padding:22px 28px;text-align:center;max-width:360px;cursor:default}
+#woClose{position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--ink);font-size:24px;line-height:1;cursor:pointer}
+#woClose:hover{background:var(--bg)}
 #walkOverlay h3{margin:0 0 6px}
 #walkOverlay p{margin:4px 0;color:var(--muted)}
 #cross{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;z-index:2;display:none;pointer-events:none}
@@ -350,6 +352,8 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
   aside.lib{justify-self:start;transform:translateX(-110%)}
   aside.right{justify-self:end;transform:translateX(110%)}
   aside.open{transform:none;box-shadow:0 0 30px rgba(40,30,20,.18)}
+  .drawerBack{display:flex!important;position:sticky;top:0;z-index:2;width:100%;min-height:44px;align-items:center;justify-content:flex-start;gap:6px;
+    padding:0 14px;border-radius:0;border-bottom:1px solid var(--line);background:var(--panel);font-weight:600}
   .lib-grid{grid-template-columns:1fr 1fr 1fr}
   .brand span,footer .only2d{display:none!important}
 }
@@ -438,6 +442,7 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
   </header>
 
   <aside class="lib">
+    <button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button>
     <div id="lib3d" class="only3d">
       <h4 data-en="Rooms · click to fly there">房间 · 点击飞到该房间</h4>
       <div id="roomList"></div>
@@ -459,7 +464,7 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
       <g id="gSel"></g>
     </svg>
     <div id="view3d">
-      <div id="walkOverlay"><div><h3 data-en="Walk mode">漫游模式</h3>
+      <div id="walkOverlay"><div><button type="button" id="woClose" aria-label="Cerrar">×</button><h3 data-en="Walk mode">漫游模式</h3>
         <p id="wo1"></p>
         <p id="wo2"></p>
         <p id="wo3"></p>
@@ -476,7 +481,7 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
     <div id="fab"></div>
   </main>
 
-  <aside class="right"><div id="panel"></div></aside>
+  <aside class="right"><button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button><div id="panel"></div></aside>
 
   <footer>
     <span class="only2d">X <b id="cx">—</b></span><span class="only2d">Y <b id="cy">—</b></span>
@@ -1574,6 +1579,7 @@ $('#fullscreen').onclick = toggleFullscreen;
 // 已从主屏幕以独立 App 方式打开时本就是全屏，隐藏按钮
 if (navigator.standalone || matchMedia('(display-mode: standalone)').matches) $('#fullscreen').hidden = true;
 $('#tgLib').onclick = () => drawer('lib');
+document.querySelectorAll('aside [data-back]').forEach(b => b.onclick = () => drawer(null));
 $('#tgPanel').onclick = () => drawer('panel');
 // 触屏上点菜单以外的地方收起「文件」菜单
 document.addEventListener('pointerdown', e => { const m = $('details.menu'); if (m.open && !m.contains(e.target)) m.open = false; });
@@ -2758,7 +2764,7 @@ function updateSel(){
 
 /* ======================= 漫游 ======================= */
 // 触屏漫游：左下虚拟摇杆移动，在画面上拖动转向（iPad 不支持鼠标指针锁定）
-const GESTO = {"dedo": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11V5a2 2 0 1 1 4 0v6\"/><path d=\"M13 10a2 2 0 1 1 4 0v2a2 2 0 1 1 4 0v3a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L5 14a1.8 1.8 0 0 1 3-2l1 1.5\"/></svg>", "pellizco": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 13V5.5a2 2 0 1 1 4 0V12\"/><path d=\"M12 12V7.5a2 2 0 1 1 4 0V13\"/><path d=\"M8 13a2 2 0 0 0-3.4 2L7 19a5 5 0 0 0 4.5 3h1.5a5 5 0 0 0 5-5v-4\"/><path d=\"M3 3l3 3M3 6V3h3M21 3l-3 3m3-3v3h-3\"/></svg>", "arrastre": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 12V5a2 2 0 1 1 4 0v7\"/><path d=\"M14 11a2 2 0 1 1 4 0v4a6 6 0 0 1-6 6h-1a5 5 0 0 1-4.2-2.3L4 15a1.8 1.8 0 0 1 2.9-2l1.5 1.7\"/><path d=\"M3 8h4M5 6l2 2-2 2\"/><path d=\"M21 8h-1\"/></svg>", "mouse": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"7\" y=\"3\" width=\"10\" height=\"18\" rx=\"5\"/><path d=\"M12 3v6M9 9h6\"/></svg>", "rueda": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"7\" y=\"3\" width=\"10\" height=\"18\" rx=\"5\"/><rect x=\"11\" y=\"6\" width=\"2\" height=\"4\" rx=\"1\" fill=\"currentColor\"/><path d=\"M3 9l-1 3 1 3M21 9l1 3-1 3\"/></svg>"};
+const GESTO = {"dedo": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11V5a2 2 0 1 1 4 0v6\"/><path d=\"M13 10a2 2 0 1 1 4 0v2a2 2 0 1 1 4 0v3a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L5 14a1.8 1.8 0 0 1 3-2l1 1.5\"/></svg>", "pellizco": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 13V5.5a2 2 0 1 1 4 0V12\"/><path d=\"M12 12V7.5a2 2 0 1 1 4 0V13\"/><path d=\"M8 13a2 2 0 0 0-3.4 2L7 19a5 5 0 0 0 4.5 3h1.5a5 5 0 0 0 5-5v-4\"/><path d=\"M3 3l3 3M3 6V3h3M21 3l-3 3m3-3v3h-3\"/></svg>", "arrastre": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 12V5a2 2 0 1 1 4 0v7\"/><path d=\"M14 11a2 2 0 1 1 4 0v4a6 6 0 0 1-6 6h-1a5 5 0 0 1-4.2-2.3L4 15a1.8 1.8 0 0 1 2.9-2l1.5 1.7\"/><path d=\"M3 8h4M5 6l2 2-2 2\"/><path d=\"M21 8h-1\"/></svg>", "mouse": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"7\" y=\"3\" width=\"10\" height=\"18\" rx=\"5\"/><path d=\"M12 3v6M9 9h6\"/></svg>", "rueda": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"7\" y=\"3\" width=\"10\" height=\"18\" rx=\"5\"/><rect x=\"11\" y=\"6\" width=\"2\" height=\"4\" rx=\"1\" fill=\"currentColor\"/><path d=\"M3 9l-1 3 1 3M21 9l1 3-1 3\"/></svg>", "control": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"3.5\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M12 3v3M12 18v3M3 12h3M18 12h3\"/></svg>", "mirar": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg>", "dostoques": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 13V6a2 2 0 1 1 4 0v7\"/><path d=\"M14 12a2 2 0 1 1 4 0v3a6 6 0 0 1-6 6h-1a5 5 0 0 1-4.2-2.3L4 15.5a1.8 1.8 0 0 1 2.9-2l1.5 1.7\"/><path d=\"M8 4.5a4.5 4.5 0 0 1 8 0\"/><path d=\"M6 2.5a7 7 0 0 1 12 0\"/></svg>", "teclado": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2\" y=\"6\" width=\"20\" height=\"12\" rx=\"2\"/><path d=\"M6 10h2M11 10h2M16 10h2M6 14h12\"/></svg>", "tecla": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"5\" width=\"16\" height=\"14\" rx=\"3\"/><path d=\"M9 9h6M9 15h6M9 9v6\"/></svg>"};
 const chip = (icon, text) => `<span class="hc">${GESTO[icon]}<span>${text}</span></span>`;
 const HINT_ORBIT = () => COARSE
   ? chip('dedo', tr('单指旋转', '1 finger turns', '1 dedo gira')) + chip('pellizco', tr('双指缩放 / 平移', '2 fingers zoom or pan', '2 dedos acercan o mueven')) + chip('arrastre', tr('拖动家具摆放', 'drag furniture to place it', 'arrastra una mesa para moverla'))
@@ -2767,7 +2773,9 @@ const HINT_TOUCHWALK = () => tr('左下摇杆移动 · 拖动画面转向 · 双
   'El control te mueve · arrastra para mirar · toca dos veces el piso para ir ahí');
 const HINT_WALK = () => tr('WASD 移动 · 鼠标转向 · 1 2 3 速度 · C 坐下 · 双击走过去 · Esc 暂停', 'WASD moves · mouse looks · 1 2 3 speed · C sits · double-click to go · Esc pauses',
   'WASD para moverte · el mouse mira · 1 2 3 velocidad · C para sentarte · doble clic para ir · Esc pausa');
-function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : esc(touchWalk || COARSE ? HINT_TOUCHWALK() : HINT_WALK()); }
+const HINT_TOUCHWALK_HTML = () => chip('control', tr('摇杆移动', 'joystick moves you', 'El control te mueve')) + chip('mirar', tr('拖动转向', 'drag to look', 'Arrastra para mirar')) + chip('dostoques', tr('双击地面走过去', 'double-tap the floor to go there', '2 toques en el piso: ir ahí'));
+const HINT_WALK_HTML = () => chip('teclado', tr('WASD 移动', 'WASD to move', 'W A S D para moverte')) + chip('mouse', tr('鼠标转向', 'mouse looks', 'Mueve el mouse para mirar')) + chip('dostoques', tr('双击走过去', 'double-click to go there', 'Doble clic: ir ahí')) + chip('tecla', tr('Esc 暂停', 'Esc pauses', 'Esc: pausa'));
+function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : touchWalk || COARSE ? HINT_TOUCHWALK_HTML() : HINT_WALK_HTML(); }
 let touchWalk = false;
 const joy = {x:0, y:0, id:null}, eul = new THREE.Euler(0, 0, 0, 'YXZ');
 function lookBy(dx, dy){
@@ -2810,8 +2818,10 @@ function setMode(m, keep){   // keep: el recorrido empieza donde está la cámar
     orbit.enabled = false; fly = null;
     const W0 = PLANTA.walk || {from:[OX, OY], to:[OX, OY - 3000]};   // afuera de la puerta principal
     if (!keep){ camera.position.set(wx(W0.from[0]), 1.6, wz(W0.from[1])); camera.lookAt(wx(W0.to[0]), 1.5, wz(W0.to[1])); }
+    let visto = false; try { visto = localStorage.getItem('plantea-recorrido-v1') === '1'; } catch(e) {}
     $('#walkOverlay').style.display = 'flex';
     walkHud(true); syncHint3d();
+    if (visto && (COARSE || !document.body.requestPointerLock)) startTouchWalk();
   } else {
     walkHud(false); freeMouse(); stopTouchWalk(); orbit.enabled = true;
     $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'none';
@@ -3710,6 +3720,10 @@ function bindUI(){
   document.querySelectorAll('#modes3d .btn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
   // 触屏设备用摇杆漫游；桌面端锁定鼠标，锁定失败时也退回到摇杆
   $('#walkOverlay').onclick = () => COARSE || !document.body.requestPointerLock ? startTouchWalk() : walkCtl.lock();
+  // La X cierra la ventana y regresa a la vista 3D normal.
+  $('#woClose').onclick = e => { e.stopPropagation(); setMode('orbit'); };
+  // En el celular las instrucciones solo salen la primera vez; después el recorrido arranca directo.
+  $('#walkOverlay').addEventListener('click', () => { try { localStorage.setItem('plantea-recorrido-v1', '1'); } catch(e) {} }, true);
   document.addEventListener('pointerlockerror', () => { if (active && opt.mode === 'walk') startTouchWalk(); });
   $('#walkExit').onclick = () => setMode('orbit');
   bindJoystick(); bindWalkHud();

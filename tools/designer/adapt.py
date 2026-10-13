@@ -1875,6 +1875,76 @@ sub(
 sub("  .btn.narrow-only,#fab .btn.narrow-only{display:inline-block!important}", "  .btn.narrow-only{display:inline-block!important}")
 
 
+
+# ---------------------------------------------------------------------------
+# Recorrido más claro (13 de octubre): la ventana de instrucciones tiene una X, en el celular solo sale la
+# primera vez (después el recorrido arranca directo); la píldora del recorrido lleva iconos; y los cajones
+# de Catálogo y Propiedades tienen un botón para volver a la vista.
+
+GESTO.update({
+    "control": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>',
+    "mirar": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    "dostoques": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V6a2 2 0 1 1 4 0v7"/><path d="M14 12a2 2 0 1 1 4 0v3a6 6 0 0 1-6 6h-1a5 5 0 0 1-4.2-2.3L4 15.5a1.8 1.8 0 0 1 2.9-2l1.5 1.7"/><path d="M8 4.5a4.5 4.5 0 0 1 8 0"/><path d="M6 2.5a7 7 0 0 1 12 0"/></svg>',
+    "teclado": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h2M11 10h2M16 10h2M6 14h12"/></svg>',
+    "tecla": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M9 9h6M9 15h6M9 9v6"/></svg>',
+})
+sub(
+    "const GESTO = " + json.dumps({k: v for k, v in GESTO.items() if k in ("dedo", "pellizco", "arrastre", "mouse", "rueda")}) + ";",
+    "const GESTO = " + json.dumps(GESTO) + ";",
+)
+# Píldora del recorrido: versión con iconos para la píldora; el texto plano sigue en el pie
+sub(
+    "function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : esc(touchWalk || COARSE ? HINT_TOUCHWALK() : HINT_WALK()); }",
+    "const HINT_TOUCHWALK_HTML = () => chip('control', tr('摇杆移动', 'joystick moves you', 'El control te mueve')) + chip('mirar', tr('拖动转向', 'drag to look', 'Arrastra para mirar')) + chip('dostoques', tr('双击地面走过去', 'double-tap the floor to go there', '2 toques en el piso: ir ahí'));\n"
+    "const HINT_WALK_HTML = () => chip('teclado', tr('WASD 移动', 'WASD to move', 'W A S D para moverte')) + chip('mouse', tr('鼠标转向', 'mouse looks', 'Mueve el mouse para mirar')) + chip('dostoques', tr('双击走过去', 'double-click to go there', 'Doble clic: ir ahí')) + chip('tecla', tr('Esc 暂停', 'Esc pauses', 'Esc: pausa'));\n"
+    "function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : touchWalk || COARSE ? HINT_TOUCHWALK_HTML() : HINT_WALK_HTML(); }",
+)
+# Ventana del recorrido: X para cerrar (vuelve a la vista 3D) y, en el celular, solo la primera vez
+sub(
+    '      <div id="walkOverlay"><div><h3 data-en="Walk mode">漫游模式</h3>',
+    '      <div id="walkOverlay"><div><button type="button" id="woClose" aria-label="Cerrar">×</button><h3 data-en="Walk mode">漫游模式</h3>',
+)
+sub(
+    "#walkOverlay>div{background:var(--panel);border-radius:14px;padding:22px 28px;text-align:center;max-width:360px}",
+    "#walkOverlay>div{position:relative;background:var(--panel);border-radius:14px;padding:22px 28px;text-align:center;max-width:360px;cursor:default}\n"
+    "#woClose{position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--ink);font-size:24px;line-height:1;cursor:pointer}\n"
+    "#woClose:hover{background:var(--bg)}",
+)
+sub(
+    "  $('#walkOverlay').onclick = () => COARSE || !document.body.requestPointerLock ? startTouchWalk() : walkCtl.lock();",
+    "  $('#walkOverlay').onclick = () => COARSE || !document.body.requestPointerLock ? startTouchWalk() : walkCtl.lock();\n"
+    "  // La X cierra la ventana y regresa a la vista 3D normal.\n"
+    "  $('#woClose').onclick = e => { e.stopPropagation(); setMode('orbit'); };\n"
+    "  // En el celular las instrucciones solo salen la primera vez; después el recorrido arranca directo.\n"
+    "  $('#walkOverlay').addEventListener('click', () => { try { localStorage.setItem('plantea-recorrido-v1', '1'); } catch(e) {} }, true);",
+)
+sub(
+    "    $('#walkOverlay').style.display = 'flex';\n    walkHud(true); syncHint3d();\n  } else {",
+    "    let visto = false; try { visto = localStorage.getItem('plantea-recorrido-v1') === '1'; } catch(e) {}\n"
+    "    $('#walkOverlay').style.display = 'flex';\n    walkHud(true); syncHint3d();\n"
+    "    if (visto && (COARSE || !document.body.requestPointerLock)) startTouchWalk();\n  } else {",
+)
+# Cajones del celular: botón para volver a la vista
+sub(
+    '  <aside class="lib">\n',
+    '  <aside class="lib">\n    <button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button>\n',
+)
+sub(
+    '  <aside class="right"><div id="panel"></div></aside>',
+    '  <aside class="right"><button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button><div id="panel"></div></aside>',
+)
+sub(
+    "  aside.open{transform:none;box-shadow:0 0 30px rgba(40,30,20,.18)}",
+    "  aside.open{transform:none;box-shadow:0 0 30px rgba(40,30,20,.18)}\n"
+    "  .drawerBack{display:flex!important;position:sticky;top:0;z-index:2;width:100%;min-height:44px;align-items:center;justify-content:flex-start;gap:6px;\n"
+    "    padding:0 14px;border-radius:0;border-bottom:1px solid var(--line);background:var(--panel);font-weight:600}",
+)
+sub(
+    "$('#tgLib').onclick = () => drawer('lib');",
+    "$('#tgLib').onclick = () => drawer('lib');\ndocument.querySelectorAll('aside [data-back]').forEach(b => b.onclick = () => drawer(null));",
+)
+
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

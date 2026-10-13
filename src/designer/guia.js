@@ -1,17 +1,23 @@
 // Guía en pantalla del diseñador: ventana al centro con 4 pasos (Siguiente / Saltar) que se abre
-// la primera vez en cada dispositivo (localStorage) y se vuelve a abrir con el botón "?" junto al
-// título. Datos: window.__GUIA__ = { kind: "salon" | "casa", mode: "demo" | "lugar" | "edit" }.
+// una vez por proyecto (en la demo y el 3D público, una vez por dispositivo; localStorage) y se vuelve a
+// abrir con el botón "?" junto al título. Datos: window.__GUIA__ = { kind: "salon" | "casa",
+// mode: "demo" | "lugar" | "edit", eventId?, eventKind?: "boda" | "xv" | "graduacion" | "corporativo" | "otro" }.
 // La carga src/lib/designer/page.ts → designerResponse (no en el enlace de solo vista del cliente).
 // Cada paso resalta el botón del que habla (Propiedades, Catálogo, Vista 3D, Compartir).
 (function () {
   const G = window.__GUIA__;
   if (!G) return;
-  const KEY = 'plantea-guia-' + (G.kind === 'salon' ? 'salon' : 'casa') + '-v1';
+  const KEY = 'plantea-guia-' + (G.eventId ? 'evento-' + G.eventId : (G.kind === 'salon' ? 'salon' : 'casa') + '-v1');
+  // Un solo ejemplo, el que le toca al proyecto: una mesa con nombre según el tipo de evento.
+  const MESA = { boda: 'Familia de la novia', xv: 'Amigas de la quinceañera', graduacion: 'Generación 2026', corporativo: 'Recursos Humanos', otro: 'Familia' };
+  const mesa = MESA[G.eventKind] || MESA.boda;
+  const QUIEN = { boda: 'a tu familia y a tus invitados', xv: 'a tu familia', graduacion: 'a tu generación', corporativo: 'a tu equipo', otro: 'a tu familia' };
+  const quien = QUIEN[G.eventKind] || QUIEN.boda;
   const touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
   const dedo = touch ? 'con el dedo' : 'con el mouse';
   const toca = touch ? 'Toca' : 'Da clic en';
   const guarda = G.mode === 'edit'
-    ? 'Con <b>Compartir</b> mandas el enlace a tu familia, a tu cliente o a tu equipo; los cambios se guardan solos.'
+    ? `Con <b>Compartir</b> mandas el enlace ${quien}; los cambios se guardan solos.`
     : 'Aquí nada se guarda: para guardar tu plano y compartirlo, entra o crea tu cuenta.';
 
   const pasos = G.kind === 'salon'
@@ -21,7 +27,7 @@
         { t: `Mueve las mesas ${dedo}`, at: '#tgLib',
           p: `Arrastra cualquier mesa para cambiarla de lugar. En <b>Catálogo</b> hay más mesas, pista, escenario, barra y mesa de dulces: ${touch ? 'tócalos' : 'dales clic'} o arrástralos al plano.` },
         { t: 'Acomoda a tus invitados', at: '#tgPanel',
-          p: `En <b>Propiedades → Lista de invitados</b> agrega a tus invitados por familia o por área y asígnalos a cada mesa. ${touch ? 'Toca' : 'Selecciona'} una mesa para ponerle nombre: "Familia de la novia", "Directivos", "Recursos Humanos".` },
+          p: `En <b>Propiedades → Lista de invitados</b> agrega a tus invitados y asígnalos a cada mesa. ${touch ? 'Toca' : 'Selecciona'} una mesa para ponerle nombre, por ejemplo "${mesa}".` },
         { t: 'Míralo en 3D y compártelo', at: G.mode === 'edit' ? '#hostBar [data-a="share"]' : '#viewSeg',
           p: `${toca} <b>Vista 3D</b> para recorrer el salón como si ya estuvieras ahí. ${guarda}` },
       ]
@@ -72,7 +78,10 @@
   function resaltar(sel) {
     foco = sel ? document.querySelector(sel) : null;
     if (foco && !foco.offsetParent) foco = null;
-    if (foco) { try { foco.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch { /* navegador viejo */ } }
+    if (foco) {
+      const tira = foco.closest('.hscroll');
+      if (tira) tira.scrollLeft = foco.offsetLeft - (tira.clientWidth - foco.offsetWidth) / 2;
+    }
     colocar();
   }
   function colocar() {

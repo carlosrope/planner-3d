@@ -124,7 +124,7 @@ export async function designerResponse(
   plan: DesignerPlan,
   host?: HostData,
   meta?: { image?: string; description?: string; url?: string; siteName?: string },
-  options?: { demo?: boolean; venue?: VenueNotice },
+  options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string },
 ) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
@@ -144,7 +144,8 @@ export async function designerResponse(
   // vista del cliente ni cuando el dueño revisa la conversión de su plano.
   if (host?.mode !== "view" && !options?.venue?.reviewHref) {
     const mode = host ? "edit" : options?.venue ? "lugar" : "demo";
-    head += inline(`window.__GUIA__ = ${json({ kind: plan.kind ?? "casa", mode })};\n${await file("guia.js")}`);
+    const guide = { kind: plan.kind ?? "casa", mode, eventId: host?.eventId ?? null, eventKind: options?.eventKind ?? "boda" };
+    head += inline(`window.__GUIA__ = ${json(guide)};\n${await file("guia.js")}`);
   }
   // Título y vista previa del enlace (WhatsApp, iMessage).
   const title = escapeHtml(plan.title);
