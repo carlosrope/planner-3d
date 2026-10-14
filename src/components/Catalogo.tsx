@@ -86,8 +86,11 @@ export function Tarjeta({ v }: { v: CatalogVenue }) {
     <article className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
       <PageLink href={`/lugares/${slug}`} className="block">
         {v.cover ? (
-          // eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app
-          <img src={`/lugares/${slug}/foto/${v.cover}`} alt={v.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+          <div className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
+            <img src={`/lugares/${slug}/foto/${v.cover}`} alt={v.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+            {v.coverIsRender && <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">Vista 3D</span>}
+          </div>
         ) : (
           <div className="flex aspect-[4/3] w-full items-center justify-center bg-stone-100 text-sm text-stone-500">Sin fotos todavía</div>
         )}

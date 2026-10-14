@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getPublicVenue, getVenueBasics } from "@/lib/dal";
 import { sectionOf } from "@/lib/domain";
-import { PROLINK_SITE } from "@/lib/prolink";
+import { PROLINK_SITE, siteOrigin } from "@/lib/prolink";
 import { waLink } from "@/lib/whatsapp";
 import { InquiryForm } from "./InquiryForm";
 
@@ -13,9 +13,16 @@ export async function generateMetadata({ params }: PageProps<"/lugares/[slug]">)
   const { slug } = await params;
   const v = await getVenueBasics(slug);
   if (!v || v.status !== "publicado") return { title: "Lugar no encontrado" };
+  const title = `${v.name} en 3D`;
+  const description = v.kind === "salon" ? `Recorre ${v.name} en 3D y prueba el montaje de tu evento.` : `Recorre ${v.name} en 3D y pruébalo amueblado.`;
+  const key = v.slug ?? v.id;
+  // Vista previa al compartir el enlace o el QR por WhatsApp: la portada (foto real o vista 3D automática).
+  const image = v.cover ? `${siteOrigin()}/lugares/${key}/foto/${v.cover}` : null;
   return {
-    title: `${v.name} en 3D`,
-    description: v.kind === "salon" ? `Recorre ${v.name} en 3D y prueba el montaje de tu evento.` : `Recorre ${v.name} en 3D y pruébalo amueblado.`,
+    title,
+    description,
+    openGraph: { title, description, type: "website", locale: "es_MX", siteName: "Plantea", url: `${siteOrigin()}/lugares/${key}`, images: image ? [{ url: image, width: 1200, height: 900, alt: title }] : undefined },
+    twitter: image ? { card: "summary_large_image" } : undefined,
   };
 }
 
@@ -58,14 +65,18 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
 
       {cover ? (
         <div className="mt-4 grid gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-          <img src={`/lugares/${slug}/foto/${cover.id}`} alt={v.name} className="aspect-[16/10] w-full rounded-2xl object-cover" />
+          <div className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
+            <img src={`/lugares/${slug}/foto/${cover.id}`} alt={v.name} className="aspect-[16/10] w-full rounded-2xl object-cover" />
+            {cover.kind === "render" && <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">Vista 3D</span>}
+          </div>
           {rest.length > 0 && (
             <ul className="grid grid-cols-4 gap-2">
               {rest.slice(0, 8).map((p) => (
-                <li key={p.id}>
+                <li key={p.id} className="relative">
                   {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-                  <img src={`/lugares/${slug}/foto/${p.id}`} alt="" className="aspect-square w-full rounded-xl object-cover" loading="lazy" />
+                  <img src={`/lugares/${slug}/foto/${p.id}`} alt={p.kind === "render" ? "Plano 2D" : ""} className="aspect-square w-full rounded-xl object-cover" loading="lazy" />
+                  {p.kind === "render" && <span className="absolute left-1.5 top-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">{p.name.startsWith("vista-3d") ? "3D" : "Plano"}</span>}
                 </li>
               ))}
             </ul>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
+import { PortadaAuto } from "@/components/PortadaAuto";
 import { adminGetVenue, adminListOrgs, requireAdmin } from "@/lib/dal";
 import { ORG_KIND_LABELS, VENUE_KIND_LABELS, VENUE_STATUSES, VENUE_STATUS_LABELS } from "@/lib/domain";
 import { siteOrigin } from "@/lib/prolink";
@@ -37,6 +38,7 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
   const reviewUrl = v.reviewToken ? `${origin}/revisar/${v.reviewToken}` : null;
   const planos = v.files.filter((f) => f.kind === "plano");
   const fotos = v.files.filter((f) => f.kind === "foto");
+  const renders = v.files.filter((f) => f.kind === "render");
   const aviso = reviewUrl
     ? `Hola${v.contactName ? ` ${v.contactName}` : ""}, ya está ${v.name} en 3D. Revísalo y confírmalo aquí: ${reviewUrl}`
     : "";
@@ -143,6 +145,20 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
           <input name="plan" type="file" accept="application/json,.json" required className="text-sm" />
           <button className={btn}>Cargar plano</button>
         </form>
+        {v.hasPlan && v.reviewToken && (
+          <div className="mt-4 border-t border-stone-200 pt-3">
+            <h3 className="text-sm font-semibold">Portada automática</h3>
+            <p className="mt-1 text-sm text-stone-500">
+              Vista 3D y plano 2D para la tarjeta del catálogo y la ficha mientras el lugar no tenga fotos (si sube fotos, las fotos ganan). Se genera sola al cargar el plano.
+            </p>
+            <PortadaAuto
+              captureSrc={`/lugares/${slug}/3d?r=${v.reviewToken}`}
+              postUrl={`/api/lugares/${v.id}/portada`}
+              auto={renders.length === 0}
+              previews={renders.map((f) => ({ src: `/lugares/${slug}/foto/${f.id}`, label: f.name.startsWith("vista-3d") ? "Vista 3D" : "Plano 2D" }))}
+            />
+          </div>
+        )}
       </section>
 
       <section className="mt-4 rounded-2xl border border-stone-200 bg-white p-4">

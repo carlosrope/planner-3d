@@ -4,11 +4,13 @@ import { withStarter } from "@/lib/designer/starter";
 import { sectionOf } from "@/lib/domain";
 
 // 3D público de un lugar del catálogo (o revisión del dueño con ?r=token): se puede mover todo; nada se guarda.
+// Con ?r=token&captura=1 lo abre PortadaAuto.tsx en un iframe para tomar la portada automática.
 
 export async function GET(request: Request, ctx: RouteContext<"/lugares/[slug]/3d">) {
   const { slug } = await ctx.params;
   const url = new URL(request.url);
   const review = url.searchParams.get("r");
+  const captura = Boolean(review) && url.searchParams.get("captura") === "1";
   const found = await getVenuePlanForView(slug, review);
   if (!found) return new Response("Este lugar no está disponible.", { status: 404 });
   const key = found.slug ?? found.id;
@@ -32,6 +34,7 @@ export async function GET(request: Request, ctx: RouteContext<"/lugares/[slug]/3
         planHref: `/eventos?lugar=${found.id}${sectionOf(found.kind) === "casas" ? "&seccion=casas" : ""}`,
         reviewHref: review ? `/revisar/${review}` : null,
       },
+      captura,
     },
   );
 }

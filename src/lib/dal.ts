@@ -324,8 +324,10 @@ export async function canEditComment(commentId: string, userId: string) {
 // Subconsultas correlacionadas con nombres de tabla escritos a mano: en una consulta de una sola tabla,
 // Drizzle quita el nombre de la tabla a las columnas dentro de sql`` y la referencia quedaría ambigua.
 
-/** Primera foto del lugar (id del archivo), para la tarjeta y la ficha. */
-const coverOf = sql<string | null>`(select vf.id from venue_file vf where vf.venue_id = venue.id and vf.kind = 'foto' order by vf.position asc, vf.created_at asc limit 1)`;
+/** Portada del lugar (id del archivo) para la tarjeta y la ficha: la primera foto real y, si no hay, la vista 3D automática (render, position 1000+). */
+const coverOf = sql<string | null>`(select vf.id from venue_file vf where vf.venue_id = venue.id and vf.kind in ('foto', 'render') order by vf.position asc, vf.created_at asc limit 1)`;
+/** Si la portada es la vista 3D automática (para etiquetarla como tal y no hacerla pasar por foto). */
+const coverIsRender = sql<boolean>`coalesce((select vf.kind = 'render' from venue_file vf where vf.venue_id = venue.id and vf.kind in ('foto', 'render') order by vf.position asc, vf.created_at asc limit 1), false)`;
 
 const catalogFields = {
   id: venue.id,
@@ -344,6 +346,7 @@ const catalogFields = {
   hasPlan: sql<boolean>`(${venue.plan} is not null)`,
   viewCount: venue.viewCount,
   cover: coverOf,
+  coverIsRender,
 };
 export type CatalogVenue = Awaited<ReturnType<typeof listCatalog>>[number];
 
@@ -401,11 +404,12 @@ export async function getVenuePlanForView(slugOrId: string, reviewToken?: string
   return row?.plan ? { ...row, plan: row.plan, owner: row.owner?.name ? row.owner : null } : null;
 }
 
+/** Fotos del lugar y, al final, su portada automática (kind "render"). */
 export async function listVenuePhotos(venueId: string) {
   return db
-    .select({ id: venueFile.id, name: venueFile.name })
+    .select({ id: venueFile.id, name: venueFile.name, kind: venueFile.kind })
     .from(venueFile)
-    .where(and(eq(venueFile.venueId, venueId), eq(venueFile.kind, "foto")))
+    .where(and(eq(venueFile.venueId, venueId), sql`${venueFile.kind} in ('foto', 'render')`))
     .orderBy(asc(venueFile.position), asc(venueFile.createdAt));
 }
 
@@ -415,7 +419,7 @@ export async function getVenuePhoto(slugOrId: string, fileId: string) {
     .select({ mimeType: venueFile.mimeType, data: venueFile.data })
     .from(venueFile)
     .innerJoin(venue, eq(venue.id, venueFile.venueId))
-    .where(and(eq(venueFile.id, fileId), bySlugOrId(slugOrId), eq(venueFile.kind, "foto"), sql`${venue.status} <> 'retirado'`))
+    .where(and(eq(venueFile.id, fileId), bySlugOrId(slugOrId), sql`${venueFile.kind} in ('foto', 'render')`, sql`${venue.status} <> 'retirado'`))
     .limit(1);
   return row ?? null;
 }
@@ -423,11 +427,38 @@ export async function getVenuePhoto(slugOrId: string, fileId: string) {
 /** Lo mínimo de un lugar en cualquier estado (página de gracias del alta, QR). */
 export async function getVenueBasics(slugOrId: string) {
   const [row] = await db
-    .select({ id: venue.id, slug: venue.slug, name: venue.name, kind: venue.kind, status: venue.status, hasPlan: sql<boolean>`(${venue.plan} is not null)` })
+    .select({ id: venue.id, slug: venue.slug, name: venue.name, kind: venue.kind, status: venue.status, hasPlan: sql<boolean>`(${venue.plan} is not null)`, cover: coverOf })
     .from(venue)
     .where(bySlugOrId(slugOrId))
     .limit(1);
   return row ?? null;
+}
+
+/** Comprueba que un enlace de revisión corresponde a ese lugar (la portada automática se guarda desde /revisar sin sesión). */
+export async function venueMatchesReviewToken(venueId: string, token: string) {
+  const [row] = await db
+    .select({ id: venue.id })
+    .from(venue)
+    .where(and(eq(venue.id, venueId), eq(venue.reviewToken, token)))
+    .limit(1);
+  return Boolean(row);
+}
+
+export type RenderFile = { name: string; mimeType: string; data: Buffer };
+
+/** Portada automática del lugar: la vista 3D y el plano 2D que captura el navegador al confirmarlo.
+ * Reemplaza la anterior y va en position 1000+ para que las fotos reales sigan ganando. */
+export async function setVenueRender(venueId: string, files: RenderFile[]) {
+  return db.transaction(async (tx) => {
+    const [v] = await tx.select({ slug: venue.slug }).from(venue).where(eq(venue.id, venueId)).limit(1);
+    if (!v) return null;
+    await tx.delete(venueFile).where(and(eq(venueFile.venueId, venueId), eq(venueFile.kind, "render")));
+    const rows = await tx
+      .insert(venueFile)
+      .values(files.map((f, i) => ({ venueId, kind: "render" as const, name: f.name, mimeType: f.mimeType, size: f.data.length, data: f.data, position: 1000 + i })))
+      .returning({ id: venueFile.id });
+    return { slug: v.slug ?? venueId, ids: rows.map((r) => r.id) };
+  });
 }
 
 /** Se abrió el 3D público del lugar. */
@@ -908,6 +939,8 @@ export async function adminSetVenuePlan(id: string, plan: DesignerPlan) {
     })
     .where(eq(venue.id, id))
     .returning({ id: venue.id, slug: venue.slug, status: venue.status, reviewToken: venue.reviewToken });
+  // La portada automática era del plano anterior: se borra para que se vuelva a capturar.
+  if (row) await db.delete(venueFile).where(and(eq(venueFile.venueId, id), eq(venueFile.kind, "render")));
   return row ?? null;
 }
 

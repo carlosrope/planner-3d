@@ -223,7 +223,9 @@ export const venue = pgTable("venue", {
   updatedAt: updatedAt(),
 });
 
-/** Archivos que el dueño sube al registrar su lugar: el plano (CAD, PDF o foto del croquis) y las fotos. */
+/** Archivos de un lugar: el plano que sube el dueño (CAD, PDF o foto del croquis), sus fotos y la portada
+ * automática (`render`: vista 3D y plano 2D que la app captura al confirmar el lugar; va al final, en
+ * position 1000+, para que las fotos reales ganen como portada). */
 export const venueFile = pgTable(
   "venue_file",
   {
@@ -231,7 +233,7 @@ export const venueFile = pgTable(
     venueId: text("venue_id")
       .notNull()
       .references(() => venue.id, { onDelete: "cascade" }),
-    kind: text("kind").$type<"plano" | "foto">().notNull(),
+    kind: text("kind").$type<"plano" | "foto" | "render">().notNull(),
     name: text("name").notNull(),
     mimeType: text("mime_type").notNull(),
     size: integer("size").notNull(),

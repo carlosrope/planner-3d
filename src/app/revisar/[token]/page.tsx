@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
+import { PortadaAuto } from "@/components/PortadaAuto";
 import { getVenueForReview } from "@/lib/dal";
 import { VENUE_STATUS_LABELS } from "@/lib/domain";
 import { PROLINK_WHATSAPP } from "@/lib/prolink";
@@ -28,6 +29,18 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
   const salon = v.kind === "salon";
   const what = salon ? "tu salón" : "tu modelo";
   const ask = waLink(PROLINK_WHATSAPP, `Hola, tengo una duda sobre ${v.name} en Plantea.`);
+  const fotos = v.photos.filter((p) => p.kind === "foto");
+  const renders = v.photos.filter((p) => p.kind === "render");
+  // Portada automática (vista 3D y plano 2D): se toma desde el navegador del dueño si ProLink no la generó.
+  const portada = v.hasPlan && (v.status === "revision" || v.status === "publicado") && (
+    <PortadaAuto
+      captureSrc={`/lugares/${slug}/3d?r=${token}`}
+      postUrl={`/api/lugares/${v.id}/portada`}
+      token={token}
+      auto={renders.length === 0}
+      previews={renders.map((f) => ({ src: `/lugares/${slug}/foto/${f.id}`, label: f.name.startsWith("vista-3d") ? "Vista 3D" : "Plano 2D" }))}
+    />
+  );
 
   return (
     <>
@@ -37,9 +50,9 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
         {v.city} · <span className="font-medium text-stone-700">{VENUE_STATUS_LABELS[v.status]}</span>
       </p>
 
-      {v.photos.length > 0 && (
+      {fotos.length > 0 && (
         <ul className="mt-4 flex gap-2 overflow-x-auto no-scrollbar">
-          {v.photos.map((p) => (
+          {fotos.map((p) => (
             <li key={p.id} className="shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
               <img src={`/lugares/${slug}/foto/${p.id}`} alt="" className="h-24 w-32 rounded-xl object-cover" />
@@ -63,6 +76,7 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
           <p className="text-sm">
             Ficha pública: <PageLink href={`/lugares/${slug}`} className="underline">/lugares/{slug}</PageLink>
           </p>
+          {portada}
         </section>
       )}
 
@@ -77,6 +91,7 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
             Abrir {what} en 3D
           </PageLink>
           <ReviewForms token={token} />
+          {portada}
         </section>
       )}
 
