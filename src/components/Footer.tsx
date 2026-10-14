@@ -33,12 +33,12 @@ export function Footer() {
           <a href={`${PROLINK_SITE}/espacios-3d.html#planes`} target="_blank" rel="noopener" className="text-stone-700 hover:underline">
             Planes y precios
           </a>
-          <a href={`${PROLINK_SITE}/privacidad.html`} target="_blank" rel="noopener" className="text-stone-500 hover:underline">
+          <Link href="/privacidad" className="text-stone-500 hover:underline">
             Aviso de privacidad
-          </a>
-          <a href={`${PROLINK_SITE}/terminos.html`} target="_blank" rel="noopener" className="text-stone-500 hover:underline">
+          </Link>
+          <Link href="/terminos" className="text-stone-500 hover:underline">
             Términos de servicio
-          </a>
+          </Link>
         </nav>
       </div>
     </footer>

@@ -93,6 +93,19 @@ export function AuthForm({
         >
           {busy ? "Un momento…" : registering ? "Crear cuenta" : "Entrar"}
         </button>
+        {registering && (
+          <p className="text-center text-xs text-stone-500">
+            Al crear tu cuenta aceptas los{" "}
+            <Link href="/terminos" className="underline" target="_blank">
+              Términos de servicio
+            </Link>{" "}
+            y el{" "}
+            <Link href="/privacidad" className="underline" target="_blank">
+              Aviso de privacidad
+            </Link>
+            .
+          </p>
+        )}
       </form>
       <p className="mt-6 text-center text-sm text-stone-600">
         {registering ? "¿Ya tienes cuenta? " : "¿No tienes cuenta? "}

@@ -205,7 +205,15 @@ export function AltaForm({ owner }: { owner: { name: string; contact: string } |
         <input type="checkbox" name="agreement" required className="mt-1 h-5 w-5" />
         <span>
           Autorizo a ProLink365 a convertir y publicar el plano, las fotos y el 3D de este lugar en Plantea. Puedo pedir
-          que se retire con 30 días de aviso. No hay exclusividad.
+          que se retire con 30 días de aviso. No hay exclusividad. El plano solo se usa para Plantea (
+          <a href="/privacidad#s4" className="underline" target="_blank">
+            aviso de privacidad
+          </a>
+          ) y acepto los{" "}
+          <a href="/terminos" className="underline" target="_blank">
+            términos
+          </a>
+          .
         </span>
       </label>
 
