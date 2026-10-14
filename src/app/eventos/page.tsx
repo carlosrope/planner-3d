@@ -3,9 +3,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getReferralOrigin, listEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
-import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isLitePlan, isOwnerKind, sectionOf, type Section } from "@/lib/domain";
+import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isLitePlan, sectionOf, type Section } from "@/lib/domain";
 import { NewEventForm } from "./NewEventForm";
-import { SignOutButton } from "./SignOutButton";
 import { SamplesLink, Welcome } from "./Welcome";
 
 export const metadata: Metadata = { title: "Proyectos" };
@@ -71,23 +70,6 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
             {org.name} · <span className={expired ? "text-red-600" : ""}>{planLine}</span>
           </p>
           <h1 className="text-2xl font-semibold">Proyectos</h1>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {isOwnerKind(org.kind) && (
-            <Link
-              href="/lugares"
-              className="flex h-10 items-center rounded-xl border border-stone-300 px-3 text-sm font-medium active:bg-stone-100"
-            >
-              Mis lugares
-            </Link>
-          )}
-          <Link
-            href="/negocio"
-            className="flex h-10 items-center rounded-xl border border-stone-300 px-3 text-sm font-medium active:bg-stone-100"
-          >
-            Mi negocio
-          </Link>
-          <SignOutButton />
         </div>
       </header>
 

@@ -36,9 +36,6 @@ async function Lugares() {
           <p className="text-sm text-stone-500">{org.name}</p>
           <h1 className="text-2xl font-semibold">Mis lugares</h1>
         </div>
-        <Link href="/eventos" className="flex h-10 shrink-0 items-center rounded-xl border border-stone-300 px-3 text-sm font-medium active:bg-stone-100">
-          Proyectos
-        </Link>
       </header>
 
       {venues.length === 0 ? (
