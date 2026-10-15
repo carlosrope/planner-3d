@@ -8,6 +8,16 @@
 # ni en "_prueba", salvo que RESTAURAR_FORZAR=1.
 set -eu
 
+# Limpia espacios, saltos de línea y comillas que a veces se cuelan al pegar las variables en Railway.
+clean() { printf '%s' "$1" | tr -d '\r\n"'"'"'' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'; }
+for v in S3_BUCKET S3_ENDPOINT S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY S3_REGION S3_PREFIX; do
+  eval "val=\${$v:-}"
+  [ -n "$val" ] && eval "$v=\$(clean \"\$val\")"
+done
+# El endpoint va sin barra final ni el nombre del bucket.
+[ -n "${S3_ENDPOINT:-}" ] && S3_ENDPOINT="$(printf '%s' "$S3_ENDPOINT" | sed 's#/*$##')"
+[ -n "${S3_ENDPOINT:-}" ] && [ -n "${S3_BUCKET:-}" ] && S3_ENDPOINT="${S3_ENDPOINT%/$S3_BUCKET}"
+
 SRC="${1:?Uso: restaurar.sh ARCHIVO|s3://... DATABASE_URL_DESTINO}"
 TARGET="${2:?Falta la URL de la base destino}"
 
