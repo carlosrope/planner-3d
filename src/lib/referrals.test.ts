@@ -20,7 +20,7 @@ describe("códigos de referido", () => {
     expect(normalizeReferralCode("LASPAL 7K3M")).toBe("LASPAL-7K3M");
     expect(normalizeReferralCode("laspal7k3m")).toBe("LASPAL-7K3M");
     expect(normalizeReferralCode("")).toBeNull();
-    // Los códigos de invitación de ProLink (SIGNUP_CODES) se comparan antes de normalizar, tal como se escriben.
+    // Los códigos de invitación de Plantea (SIGNUP_CODES) se comparan antes de normalizar, tal como se escriben.
     expect(normalizeReferralCode("VDEVACA2026X")).toBe("VDEVACA2026X");
   });
 

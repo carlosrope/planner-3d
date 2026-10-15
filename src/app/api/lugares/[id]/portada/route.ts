@@ -5,7 +5,7 @@ import { getCurrentUser, isAdmin, setVenueRender, venueMatchesReviewToken } from
 
 // Portada automática de un lugar: la vista 3D y el plano 2D que captura el navegador
 // (src/designer/captura.js dentro de un iframe) al cargar el plano o confirmar el lugar.
-// Puede guardarla ProLink (admin) o el dueño desde su enlace de revisión (?r=token).
+// Puede guardarla la administración o el dueño desde su enlace de revisión (?r=token).
 
 const image = z.object({
   name: z.string().regex(/^[a-z0-9-]+\.jpg$/),

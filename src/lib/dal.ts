@@ -86,7 +86,7 @@ export async function requireUser(next?: string): Promise<CurrentUser> {
   return user;
 }
 
-// Administración de ProLink: los correos de ADMIN_EMAILS (separados por coma).
+// Administración de Plantea: los correos de ADMIN_EMAILS (separados por coma).
 const adminEmails = () =>
   (process.env.ADMIN_EMAILS ?? "")
     .split(",")
@@ -517,7 +517,7 @@ export type VenueIntake = {
 };
 export type IntakeFile = { kind: "plano" | "foto"; name: string; mimeType: string; data: Buffer };
 
-/** Alta de un lugar por su dueño: queda "en conversión" hasta que ProLink arma el plano. */
+/** Alta de un lugar por su dueño: queda "en conversión" hasta que la administración arma el plano. */
 export async function createVenueIntake(intake: VenueIntake, files: IntakeFile[]) {
   const root = slugify(intake.name) || "lugar";
   const taken = await db.select({ slug: venue.slug }).from(venue).where(like(venue.slug, `${root}%`));
@@ -881,7 +881,7 @@ export async function attachReferralEvent(codeId: string, eventId: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Administración de ProLink (solo ADMIN_EMAILS; las páginas llaman antes a requireAdmin)
+// Administración de Plantea (solo ADMIN_EMAILS; las páginas llaman antes a requireAdmin)
 
 const ownerName = organization.name;
 
@@ -949,7 +949,7 @@ export type AdminVenuePatch = Partial<{
   notes: string | null;
 }>;
 
-/** Cambios de ProLink a un lugar; al publicar se marca la fecha y al pasar a revisión se asegura el enlace del dueño. */
+/** Cambios de la administración a un lugar; al publicar se marca la fecha y al pasar a revisión se asegura el enlace del dueño. */
 export async function adminUpdateVenue(id: string, patch: AdminVenuePatch, actor: Actor) {
   return db.transaction(async (tx) => {
     const [before] = await tx.select({ name: venue.name, status: venue.status, isPublic: venue.isPublic, ownerOrgId: venue.ownerOrgId }).from(venue).where(eq(venue.id, id)).limit(1);
@@ -971,7 +971,7 @@ export async function adminUpdateVenue(id: string, patch: AdminVenuePatch, actor
   });
 }
 
-/** ProLink carga el plano del diseñador (JSON de tools/cad-import): el lugar pasa a "por confirmar". */
+/** La administración carga el plano del diseñador (JSON de tools/cad-import): el lugar pasa a "por confirmar". */
 export async function adminSetVenuePlan(id: string, plan: DesignerPlan) {
   const [row] = await db
     .update(venue)
@@ -1002,7 +1002,7 @@ export async function adminDeleteVenueFile(fileId: string) {
   await db.delete(venueFile).where(eq(venueFile.id, fileId));
 }
 
-/** ProLink agrega fotos o planos a un lugar (los que llegan por WhatsApp, o de los lugares de demostración). */
+/** La administración agrega fotos o planos a un lugar (los que llegan por WhatsApp, o de los lugares de demostración). */
 export async function adminAddVenueFiles(venueId: string, files: IntakeFile[]) {
   if (!files.length) return;
   const [{ next }] = await db
@@ -1169,7 +1169,7 @@ export async function listTrashedEvents(orgId: string) {
     .orderBy(desc(event.deletedAt));
 }
 
-/** ProLink manda un lugar a la papelera o lo saca de ella. */
+/** La administración manda un lugar a la papelera o lo saca de ella. */
 export async function adminTrashVenue(id: string, trashed: boolean, actor: Actor) {
   return db.transaction(async (tx) => {
     const [row] = await tx
@@ -1187,7 +1187,7 @@ export async function adminListAudit(limit = 300) {
   return db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(limit);
 }
 
-/** ProLink saca de la papelera el evento de cualquier negocio. */
+/** La administración saca de la papelera el evento de cualquier negocio. */
 export async function adminRestoreEvent(eventId: string) {
   const [row] = await db.update(event).set({ deletedAt: null }).where(and(eq(event.id, eventId), isNotNull(event.deletedAt))).returning({ id: event.id });
   return row ?? null;

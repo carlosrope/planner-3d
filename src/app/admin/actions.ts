@@ -19,7 +19,7 @@ import { ORG_KINDS, PLANS, TIERS, VENUE_STATUSES, isSection } from "@/lib/domain
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 import { endOfDay } from "@/lib/dates";
 
-// Acciones de la administración de ProLink. Todas piden requireAdmin.
+// Acciones de la administración de Plantea. Todas piden requireAdmin.
 
 const id = z.string().min(1).max(64);
 const optional = (max: number) => z.string().trim().max(max).transform((s) => s || null);
@@ -103,7 +103,7 @@ export async function uploadVenuePlan(formData: FormData): Promise<void> {
   revalidate(venueId.data);
 }
 
-/** Fotos (hasta 3 MB cada una) o planos (hasta 12 MB) que ProLink agrega a un lugar. */
+/** Fotos (hasta 3 MB cada una) o planos (hasta 12 MB) que la administración agrega a un lugar. */
 export async function addFiles(formData: FormData): Promise<void> {
   await requireAdmin();
   const parsed = z.object({ venueId: id, kind: z.enum(["foto", "plano"]) }).safeParse({ venueId: formData.get("venueId"), kind: formData.get("kind") });

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 // Portada automática de un lugar: abre el 3D del lugar en un iframe invisible (con ?captura=1 carga
 // src/designer/captura.js), recibe por postMessage la vista 3D y el plano 2D en JPEG y los guarda en
 // /api/lugares/[id]/portada. Arranca sola cuando el lugar ya tiene plano y todavía no tiene portada;
-// el botón la vuelve a generar. La usan /admin/lugares/[id] (ProLink) y /revisar/[token] (el dueño).
+// el botón la vuelve a generar. La usan /admin/lugares/[id] (administración) y /revisar/[token] (el dueño).
 
 type Props = {
   /** URL del 3D del lugar con el enlace de revisión, por ejemplo /lugares/salon/3d?r=token */

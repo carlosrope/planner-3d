@@ -1,5 +1,5 @@
 // Aviso de la demostración pública (/disenador/[lugar], sin cuenta): el plano es de ejemplo y
-// ProLink arma el del negocio. Datos: window.__DEMO__ = { kind: "salon" | "casa", whatsapp: "52…" }.
+// La administración arma el del negocio. Datos: window.__DEMO__ = { kind: "salon" | "casa", whatsapp: "52…" }.
 // Con `venue` (src/lib/designer/page.ts → VenueNotice) es el 3D público de un lugar real del catálogo
 // (/lugares/[slug]/3d): nada se guarda, y los botones llevan a planear ahí o al WhatsApp del lugar.
 // Se cierra por pestaña (sessionStorage) y vuelve al abrir otra planta en una pestaña nueva.

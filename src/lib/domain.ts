@@ -45,7 +45,7 @@ export const PLAN_MODULES: Record<Exclude<Plan, "prueba" | "invitado">, readonly
 };
 /**
  * Nivel del plan: Pro (con un tope de códigos de referido al mes) o Ilimitado (códigos sin tope).
- * Precios solo en prolink365.com.mx.
+ * Precios en la página /planes.
  */
 export const TIERS = ["pro", "ilimitado"] as const;
 export type Tier = (typeof TIERS)[number];
@@ -89,7 +89,7 @@ export const VENUE_KIND_LABELS: Record<VenueKind, string> = { salon: "Salón de 
 export const isVenueKind = (value: unknown): value is VenueKind => value === "salon" || value === "casa";
 
 /**
- * Estado de un lugar del catálogo: el dueño lo registra (`conversion`: ProLink arma el plano), revisa su enlace
+ * Estado de un lugar del catálogo: el dueño lo registra (`conversion`: la administración arma el plano), revisa su enlace
  * (`revision`), lo confirma (`publicado`: aparece en el catálogo público y para las planners) o pide retirarlo.
  */
 export const VENUE_STATUSES = ["conversion", "revision", "publicado", "retirado"] as const;
@@ -103,7 +103,7 @@ export const VENUE_STATUS_LABELS: Record<VenueStatus, string> = {
 export const isVenueStatus = (value: unknown): value is VenueStatus =>
   typeof value === "string" && (VENUE_STATUSES as readonly string[]).includes(value);
 
-/** Un pago por transferencia: el cliente sube el comprobante y ProLink lo confirma o lo rechaza. */
+/** Un pago por transferencia: el cliente sube el comprobante y la administración lo confirma o lo rechaza. */
 export const PAYMENT_STATUSES = ["pendiente", "confirmado", "rechazado"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {

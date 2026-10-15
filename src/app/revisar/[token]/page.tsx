@@ -31,7 +31,7 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
   const ask = waLink(CONTACT_WHATSAPP, `Hola, tengo una duda sobre ${v.name} en Plantea.`);
   const fotos = v.photos.filter((p) => p.kind === "foto");
   const renders = v.photos.filter((p) => p.kind === "render");
-  // Portada automática (vista 3D y plano 2D): se toma desde el navegador del dueño si ProLink no la generó.
+  // Portada automática (vista 3D y plano 2D): se toma desde el navegador del dueño si la administración no la generó.
   const portada = v.hasPlan && (v.status === "revision" || v.status === "publicado") && (
     <PortadaAuto
       captureSrc={`/lugares/${slug}/3d?r=${token}`}

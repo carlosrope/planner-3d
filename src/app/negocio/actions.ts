@@ -57,7 +57,7 @@ const paymentBody = z.object({
   amount: z.coerce.number().int().min(1).max(1_000_000),
 });
 
-/** El negocio sube el comprobante de su transferencia; ProLink lo confirma desde la administración. */
+/** El negocio sube el comprobante de su transferencia; la administración lo confirma. */
 export async function submitPayment(_prev: PaymentState, formData: FormData): Promise<PaymentState> {
   const user = await requireUser("/negocio");
   const org = await requireOrg(user);

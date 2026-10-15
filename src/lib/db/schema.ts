@@ -266,7 +266,7 @@ export const venueInquiry = pgTable(
   (t) => [index("venue_inquiry_venue_idx").on(t.venueId)],
 );
 
-/** Pago por transferencia: el negocio sube su comprobante y ProLink lo confirma (activa el plan) o lo rechaza. */
+/** Pago por transferencia: el negocio sube su comprobante y la administración lo confirma (activa el plan) o lo rechaza. */
 export const payment = pgTable(
   "payment",
   {
@@ -282,7 +282,7 @@ export const payment = pgTable(
     receiptType: text("receipt_type").notNull(),
     receipt: bytea("receipt").notNull(),
     status: text("status").$type<PaymentStatus>().notNull().default("pendiente"),
-    /** Nota de ProLink al confirmar o rechazar. */
+    /** Nota de la administración al confirmar o rechazar. */
     note: text("note"),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
     createdAt: createdAt(),

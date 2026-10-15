@@ -141,7 +141,7 @@ export async function designerResponse(
     head += inline(await file("eventos/eventos.js"));
   }
   if (host) head += inline(`window.__HOST_DATA__ = ${json(host)};\n${await file("host.js")}`);
-  // Demostración sin cuenta: aviso de que el plano es de ejemplo, con el WhatsApp de ProLink.
+  // Demostración sin cuenta: aviso de que el plano es de ejemplo, con el WhatsApp de Plantea.
   if (options?.demo || options?.venue) {
     const notice = { kind: plan.kind ?? "casa", whatsapp: CONTACT_WHATSAPP, venue: options.venue ?? null };
     head += inline(`window.__DEMO__ = ${json(notice)};\n${await file("demo.js")}`);
