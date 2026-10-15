@@ -5,9 +5,10 @@ import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getPublicVenue, getVenueBasics } from "@/lib/dal";
 import { sectionOf } from "@/lib/domain";
-import { PROLINK_SITE, siteOrigin } from "@/lib/prolink";
+import { PROLINK_SITE } from "@/lib/prolink";
 import { waLink } from "@/lib/whatsapp";
 import { InquiryForm } from "./InquiryForm";
+import { SITE_URL, jsonLd, venueJsonLd } from "@/lib/site";
 
 export async function generateMetadata({ params }: PageProps<"/lugares/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -17,11 +18,12 @@ export async function generateMetadata({ params }: PageProps<"/lugares/[slug]">)
   const description = v.kind === "salon" ? `Recorre ${v.name} en 3D y prueba el montaje de tu evento.` : `Recorre ${v.name} en 3D y pruébalo amueblado.`;
   const key = v.slug ?? v.id;
   // Vista previa al compartir el enlace o el QR por WhatsApp: la portada (foto real o vista 3D automática).
-  const image = v.cover ? `${siteOrigin()}/lugares/${key}/foto/${v.cover}` : null;
+  const image = v.cover ? `${SITE_URL}/lugares/${key}/foto/${v.cover}` : null;
   return {
     title,
     description,
-    openGraph: { title, description, type: "website", locale: "es_MX", siteName: "Plantea", url: `${siteOrigin()}/lugares/${key}`, images: image ? [{ url: image, width: 1200, height: 900, alt: title }] : undefined },
+    alternates: { canonical: `/lugares/${key}` },
+    openGraph: { title, description, type: "website", locale: "es_MX", siteName: "Plantea", url: `${SITE_URL}/lugares/${key}`, images: image ? [{ url: image, width: 1200, height: 900, alt: title }] : undefined },
     twitter: image ? { card: "summary_large_image" } : undefined,
   };
 }
@@ -51,9 +53,20 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
     v.city,
   ].filter((f): f is string => Boolean(f));
   const [cover, ...rest] = v.photos;
+  const ld = venueJsonLd({
+    kind: v.kind,
+    name: v.name,
+    slug,
+    city: v.city,
+    address: v.address,
+    description: v.description,
+    capacity: v.capacity,
+    image: cover ? `${SITE_URL}/lugares/${slug}/foto/${cover.id}` : null,
+  });
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ld) }} />
       <p className="text-sm text-stone-500">
         <Link href={salon ? "/salones" : "/casas"} className="underline">
           {salon ? "Salones" : "Modelos de casa"}

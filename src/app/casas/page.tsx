@@ -5,6 +5,7 @@ import { Catalogo } from "@/components/Catalogo";
 export const metadata: Metadata = {
   title: "Modelos de casa en 3D",
   description: "Recorre los modelos de casa en 3D, cámbiales muebles y pisos, y pide informes a la desarrolladora.",
+  alternates: { canonical: "/casas" },
 };
 
 export default function CasasPage() {

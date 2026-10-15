@@ -9,6 +9,7 @@ export async function generateMetadata({ params }: PageProps<"/salones/[ciudad]"
   return {
     title: `Salones de eventos en ${city} en 3D`,
     description: `Recorre los salones de eventos de ${city} en 3D, prueba el montaje de tu evento y pide informes al salón.`,
+    alternates: { canonical: `/salones/${ciudad}` },
   };
 }
 

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { lanHosts } from "./src/lib/lan";
 import { securityHeaders } from "./src/lib/security-headers";
+import { LEGACY_HOST, SITE_URL } from "./src/lib/site";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -15,7 +16,26 @@ const nextConfig: NextConfig = {
   experimental: { serverActions: { bodySizeLimit: "40mb" } },
   // CSP, X-Frame-Options (salvo /v/ y el 3D público), Referrer-Policy y demás: src/lib/security-headers.ts.
   async headers() {
-    return securityHeaders(process.env.NODE_ENV !== "production");
+    return [
+      ...securityHeaders(process.env.NODE_ENV !== "production"),
+      // Fuera de buscadores: cuentas, paneles y enlaces privados (el enlace /v/ y la revisión del dueño).
+      ...["/v/:path*", "/revisar/:path*", "/admin/:path*", "/eventos/:path*", "/negocio/:path*", "/lugares/:slug/panel", "/olvide", "/restablecer"].map((source) => ({
+        source,
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      })),
+    ];
+  },
+  // La dirección vieja de Railway pasa a plantea.com.mx con la misma ruta (los enlaces y QR que circulan siguen
+  // sirviendo y Google no ve dos sitios iguales). La API se queda para no cortar sesiones abiertas.
+  async redirects() {
+    return [
+      {
+        source: "/:path((?!api/).*)",
+        has: [{ type: "host", value: LEGACY_HOST }],
+        destination: `${SITE_URL}/:path`,
+        permanent: true,
+      },
+    ];
   },
   turbopack: {
     rules: {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageLink } from "@/components/PageLink";
 import { PROLINK_SITE } from "@/lib/prolink";
+import { jsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/site";
 
 // Portada de Plantea: qué es, pruébalo sin cuenta, cómo funciona, para quién y cómo entra un salón.
 
@@ -20,6 +21,7 @@ const QUIEN = [
 export default function Home() {
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd([organizationJsonLd(), websiteJsonLd()]) }} />
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -right-24 -top-24 h-[420px] w-[420px] rounded-[48%_52%_40%_60%/55%_45%_55%_45%] bg-[#f3ece2]" aria-hidden="true" />

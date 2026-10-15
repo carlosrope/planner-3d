@@ -9,6 +9,7 @@ export async function generateMetadata({ params }: PageProps<"/casas/[ciudad]">)
   return {
     title: `Modelos de casa en ${city} en 3D`,
     description: `Recorre los modelos de casa de ${city} en 3D y pide informes a la desarrolladora.`,
+    alternates: { canonical: `/casas/${ciudad}` },
   };
 }
 
