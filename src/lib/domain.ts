@@ -2,19 +2,23 @@ import { endOfDay } from "./dates";
 
 // Catálogos del negocio compartidos por la base de datos, el servidor y la interfaz.
 
-export const EVENT_KINDS = ["boda", "xv", "graduacion", "corporativo", "casa", "otro"] as const;
+export const EVENT_KINDS = ["boda", "xv", "cumpleanos", "bautizo", "graduacion", "infantil", "corporativo", "posada", "casa", "otro"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 export const EVENT_KIND_LABELS: Record<EventKind, string> = {
   boda: "Boda",
   xv: "XV años",
+  cumpleanos: "Cumpleaños",
+  bautizo: "Bautizo o primera comunión",
   graduacion: "Graduación",
-  corporativo: "Corporativo",
+  infantil: "Infantil o baby shower",
+  corporativo: "Corporativo o conferencia",
+  posada: "Posada o fin de año",
   casa: "Casa / inmobiliaria",
   otro: "Otro",
 };
 
 /** Tipos de evento en un salón (la casa tiene su propia sección). */
-export const SALON_EVENT_KINDS = ["boda", "xv", "graduacion", "corporativo", "otro"] as const satisfies readonly EventKind[];
+export const SALON_EVENT_KINDS = ["boda", "xv", "cumpleanos", "bautizo", "graduacion", "infantil", "corporativo", "posada", "otro"] as const satisfies readonly EventKind[];
 
 /** Las dos secciones de la app: eventos (salones) y casas (inmobiliarias). Cada una es un módulo que la cuenta contrata. */
 export const SECTIONS = {

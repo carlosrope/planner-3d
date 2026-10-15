@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { CONTACT_WHATSAPP } from "../brand";
 import { withoutVendors, type DesignerPlan, type PropertyDetails } from "./types";
+import { EVENT_KIND_LABELS, SALON_EVENT_KINDS } from "../domain";
 
 // Arma la página del diseñador (src/designer/disenador.html, adaptación de
 // wy51ai/floorplan-3d, MIT © 2026 wuyi) con los datos del lugar y, si aplica,
@@ -38,6 +39,8 @@ export type HostData = {
   guests: number | null;
   /** Fecha del evento (AAAA-MM-DD) para las hojas y los mensajes a proveedores. */
   date: string | null;
+  /** Tipo de evento (boda, xv, infantil…): decide el montaje sugerido. */
+  kind?: string;
   backHref?: string;
   backLabel?: string;
   activeId: string;
@@ -79,7 +82,7 @@ type LayoutRow = { id: string; name: string; note: string; recommended: boolean;
 /** Datos del anfitrión para un evento: abre la distribución pedida, la recomendada o la primera. */
 export function hostFor(
   mode: HostData["mode"],
-  ev: { id: string; title: string; guestCount: number | null; eventDate?: string | null; details?: PropertyDetails | null },
+  ev: { id: string; title: string; guestCount: number | null; eventDate?: string | null; kind?: string; details?: PropertyDetails | null },
   layouts: LayoutRow[],
   wanted: string | null,
   brand: Brand,
@@ -93,6 +96,7 @@ export function hostFor(
     title: ev.title,
     guests: ev.guestCount,
     date: ev.eventDate ?? null,
+    kind: ev.kind,
     backHref: back?.href,
     backLabel: back?.label,
     activeId: active.id,
@@ -136,6 +140,8 @@ export async function designerResponse(
   if (process.env.SENTRY_DSN) head = inline(ERROR_REPORTER) + head;
   if (plan.kind === "salon") {
     head += inline(`window.__EVENTOS__ = ${await file("eventos/catalogo.json")};`);
+    // Tipos de evento de salón con su nombre (una sola fuente: src/lib/domain.ts).
+    head += inline(`window.__TIPOS_EVENTO__ = ${json(SALON_EVENT_KINDS.map((k) => [k, EVENT_KIND_LABELS[k]]))};`);
     head += inline(await file("eventos/modelos.js"));
     if (!host?.lite) head += inline(await file("eventos/proveedores.js"));
     head += inline(await file("eventos/eventos.js"));

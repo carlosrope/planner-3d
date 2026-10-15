@@ -19,10 +19,12 @@ window.__PROVEEDORES__ = function vendors(K) {
     dulces: { letters: 'Du', links: ['dessert'] },
     foto: { letters: 'FV', links: [] },
     photobooth: { letters: 'PB', links: ['booth', 'platform360'] },
+    show: { letters: 'Sh', links: ['showarea', 'kidszone'] },
+    snacks: { letters: 'Sn', links: [] },
     mobiliario: { letters: 'Mo', links: [] },
     otro: { letters: '+', links: [] },
   };
-  const NOT_THEIRS = ['vendor', 'staff', 'rtable', 'itable', 'headtable'];   // piezas que no se le asignan a un proveedor
+  const NOT_THEIRS = ['vendor', 'staff', 'rtable', 'itable', 'headtable', 'schooltable', 'chairrow'];   // piezas que no se le asignan a un proveedor
   const kindItem = k => ITEMS.find(i => i.type === 'vendor' && i.kind === k) || ITEMS.find(i => i.type === 'vendor' && i.kind === 'otro');
   const rawName = k => kindItem(k)?.name || k;                // nombre del catálogo (en español, como se guarda)
   const kindName = k => nm(rawName(k));

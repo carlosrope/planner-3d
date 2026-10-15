@@ -45,21 +45,67 @@ const hits = (a: Box, b: Box) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[
 const inside = (a: Box, z: Box) => a[0] >= z[0] && a[1] >= z[1] && a[2] <= z[2] && a[3] <= z[3];
 
 /** Plantillas de montaje: qué piezas llenan la zona de mesas. */
-export const TEMPLATES = ["redondas", "imperial", "coctel"] as const;
+export const TEMPLATES = ["redondas", "imperial", "coctel", "auditorio", "escuela"] as const;
 export type Template = (typeof TEMPLATES)[number];
 export const TEMPLATE_LABELS: Record<Template, string> = {
   redondas: "Banquete con mesas redondas",
   imperial: "Mesas imperiales",
   coctel: "Cóctel con periqueras y salas lounge",
+  auditorio: "Auditorio con filas de sillas",
+  escuela: "Escuela con mesas frente al escenario",
 };
 
-type Fill = { name: string; count: number; gapX: number; gapY: number; numbered: boolean };
+/**
+ * Receta de cada tipo de evento: qué va en cada lugar fijo del salón (setup) y qué se agrega.
+ * null = ese lugar se queda vacío. Las piezas son nombres del catálogo.
+ */
+type Recipe = {
+  head?: string;
+  stage: string | null;
+  dance: string | null;
+  dj: string | null;
+  bar: string | null;
+  dessert: boolean;
+  cake: boolean;
+  candelabra: boolean;
+  /** Sobre el escenario (podio, pantalla). */
+  onStage?: string[];
+  /** Se acomodan en la zona de mesas, en el primer lugar libre junto al foco. */
+  extras?: { name: string; far?: boolean }[];
+  template: Template;
+};
+const PARTY = { stage: "Escenario / tarima", dance: "Pista de baile", dj: "Cabina DJ", bar: "Barra", dessert: true, cake: true, candelabra: false, template: "redondas" } as const;
+export const RECIPES: Record<EventKind, Recipe> = {
+  boda: { ...PARTY, head: "Mesa de novios", candelabra: true },
+  xv: { ...PARTY, head: "Mesa de honor XV", candelabra: true },
+  cumpleanos: { ...PARTY },
+  bautizo: { ...PARTY, stage: null, dance: null, dj: "Mesa de regalos", bar: "Barra de snacks y bebidas" },
+  graduacion: { ...PARTY, head: "Mesa de presídium", dessert: false, cake: false },
+  infantil: { ...PARTY, stage: "Show de payasitas", dance: "Área infantil", bar: "Barra de snacks y bebidas", extras: [{ name: "Show de botargas" }] },
+  corporativo: {
+    ...PARTY,
+    dance: null,
+    dj: null,
+    bar: "Estación de café",
+    dessert: false,
+    cake: false,
+    onStage: ["Podio", "Pantalla LED"],
+    extras: [{ name: "Mesa de registro", far: true }],
+    template: "auditorio",
+  },
+  posada: { ...PARTY, cake: false },
+  casa: { ...PARTY },
+  otro: { ...PARTY },
+};
+
+type Fill = { name: string; count: number; gapX: number; gapY: number; numbered: boolean; rot?: number; toward?: { cx: number; cy: number }; far?: boolean };
 
 export function starterFurniture(
   plan: DesignerPlan,
   opts: { guests: number; kind: EventKind; template?: Template },
 ): Furniture[] {
   const setup = plan.setup;
+  const recipe = RECIPES[opts.kind] ?? RECIPES.otro;
   if (!setup) return [];
   let n = 0;
   const out: Furniture[] = [];
@@ -81,19 +127,28 @@ export function starterFurniture(
     });
   };
 
-  place("Escenario / tarima", setup.stage);
-  place("Pista de baile", setup.dance);
-  place("Cabina DJ", setup.dj);
-  place("Barra", setup.bar);
-  place("Mesa de dulces", setup.dessert);
-  place("Mesa de pastel", setup.cake);
-  if (opts.kind === "boda") place("Mesa de novios", setup.head);
-  if (opts.kind === "xv") {
-    place("Mesa de honor XV", setup.head);
-    // El trono va junto a la mesa de honor, del lado derecho.
-    if (setup.head) place("Trono de quinceañera", { cx: setup.head.cx + 2900, cy: setup.head.cy });
+  // Lo que no es el escenario ni la pista toma su propia medida del catálogo (el lugar fijo solo da el centro).
+  const at = (spot: SetupSpot | undefined, name: string, keep: string) => (spot && name !== keep ? { cx: spot.cx, cy: spot.cy, rot: spot.rot } : spot);
+  if (recipe.stage) place(recipe.stage, at(setup.stage, recipe.stage, "Escenario / tarima"));
+  if (recipe.stage === "Escenario / tarima" && setup.stage && recipe.onStage) {
+    const sd = setup.stage.d ?? item("Escenario / tarima").d;
+    // Podio al frente del escenario; pantalla al fondo.
+    for (const name of recipe.onStage) {
+      const dy = name === "Pantalla LED" ? -sd / 2 + 400 : sd / 2 - 700;
+      place(name, { cx: setup.stage.cx, cy: setup.stage.cy + dy });
+    }
   }
-  if (setup.dance) {
+  if (recipe.dance) place(recipe.dance, at(setup.dance, recipe.dance, "Pista de baile"));
+  if (recipe.dj) place(recipe.dj, at(setup.dj, recipe.dj, "Cabina DJ"));
+  if (recipe.bar) place(recipe.bar, at(setup.bar, recipe.bar, "Barra"));
+  if (recipe.dessert) place("Mesa de dulces", setup.dessert);
+  if (recipe.cake) place("Mesa de pastel", setup.cake);
+  if (recipe.head) place(recipe.head, at(setup.head, recipe.head, "Mesa de novios"));
+  if (opts.kind === "xv" && setup.head) {
+    // El trono va junto a la mesa de honor, del lado derecho.
+    place("Trono de quinceañera", { cx: setup.head.cx + 2900, cy: setup.head.cy });
+  }
+  if (setup.dance && recipe.candelabra && recipe.dance === "Pista de baile") {
     const { cx, cy } = setup.dance;
     const hw = (setup.dance.w ?? 6000) / 2 + 500;
     const hh = (setup.dance.d ?? 6000) / 2 + 500;
@@ -107,9 +162,13 @@ export function starterFurniture(
     const b: Box = [w[0], w[1], w[2], w[3]];
     if (hits(b, zone)) blocked.push(grow(b, CLEAR));
   }
-  const focus = setup.dance ?? setup.stage ?? { cx: (zone[0] + zone[2]) / 2, cy: zone[1] };
+  const center = { cx: (zone[0] + zone[2]) / 2, cy: (zone[1] + zone[3]) / 2 };
+  const focus = setup.dance ?? setup.stage ?? { cx: center.cx, cy: zone[1] };
+  // Filas y mesas escuela miran al escenario (o a la pista): +y es el frente de la pieza.
+  const stageFocus = setup.stage ?? setup.dance ?? focus;
+  const facing = stageFocus.cy < center.cy ? 180 : 0;
   let tableNo = 0;
-  const fill = ({ name, count, gapX, gapY, numbered }: Fill) => {
+  const fill = ({ name, count, gapX, gapY, numbered, rot = 0, toward = focus, far = false }: Fill) => {
     const it = item(name);
     const px = it.w + gapX;
     const py = it.d + gapY;
@@ -124,10 +183,11 @@ export function starterFurniture(
         const cy = Math.round(y0 + r * py);
         const b = boxOf({ cx, cy, w: it.w, d: it.d, rot: 0 });
         if (!inside(b, zone) || blocked.some((o) => hits(b, o))) continue;
-        spots.push({ cx, cy, dist: Math.hypot(cx - focus.cx, cy - focus.cy) });
+        spots.push({ cx, cy, dist: Math.hypot(cx - toward.cx, cy - toward.cy) });
       }
     }
-    spots.sort((a, b) => a.dist - b.dist);
+    // far: lo más lejos del foco (la mesa de registro va hacia la entrada, no junto al escenario).
+    spots.sort((a, b) => (far ? b.dist - a.dist : a.dist - b.dist));
     for (const s of spots.slice(0, Math.max(0, count))) {
       const f: Furniture = {
         id: `s${++n}`,
@@ -137,7 +197,7 @@ export function starterFurniture(
         cy: s.cy,
         w: it.w,
         d: it.d,
-        rot: 0,
+        rot,
         color: it.color,
         ...(it.seats ? { seats: it.seats, table: it.table } : {}),
       };
@@ -146,10 +206,19 @@ export function starterFurniture(
     }
   };
 
+  // Extras de la receta (show de botargas, mesa de registro…): un lugar libre cada uno, antes que las mesas.
+  for (const x of recipe.extras ?? []) fill({ name: x.name, count: 1, gapX: CLEAR, gapY: CLEAR, numbered: false, far: x.far, toward: x.far ? stageFocus : focus });
+
   const headSeats = out.reduce((a, f) => a + (f.seats ?? 0), 0);
   const guests = Math.max(0, opts.guests - headSeats);
-  const template = opts.template ?? "redondas";
-  if (template === "coctel") {
+  const template = opts.template ?? recipe.template;
+  if (template === "auditorio") {
+    const row = item("Fila de 8 sillas");
+    fill({ name: row.name, count: Math.ceil(guests / (row.seats ?? 8)), gapX: 1200, gapY: 350, numbered: false, rot: facing, toward: stageFocus });
+  } else if (template === "escuela") {
+    const desk = item("Mesa escuela 1.80 m");
+    fill({ name: desk.name, count: Math.ceil(guests / (desk.seats ?? 3)), gapX: 500, gapY: 450, numbered: true, rot: facing, toward: stageFocus });
+  } else if (template === "coctel") {
     // De pie: una periquera por cada 6 invitados y una sala lounge por cada 60 (máximo 4).
     fill({ name: "Sala lounge", count: Math.min(4, Math.ceil(guests / 60)), gapX: 1500, gapY: 1500, numbered: false });
     fill({ name: "Periquera", count: Math.ceil(guests / 6), gapX: 1700, gapY: 1700, numbered: false });

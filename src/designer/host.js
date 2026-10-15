@@ -588,6 +588,7 @@
 
   window.__HOST__ = {
     get guests() { return D.guests; },
+    get kind() { return D.kind || null; },   // tipo de evento (boda, xv, infantil…)
     get date() { return D.date || null; },   // AAAA-MM-DD
     brand: B,
     editable: EDIT,
@@ -596,6 +597,10 @@
       D.guests = n;
       api?.rerender();
       if (EDIT) { try { await request('PATCH', `/api/events/${D.eventId}`, { guestCount: n }); } catch (e) { api?.toast(e.message); } }
+    },
+    async setKind(k) {
+      D.kind = k;
+      if (EDIT) { try { await request('PATCH', `/api/events/${D.eventId}`, { kind: k }); } catch (e) { api?.toast(e.message); } }
     },
     loadState(lv) { levelId = lv; return levelOf(active, lv); },
     save,

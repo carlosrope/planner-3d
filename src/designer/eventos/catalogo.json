@@ -54,6 +54,25 @@
         "table": 1000
       },
       {
+        "type": "schooltable",
+        "name": "Mesa escuela 1.80 m",
+        "nameEn": "Classroom table 1.80 m",
+        "w": 1800,
+        "d": 1300,
+        "color": "#f4efe6",
+        "seats": 3,
+        "table": 600
+      },
+      {
+        "type": "chairrow",
+        "name": "Fila de 8 sillas",
+        "nameEn": "Row of 8 chairs",
+        "w": 4160,
+        "d": 600,
+        "color": "#f4efe6",
+        "seats": 8
+      },
+      {
         "type": "headtable",
         "name": "Mesa de novios",
         "nameEn": "Sweetheart table",
@@ -74,6 +93,16 @@
         "table": 900
       },
       {
+        "type": "headtable",
+        "name": "Mesa de presídium",
+        "nameEn": "Presidium table",
+        "w": 4800,
+        "d": 1450,
+        "color": "#fbf3df",
+        "seats": 8,
+        "table": 900
+      },
+      {
         "type": "cocktail",
         "name": "Periquera",
         "nameEn": "Cocktail table",
@@ -88,6 +117,22 @@
         "w": 2600,
         "d": 2000,
         "color": "#efe9df"
+      },
+      {
+        "type": "desk",
+        "name": "Mesa de registro",
+        "nameEn": "Registration desk",
+        "w": 2400,
+        "d": 800,
+        "color": "#f4efe6"
+      },
+      {
+        "type": "desk",
+        "name": "Mesa de regalos",
+        "nameEn": "Gift table",
+        "w": 1800,
+        "d": 800,
+        "color": "#f6e7da"
       }
     ]
   },
@@ -126,6 +171,14 @@
         "w": 3500,
         "d": 400,
         "color": "#1d1d1f"
+      },
+      {
+        "type": "podium",
+        "name": "Podio",
+        "nameEn": "Lectern",
+        "w": 700,
+        "d": 550,
+        "color": "#6b4e37"
       }
     ]
   },
@@ -140,6 +193,14 @@
         "w": 3600,
         "d": 1000,
         "color": "#e9e5de"
+      },
+      {
+        "type": "bar",
+        "name": "Barra de snacks y bebidas",
+        "nameEn": "Snack and drinks bar",
+        "w": 3000,
+        "d": 900,
+        "color": "#f6d9a8"
       },
       {
         "type": "dessert",
@@ -248,6 +309,30 @@
         "w": 1200,
         "d": 1200,
         "color": "#2b2b2d"
+      },
+      {
+        "type": "kidszone",
+        "name": "Área infantil",
+        "nameEn": "Kids area",
+        "w": 5000,
+        "d": 4000,
+        "color": "#cfe6f2"
+      },
+      {
+        "type": "showarea",
+        "name": "Show de payasitas",
+        "nameEn": "Clown show",
+        "w": 4000,
+        "d": 3000,
+        "color": "#f7c8d4"
+      },
+      {
+        "type": "showarea",
+        "name": "Show de botargas",
+        "nameEn": "Costume characters show",
+        "w": 4000,
+        "d": 3000,
+        "color": "#d9c8f2"
       }
     ]
   },
@@ -404,6 +489,24 @@
         "d": 700,
         "color": "#1f7a7a",
         "kind": "photobooth"
+      },
+      {
+        "type": "vendor",
+        "name": "Show infantil",
+        "nameEn": "Kids show",
+        "w": 700,
+        "d": 700,
+        "color": "#d9467a",
+        "kind": "show"
+      },
+      {
+        "type": "vendor",
+        "name": "Snacks y bebidas",
+        "nameEn": "Snacks and drinks",
+        "w": 700,
+        "d": 700,
+        "color": "#d98a1f",
+        "kind": "snacks"
       },
       {
         "type": "vendor",

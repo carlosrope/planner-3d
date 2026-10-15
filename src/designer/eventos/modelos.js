@@ -281,6 +281,49 @@
       [90, 210, 330].forEach(a => o += line2(0, cy, Math.cos(a * PI / 180) * 300, cy + Math.sin(a * PI / 180) * 300, '#3d3a34', 1.2));
       return o + dot(0, cy - 40, 200, 'none', 'stroke="#f2b84b" stroke-width="2" vector-effect="non-scaling-stroke"') + K.rc(-70, cy - 90, 140, 100, '#2b2b2d', 'rx="15"');
     },
+    // Fila de sillas (auditorio): todas miran al frente (+y).
+    chairrow(w, d, c, f, K) {
+      const n = clamp(Math.round(isNum(f?.seats) ? f.seats : w / 520), 1, 40), sp = w / n, cw = clamp(sp - 60, 260, 440), col = f?.chair || GOLD;
+      let o = '';
+      for (let i = 0; i < n; i++) o += grp(-w / 2 + sp * (i + .5), 0, 0, chair2d(K, col, cw));
+      return o;
+    },
+    // Mesa escuela: tabla angosta al frente y sillas detrás, mirando al escenario (+y).
+    schooltable(w, d, c, f, K) {
+      const n = clamp(Math.round(isNum(f?.seats) ? f.seats : w / 600), 1, 12), td = clamp(isNum(f?.table) ? f.table : 600, 400, d - 400), ty = d / 2 - td / 2 - 30;
+      const sp = (w - 120) / n, cw = clamp(sp - 60, 260, 440), col = f?.chair || GOLD, cy = ty - td / 2 - 230;
+      let o = cloth2d(K, -w / 2 + 40, ty - td / 2, w - 80, td, c);
+      for (let i = 0; i < n; i++) o += grp(-w / 2 + 60 + sp * (i + .5), cy, 0, chair2d(K, col, cw));
+      return o;
+    },
+    // Mesa con mantel, sin sillas (registro, regalos).
+    desk(w, d, c, f, K) {
+      let o = cloth2d(K, -w / 2 + 30, -d / 2 + 30, w - 60, d - 60, c);
+      if (/regalo/i.test(f?.name || '')) [[-.28, .1], [0, -.08], [.27, .12]].forEach(([kx, ky], i) => o += K.rc(w * kx - 140, d * ky - 120, 280, 240, ['#e8b4c0', '#b8d4e8', '#f0d48a'][i], 'rx="18"'));
+      else { o += K.rc(-w * .3, -60, w * .22, 160, '#ffffff', 'rx="10"'); o += dot(w * .2, 0, 70, '#c9a24a', FS); }
+      return o;
+    },
+    podium(w, d, c, f, K) {
+      return K.rc(-w / 2, -d / 2, w, d, c, 'rx="40"') + K.rc(-w / 2 + 70, -d / 2 + 60, w - 140, d * .45, K.shade(c, 1.25), 'rx="20"') + dot(0, d / 2 - 90, 40, '#262628', FS);
+    },
+    // Área infantil: tapete de colores con juguetes.
+    kidszone(w, d, c, f, K) {
+      const x = -w / 2, y = -d / 2, cols = ['#f3c6cf', '#c8dfe8', '#f6e3a8', '#cde8c4'], nx = Math.max(1, Math.round(w / 1000)), ny = Math.max(1, Math.round(d / 1000));
+      let o = K.rc(x, y, w, d, c, 'rx="60"');
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) o += rect2(x + 40 + i * (w - 80) / nx, y + 40 + j * (d - 80) / ny, (w - 80) / nx - 30, (d - 80) / ny - 30, cols[(i + j) % 4], 'rx="30"');
+      o += dot(-w * .25, -d * .2, 260, '#e06c7f', FS) + dot(w * .22, d * .18, 220, '#5aa0d8', FS) + K.rc(w * .1, -d * .3, 420, 420, '#f2b84b', 'rx="40"');
+      return o;
+    },
+    // Área de show (payasitas, botargas): tarima baja redonda con globos y lugar para el público al frente.
+    showarea(w, d, c, f, K) {
+      const r = Math.min(w, d * 1.2) * .32, cy = -d / 2 + r + 60;
+      let o = K.rc(-w / 2, -d / 2, w, d, K.shade(c, 1.3), 'rx="80" stroke-dasharray="80 60"');
+      o += K.ec(0, cy, r + 40, r + 40, K.shade(c, .85)) + K.ec(0, cy, r, r, c);
+      const balloons = ['#e05a6d', '#4f9de0', '#f2c14b', '#62b86f', '#a272d8'];
+      for (let i = 0; i < 5; i++) { const a = PI + (i / 4) * PI; o += dot(Math.cos(a) * (r + 120), cy + Math.sin(a) * (r * .6) - 40, 90, balloons[i], FS); }
+      for (let i = 0; i < 5; i++) o += dot(-w * .3 + i * w * .15, d / 2 - 260, 110, '#ffffff', FS);
+      return o;
+    },
     platform360(w, d, c, f, K) {
       const m = Math.min(w, d), R = m / 2 - 100, a = PI / 4, e = m / 2 - 40;
       return dot(0, 0, m / 2 - 10, 'none', FS + ' stroke-dasharray="4 4"') + K.ec(0, 0, R, R, c) + K.ec(0, 0, R - 40, R - 40, '#f3f3f5')
@@ -1005,6 +1048,57 @@
         [pk, K.glowMat('#ffe4ef', '#ff6fa6', 1.3), false, false, false], [wl, K.glowMat('#ffffff', '#fff6e8', 1.1), false, false, false]]);
     },
 
+    chairrow(g, f, K) {
+      const T = K.THREE, m = K.M, n = clamp(Math.round(isNum(f.seats) ? f.seats : f.w / 520), 1, 40), sp = f.w / n, ck = clamp((sp - 60) / 420, .6, 1);
+      const cg = cached('chair-chiavari', () => chiavariGeo(K));
+      const cm = Array.from({ length: n }, (_, i) => mtx(T, m(-f.w / 2 + sp * (i + .5)), 0, 0, 0, ck));
+      addInst(K, g, cg.frame, paintMat(K, f.chair || GOLD), cm, true);
+      addInst(K, g, cg.cushion, K.fabric(IVORY), cm, true);
+    },
+    schooltable(g, f, K) {
+      const T = K.THREE, m = K.M, w = m(f.w), d = m(f.d), c = f.color || '#f4efe6', n = clamp(Math.round(isNum(f.seats) ? f.seats : f.w / 600), 1, 12);
+      const td = m(clamp(isNum(f.table) ? f.table : 600, 400, f.d - 400)), tz = d / 2 - td / 2 - .03, tw = w - .08;
+      const o = addMesh(K, g, rectCloth(T, tw, td), clothMat(K, c)); o.position.z = tz;
+      const sp = (f.w - 120) / n, ck = clamp((sp - 60) / 420, .6, 1), cz = tz - td / 2 - .23;
+      const cg = cached('chair-chiavari', () => chiavariGeo(K));
+      const cm = Array.from({ length: n }, (_, i) => mtx(T, m(-f.w / 2 + 60 + sp * (i + .5)), 0, cz, 0, ck));
+      addInst(K, g, cg.frame, paintMat(K, f.chair || GOLD), cm, true);
+      addInst(K, g, cg.cushion, K.fabric(IVORY), cm, true);
+    },
+    desk(g, f, K) {
+      const T = K.THREE, w = K.M(f.w), d = K.M(f.d), c = f.color || '#f4efe6';
+      addMesh(K, g, rectCloth(T, w - .06, d - .06), clothMat(K, c));
+      const it = GB(K);
+      if (/regalo/i.test(f.name || '')) [[-.28, .02, '#e8b4c0', .26], [0, -.04, '#b8d4e8', .34], [.26, .05, '#f0d48a', .22]].forEach(([kx, kz, col, h]) => it.rbox(.26, h, .22, w * kx, TOP, d * kz, .02, col));
+      else { it.box(.3, .01, .21, -w * .2, TOP, 0, '#ffffff'); it.cyl(.035, .035, .1, w * .2, TOP, 0, 14, '#c9a24a'); }
+      emit(K, g, [[it, vcMat(K, .5), true, true]]);
+    },
+    podium(g, f, K) {
+      const w = K.M(f.w), d = K.M(f.d), c = f.color || '#6b4e37', wood = GB(K), blk = GB(K);
+      wood.box(w * .82, .08, d * .82, 0, 0, 0); wood.rbox(w * .7, 1.0, d * .6, 0, .08, -.02, .02);
+      wood.rbox(w, .05, d * .78, 0, 1.08, 0, .015, null, -.25);
+      blk.cyl(.01, .01, .32, 0, 1.1, -d * .18, 8); blk.sph(.025, .03, .025, 0, 1.44, -d * .14, null, 10);
+      emit(K, g, [[wood, K.woodM(c)], [blk, blackMat(K)]]);
+    },
+    kidszone(g, f, K) {
+      const w = K.M(f.w), d = K.M(f.d), mat = GB(K), toys = GB(K);
+      const nx = Math.max(1, Math.round(w / 1)), nz = Math.max(1, Math.round(d / 1)), cols = ['#f3c6cf', '#c8dfe8', '#f6e3a8', '#cde8c4'];
+      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) mat.box(w / nx - .02, .03, d / nz - .02, -w / 2 + w / nx * (i + .5), 0, -d / 2 + d / nz * (j + .5), cols[(i + j) % 4]);
+      [[-.25, -.2, '#e06c7f', .26], [.22, .18, '#5aa0d8', .22], [-.05, .25, '#62b86f', .18]].forEach(([kx, kz, col, r]) => toys.sph(r, r, r, w * kx, .03 + r, d * kz, col, 16));
+      toys.rbox(.42, .42, .42, w * .14, .03, -d * .28, .04, '#f2b84b'); toys.rbox(.3, .3, .3, w * .14, .45, -d * .28, .03, '#a272d8');
+      emit(K, g, [[mat, vcMat(K, .9), false, true], [toys, vcMat(K, .45), true, true]]);
+    },
+    showarea(g, f, K) {
+      const w = K.M(f.w), d = K.M(f.d), c = f.color || '#f7c8d4', r = Math.min(w, d * 1.2) * .32, cz = -d / 2 + r + .06;
+      const base = GB(K), balls = GB(K), str = GB(K);
+      base.cyl(r + .04, r + .06, .18, 0, 0, cz, 48, K.darker ? K.darker(c, .85) : c); base.cyl(r, r, .02, 0, .18, cz, 48, c);
+      const cols = ['#e05a6d', '#4f9de0', '#f2c14b', '#62b86f', '#a272d8'];
+      for (let i = 0; i < 5; i++) {
+        const a = PI + (i / 4) * PI, x = Math.cos(a) * (r + .12), z = cz + Math.sin(a) * r * .6 - .04, h = 1.5 + (i % 2) * .25;
+        balls.sph(.16, .2, .16, x, h, z, cols[i], 16); str.tube([[x, .02, z], [x + .03, h * .5, z], [x, h - .2, z]], .004, '#ffffff', 8, 4);
+      }
+      emit(K, g, [[base, vcMat(K, .6), true, true], [balls, vcMat(K, .25), true, true], [str, vcMat(K, .6), false, true]]);
+    },
     platform360(g, f, K) {
       const m = Math.min(K.M(f.w), K.M(f.d)), r = m / 2 - .1, c = f.color || '#2b2b2d', a = PI / 4, ax = Math.cos(a), az = Math.sin(a), R2 = m / 2 - .04;
       const bs = GB(K), tp = GB(K), mt = GB(K), gl = GB(K);

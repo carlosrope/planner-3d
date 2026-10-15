@@ -8,8 +8,10 @@
   const CAT = window.__EVENTOS__ || [];
   const MODELS = window.__EXT_MODELS__ || { svg: {}, build3d: {}, nolabel: [] };
   const CHAIR = '#c9a24a';   // silla Tiffany dorada
-  const SEATED = ['rtable', 'itable', 'headtable'];
-  const NUMBERED = ['rtable', 'itable'];
+  const SEATED = ['rtable', 'itable', 'headtable', 'schooltable', 'chairrow'];
+  const NUMBERED = ['rtable', 'itable', 'schooltable'];
+  // Las filas de sillas dan lugares, pero no son mesas: no llevan mantel ni cuentan como mesa.
+  const isTable = f => SEATED.includes(f.type) && f.type !== 'chairrow';
   // Staff: los meseros (y capitanes) atienden mesas; cada uno con un color para su sección.
   const SECTIONED = ['mesero', 'capitan'];
   const SECTION_COLORS = ['#2f6fb0', '#2e8b57', '#d9822b', '#8e44ad', '#c0392b', '#16a085', '#b7950b', '#d35400', '#2c3e50', '#a93226'];
@@ -153,6 +155,9 @@
   const ITEMS = CAT.flatMap(c => c.items);
   function pieceName(f) {
     if (f.type === 'staff') return nm(ITEMS.find(i => i.role === f.role)?.name || f.name);
+    // Primero por nombre (dos piezas del mismo tipo y medida, como el show de payasitas y el de botargas).
+    const byName = ITEMS.find(i => i.type === f.type && i.name === f.name && i.w === f.w && i.d === f.d);
+    if (byName) return nm(byName.name);
     const same = ITEMS.find(i => i.type === f.type && i.w === f.w && i.d === f.d);
     if (same) return nm(same.name);
     const base = ITEMS.find(i => i.type === f.type);
@@ -197,7 +202,7 @@
     const pieces = {}, chairs = {}, cloths = {};
     st.furniture.forEach(f => { if (f.type === 'staff' || f.type === 'vendor') return; const k = pieceName(f); pieces[k] = (pieces[k] || 0) + 1; });
     tables.forEach(f => { const c = f.chair || CHAIR; chairs[c] = (chairs[c] || 0) + seats(f); });
-    tables.forEach(f => { cloths[f.color] = (cloths[f.color] || 0) + 1; });
+    tables.filter(isTable).forEach(f => { cloths[f.color] = (cloths[f.color] || 0) + 1; });
     return { tables, pieces: Object.entries(pieces).sort((a, b) => b[1] - a[1]), chairs: Object.entries(chairs), cloths: Object.entries(cloths) };
   }
 
@@ -216,19 +221,24 @@
           : `<input type="number" id="xGuests" value="${guests || ''}" min="0" max="5000" step="1" inputmode="numeric"
           style="width:100%;font-size:20px;font-weight:600;border:1px solid var(--line);border-radius:6px;padding:2px 6px">`}</div>
         <div><small>${t('Seats', 'Lugares')}</small><span class="big">${places}</span></div></div>
-      <div class="total"><span>${status}</span><b style="color:${diff < 0 ? '#b3372a' : 'inherit'}">${tables.length} ${t('tables', 'mesas')}</b></div>
+      <div class="total"><span>${status}</span><b style="color:${diff < 0 ? '#b3372a' : 'inherit'}">${tables.filter(isTable).length ? `${tables.filter(isTable).length} ${t('tables', 'mesas')}` : `${tables.length} ${t('rows', 'filas')}`}</b></div>
       ${canSeeGuests() ? `<div class="actions"><button class="btn primary" id="xOpenGuests">${t('Guest list', 'Lista de invitados')} (${names.length})</button></div>
       ${names.length ? `<div class="muted" style="margin-top:6px">${t(`${seated} seated · ${names.length - seated} without a table`,
         `${seated} sentados · ${names.length - seated} sin mesa`)}</div>` : ''}` : ''}</section>
     <section><h3>${t('Furniture list', 'Lista de mobiliario')} <small>${t('for rental and setup', 'para renta y montaje')}</small></h3>
       <table>${pieces.map(([k, n]) => row(esc(k), n)).join('')}
         ${chairs.map(([c, n]) => row(`${sw(c)}${t('Chairs', 'Sillas')} ${colorName(c).toLowerCase()}`, n)).join('')}</table>
-      ${tables.length ? `<h3 style="margin-top:12px">${t('Tablecloths', 'Manteles')}</h3>
+      ${tables.filter(isTable).length ? `<h3 style="margin-top:12px">${t('Tablecloths', 'Manteles')}</h3>
         <table>${cloths.map(([c, n]) => row(`${sw(c)}${colorName(c)}`, n)).join('')}</table>` : ''}
       <div class="actions"><button class="btn" id="xPrintSetup">${t('Setup sheet (PDF)', 'Hoja de montaje (PDF)')}</button></div></section>
     ${staffSection(state)}
     ${V?.section(state) ?? ''}
-    ${canSeeGuests() ? `<section><h3>${t('Layout template', 'Plantilla de montaje')} <small>${t(`for ${guests || 'your'} guests`, `para ${guests || 'tus'} invitados`)}</small></h3>
+    ${canSeeGuests() ? `<section><h3>${t('Event type', 'Tipo de evento')}</h3>
+      <select id="xKind" style="width:100%;font-size:15px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff">
+        ${KINDS.map(([v, label]) => `<option value="${v}"${v === kindOf(state) ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select>
+      <div class="muted" style="margin-top:6px">${t('Changing it rebuilds the layout with what that party needs; you can undo it.',
+        'Al cambiarlo se rearma el montaje con lo que lleva esa fiesta; se puede deshacer.')}</div></section>
+    <section><h3>${t('Layout template', 'Plantilla de montaje')} <small>${t(`for ${guests || 'your'} guests`, `para ${guests || 'tus'} invitados`)}</small></h3>
       <div class="actions">${Object.entries(TEMPLATES).map(([k, [en, es]]) => `<button class="btn" data-template="${k}">${t(en, es)}</button>`).join('')}</div>
       <div class="muted" style="margin-top:6px">${t('Replaces the furniture of this layout; you can undo it.', 'Reemplaza los muebles de esta distribución; se puede deshacer.')}</div></section>` : ''}`;
   }
@@ -250,16 +260,24 @@
         <button class="btn" id="xPrintWaiters">${t('Waiters sheet (PDF)', 'Hoja de meseros (PDF)')}</button></div>` : ''}</section>`;
   }
 
-  const TEMPLATES = { redondas: ['Round tables', 'Redondas'], imperial: ['Banquet tables', 'Imperiales'], coctel: ['Cocktail', 'Cóctel'] };
+  const TEMPLATES = {
+    redondas: ['Round tables', 'Redondas'], imperial: ['Banquet tables', 'Imperiales'], coctel: ['Cocktail', 'Cóctel'],
+    auditorio: ['Theater rows', 'Auditorio'], escuela: ['Classroom', 'Escuela'],
+  };
+  // Tipos de evento (los pone el servidor desde src/lib/domain.ts). El tipo vive en el evento (host) o, en la demo, en el diseño.
+  const KINDS = window.__TIPOS_EVENTO__ || [['boda', 'Boda']];
+  const kindLabel = k => (KINDS.find(([v]) => v === k) || [k, k])[1];
+  const kindOf = st => host()?.kind || st.eventKind || 'boda';
 
-  async function applyTemplate(kind) {
+  /** Rearma el montaje con una plantilla; sin plantilla, la que sugiere el tipo de evento. */
+  async function applyTemplate(kind, opts = {}) {
     const guests = guestsOf(state) || list(state).length || 200;
     const where = host()?.eventId ? `evento=${encodeURIComponent(host().eventId)}` : `lugar=${encodeURIComponent(window.__CASA__.id)}`;
-    if (!confirm(t(`Replace the furniture with the “${TEMPLATES[kind][0]}” template for ${guests} guests? You can undo it.`,
+    if (!opts.confirmed && !confirm(t(`Replace the furniture with the “${TEMPLATES[kind][0]}” template for ${guests} guests? You can undo it.`,
       `¿Reemplazar los muebles con la plantilla “${TEMPLATES[kind][1]}” para ${guests} invitados? Se puede deshacer.`))) return;
     let data;
     try {
-      const r = await fetch(`/api/plantilla?tipo=${kind}&invitados=${guests}&${where}`);
+      const r = await fetch(`/api/plantilla?${kind ? `tipo=${kind}&` : ''}clase=${encodeURIComponent(opts.eventKind || kindOf(state))}&invitados=${guests}&${where}`);
       data = await r.json();
       if (!r.ok) throw new Error(data.error);
     } catch (e) { return toast(e.message || t('Could not load the template', 'No se pudo cargar la plantilla')); }
@@ -278,6 +296,14 @@
     if (open) open.onclick = () => select({ kind: 'ext', panel: 'guests' });
     document.getElementById('xPrintSetup').onclick = () => printSetup(state);
     document.querySelectorAll('#panel [data-template]').forEach(b => b.onclick = () => applyTemplate(b.dataset.template));
+    const kindSel = document.getElementById('xKind');
+    if (kindSel) kindSel.onchange = async () => {
+      const k = kindSel.value, prev = kindOf(state);
+      if (!confirm(t(`Rebuild the layout for “${kindLabel(k)}”? You can undo it.`, `¿Rearmar el montaje para “${kindLabel(k)}”? Se puede deshacer.`))) { kindSel.value = prev; return; }
+      if (host()) await host().setKind(k);
+      else mutate(() => { state.eventKind = k; });
+      await applyTemplate(null, { confirmed: true, eventKind: k });
+    };
     document.querySelectorAll('#panel [data-fsel]').forEach(tr => tr.onclick = () => select({ kind: 'furn', id: tr.dataset.fsel }));
     const dist = document.getElementById('xDistribute');
     if (dist) dist.onclick = () => mutate(() => distributeTables(state)) || toast(t('Tables split among waiters', 'Mesas repartidas entre los meseros'));

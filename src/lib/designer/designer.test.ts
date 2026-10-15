@@ -64,6 +64,39 @@ describe("montaje inicial de un salón", () => {
     expect(items.some((f) => /^Mesa \d+$/.test(f.name))).toBe(false);
   });
 
+  it("cada tipo de evento pone lo suyo y quita lo que no le toca", () => {
+    const names = (kind: Parameters<typeof starterFurniture>[1]["kind"]) => starterFurniture(SALON, { guests: 120, kind }).map((f) => f.name);
+    const infantil = names("infantil");
+    expect(infantil).toEqual(expect.arrayContaining(["Show de payasitas", "Show de botargas", "Área infantil", "Barra de snacks y bebidas", "Mesa de dulces"]));
+    expect(infantil).not.toContain("Pista de baile");
+    expect(infantil).not.toContain("Candelabro de piso");
+    const bautizo = names("bautizo");
+    expect(bautizo).toEqual(expect.arrayContaining(["Mesa de regalos", "Barra de snacks y bebidas", "Mesa de pastel"]));
+    expect(bautizo).not.toContain("Pista de baile");
+    const corp = names("corporativo");
+    expect(corp).toEqual(expect.arrayContaining(["Podio", "Pantalla LED", "Mesa de registro", "Estación de café"]));
+    expect(corp).not.toContain("Pista de baile");
+    expect(corp).not.toContain("Mesa de pastel");
+    expect(names("graduacion")).toContain("Mesa de presídium");
+    expect(names("cumpleanos")).toEqual(expect.arrayContaining(["Pista de baile", "Mesa de pastel"]));
+    expect(names("posada")).not.toContain("Mesa de pastel");
+    // Candelabros solo en boda y XV.
+    expect(names("boda")).toContain("Candelabro de piso");
+    expect(names("cumpleanos")).not.toContain("Candelabro de piso");
+  });
+
+  it("auditorio y escuela sientan a todos mirando al escenario, sin choques", () => {
+    for (const [template, type, per] of [["auditorio", "chairrow", 8], ["escuela", "schooltable", 3]] as const) {
+      const items = starterFurniture(SALON, { guests: 120, kind: "corporativo", template });
+      const rows = items.filter((f) => f.type === type);
+      expect(rows.length).toBe(Math.ceil(120 / per));
+      expect(new Set(rows.map((r) => r.rot)).size).toBe(1);
+      rows.forEach((t, i) => rows.slice(i + 1).forEach((u) => expect(overlap(box(t), box(u))).toBe(false)));
+    }
+    // El corporativo arma auditorio si no se pide otra plantilla.
+    expect(starterFurniture(SALON, { guests: 80, kind: "corporativo" }).some((f) => f.type === "chairrow")).toBe(true);
+  });
+
   it("si no caben todos, pone las que caben", () => {
     const items = starterFurniture(SALON, { guests: 2000, kind: "boda" });
     expect(items.filter((f) => f.type === "rtable").length).toBeLessThan(200);
