@@ -4,6 +4,8 @@ import { securityHeaders } from "./src/lib/security-headers";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // Las pruebas de punta a punta (Playwright) levantan su propio servidor sin pisar el de desarrollo.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   partialPrefetching: true,
   // Permite abrir el servidor de desarrollo desde el iPhone en la misma red Wi-Fi.
   allowedDevOrigins: lanHosts(),

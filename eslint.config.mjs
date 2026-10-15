@@ -13,6 +13,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",,
     ".venv-cad/**",
+    // Pruebas de punta a punta: servidor propio y resultados de Playwright.
+    ".next-e2e/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 
