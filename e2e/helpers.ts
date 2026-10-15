@@ -29,6 +29,15 @@ export async function signIn(page: Page, email: string) {
   await expect(field(page, "email")).toHaveCount(1);
   await field(page, "email").fill(email);
   await field(page, "password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Entrar", exact: true }).locator("visible=true").click();
-  await expect(page).toHaveURL(/\/eventos/);
+  // La primera vez el servidor de pruebas compila la página y el clic puede llegar antes de que el formulario esté
+  // listo: si no avanzó, se vuelve a intentar una vez.
+  const submit = page.getByRole("button", { name: "Entrar", exact: true }).locator("visible=true");
+  await submit.click();
+  try {
+    await expect(page).toHaveURL(/\/eventos/, { timeout: 8_000 });
+  } catch {
+    await field(page, "password").fill(PASSWORD);
+    await submit.click();
+    await expect(page).toHaveURL(/\/eventos/);
+  }
 }
