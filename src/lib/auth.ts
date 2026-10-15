@@ -10,6 +10,7 @@ import { activeModules, sectionOf } from "./domain";
 import { FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, type Invite } from "./invites";
 import { normalizeReferralCode } from "./referrals";
 import { lanOrigins } from "./lan";
+import { passwordResetEmail, sendEmail } from "./email";
 
 const invites = parseInvites(process.env.SIGNUP_CODES, process.env.SIGNUP_CODE);
 
@@ -45,7 +46,17 @@ export const auth = betterAuth({
     provider: "pg",
     schema: { user, session, account, verification },
   }),
-  emailAndPassword: { enabled: true, minPasswordLength: 8 },
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 8,
+    // "Olvidé mi contraseña": el enlace llega por correo (Resend) y dura una hora; en local se imprime en consola.
+    resetPasswordTokenExpiresIn: 60 * 60,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail(passwordResetEmail(user.email, user.name, url));
+    },
+    // Al cambiarla se cierran las demás sesiones abiertas.
+    revokeSessionsOnPasswordReset: true,
+  },
   hooks: {
     // Con SIGNUP_CODES o SIGNUP_CODE definidos, crear cuenta pide un código de invitación; el código decide
     // el tipo de negocio, el plan, los módulos y, en una prueba, cuándo vence.

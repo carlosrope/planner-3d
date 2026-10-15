@@ -87,6 +87,13 @@ export function AuthForm({
           <input name="invite" autoComplete="off" placeholder="Código del salón (si te dieron uno)" className={input} />
         ) : null}
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {!registering && (
+          <p className="text-right text-sm">
+            <Link href="/olvide" className="text-stone-600 underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
+        )}
         <button
           disabled={busy}
           className="h-12 w-full rounded-xl bg-stone-900 font-medium text-white active:bg-stone-700 disabled:opacity-60"
