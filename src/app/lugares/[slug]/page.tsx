@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getPublicVenue, getVenueBasics } from "@/lib/dal";
 import { sectionOf } from "@/lib/domain";
-import { PROLINK_SITE } from "@/lib/prolink";
 import { waLink } from "@/lib/whatsapp";
 import { InquiryForm } from "./InquiryForm";
 import { SITE_URL, jsonLd, venueJsonLd } from "@/lib/site";
@@ -155,9 +154,9 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
 
       <p className="mt-8 text-center text-sm text-stone-500">
         Hecho con{" "}
-        <a href={`${PROLINK_SITE}/espacios-3d.html`} className="underline" target="_blank" rel="noopener">
-          Plantea · por ProLink365
-        </a>
+        <Link href="/" className="underline">
+          Plantea
+        </Link>
         {" · "}
         <Link href="/alta" className="underline">
           Registra tu lugar

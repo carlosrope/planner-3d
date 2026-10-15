@@ -29,6 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
     page("/disenador/salon-demo", 0.6, "monthly"),
     page("/disenador/chardonnay", 0.5, "monthly"),
+    page("/planes", 0.6, "monthly"),
     page("/alta", 0.6, "monthly"),
     page("/registro", 0.4, "monthly"),
     page("/privacidad", 0.2, "monthly"),

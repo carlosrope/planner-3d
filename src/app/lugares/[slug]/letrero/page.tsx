@@ -37,7 +37,7 @@ async function Letrero({ params }: { params: PageProps<"/lugares/[slug]/letrero"
         <img src={`/lugares/${slug}/qr.svg`} alt="Código QR" className="mx-auto my-6 h-64 w-64" />
         <p className="text-lg font-medium">Escanea y {salon ? "prueba cómo queda tu evento" : "recórrela amueblada"}</p>
         <p className="mt-2 break-all text-sm text-stone-500">/lugares/{slug}/3d</p>
-        <p className="mt-6 text-xs text-stone-400">Plantea · por ProLink365</p>
+        <p className="mt-6 text-xs text-stone-400">plantea.com.mx</p>
       </div>
       <PrintButton />
     </main>

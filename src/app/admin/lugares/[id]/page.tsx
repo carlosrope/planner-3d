@@ -6,7 +6,7 @@ import { PageLink } from "@/components/PageLink";
 import { PortadaAuto } from "@/components/PortadaAuto";
 import { adminGetVenue, adminListOrgs, requireAdmin } from "@/lib/dal";
 import { ORG_KIND_LABELS, VENUE_KIND_LABELS, VENUE_STATUSES, VENUE_STATUS_LABELS } from "@/lib/domain";
-import { siteOrigin } from "@/lib/prolink";
+import { siteOrigin } from "@/lib/brand";
 import { formatWhatsapp, waLink } from "@/lib/whatsapp";
 import { AdminNav } from "../../AdminNav";
 import { addFiles, deleteFile, trashVenue, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";

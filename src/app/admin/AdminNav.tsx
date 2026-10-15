@@ -11,7 +11,7 @@ const TABS = [
 export function AdminNav({ current }: { current: (typeof TABS)[number]["href"] }) {
   return (
     <header className="mb-5">
-      <p className="text-sm text-stone-500">ProLink365 · administración de Plantea</p>
+      <p className="text-sm text-stone-500">Administración de Plantea</p>
       <nav className="mt-2 flex flex-wrap gap-2" aria-label="Secciones">
         {TABS.map((t) => (
           <Link

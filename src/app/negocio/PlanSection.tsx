@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { getReferralOrigin, listPayments, type Org } from "@/lib/dal";
 import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, TIER_LABELS, activeModules, isLitePlan, planDaysLeft, referralQuota } from "@/lib/domain";
-import { PRICES_URL, PROLINK_WHATSAPP, spei } from "@/lib/prolink";
+import { PRICES_URL, CONTACT_WHATSAPP, spei } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 import { PaymentForm } from "./PaymentForm";
 import { formatDate, formatInstant } from "@/lib/dates";
@@ -45,9 +46,9 @@ export async function PlanSection({ org }: { org: Org }) {
         </p>
         <p className="mt-2 text-sm">
           Planes y precios:{" "}
-          <a href={PRICES_URL} target="_blank" rel="noopener" className="underline">
-            prolink365.com.mx/espacios-3d
-          </a>
+          <Link href={PRICES_URL} className="underline">
+            plantea.com.mx/planes
+          </Link>
         </p>
       </div>
 
@@ -68,7 +69,7 @@ export async function PlanSection({ org }: { org: Org }) {
         ) : (
           <p className="mt-2 text-sm text-stone-600">
             Pide los datos de la cuenta por{" "}
-            <a href={waLink(PROLINK_WHATSAPP, `Hola, quiero pagar el plan de ${org.name} en Plantea.`)} target="_blank" rel="noopener" className="underline">
+            <a href={waLink(CONTACT_WHATSAPP, `Hola, quiero pagar el plan de ${org.name} en Plantea.`)} target="_blank" rel="noopener" className="underline">
               WhatsApp
             </a>
             .

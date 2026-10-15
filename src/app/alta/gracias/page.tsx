@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getVenueBasics } from "@/lib/dal";
-import { PROLINK_WHATSAPP } from "@/lib/prolink";
+import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 
 export const metadata: Metadata = { title: "Lugar registrado" };
@@ -31,12 +31,12 @@ async function Gracias({ searchParams }: { searchParams: PageProps<"/alta/gracia
         WhatsApp con un enlace para que revises {salon ? "tu salón" : "tu modelo"} y lo confirmes.
       </p>
       <a
-        href={waLink(PROLINK_WHATSAPP, `Hola, acabo de registrar ${name} en Plantea.`)}
+        href={waLink(CONTACT_WHATSAPP, `Hola, acabo de registrar ${name} en Plantea.`)}
         target="_blank"
         rel="noopener"
         className="flex h-12 items-center justify-center rounded-xl bg-[#25d366] font-medium text-white"
       >
-        Avisarle a ProLink por WhatsApp
+        Avisarle a Plantea por WhatsApp
       </a>
       <p className="text-sm text-stone-500">
         Si el plano pesaba mucho o quieres mandar más fotos, hazlo por ese mismo WhatsApp.

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { PageLink } from "@/components/PageLink";
-import { PROLINK_SITE } from "@/lib/prolink";
 import { jsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/site";
 
 // Portada de Plantea: qué es, pruébalo sin cuenta, cómo funciona, para quién y cómo entra un salón.
@@ -121,9 +120,9 @@ export default function Home() {
         </div>
         <p className="mt-6 text-center text-sm text-stone-500">
           Planes y precios en{" "}
-          <a href={`${PROLINK_SITE}/espacios-3d.html#planes`} target="_blank" rel="noopener" className="underline">
-            prolink365.com.mx
-          </a>
+          <Link href="/planes" className="underline">
+            plantea.com.mx/planes
+          </Link>
           . ¿Ya tienes cuenta?{" "}
           <Link href="/entrar" className="underline">
             Entrar

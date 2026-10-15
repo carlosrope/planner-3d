@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Legal, RESPONSABLE, Seccion } from "@/components/Legal";
-import { PRICES_URL } from "@/lib/prolink";
+import { PRICES_URL } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Términos de servicio",

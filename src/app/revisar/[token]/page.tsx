@@ -5,7 +5,7 @@ import { PageLink } from "@/components/PageLink";
 import { PortadaAuto } from "@/components/PortadaAuto";
 import { getVenueForReview } from "@/lib/dal";
 import { VENUE_STATUS_LABELS } from "@/lib/domain";
-import { PROLINK_WHATSAPP } from "@/lib/prolink";
+import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 import { ReviewForms } from "./ReviewForms";
 
@@ -28,7 +28,7 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
   const slug = v.slug ?? v.id;
   const salon = v.kind === "salon";
   const what = salon ? "tu salón" : "tu modelo";
-  const ask = waLink(PROLINK_WHATSAPP, `Hola, tengo una duda sobre ${v.name} en Plantea.`);
+  const ask = waLink(CONTACT_WHATSAPP, `Hola, tengo una duda sobre ${v.name} en Plantea.`);
   const fotos = v.photos.filter((p) => p.kind === "foto");
   const renders = v.photos.filter((p) => p.kind === "render");
   // Portada automática (vista 3D y plano 2D): se toma desde el navegador del dueño si ProLink no la generó.

@@ -4,7 +4,9 @@ import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getReferralOrigin, listEvents, listTrashedEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
 import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isLitePlan, sectionOf, trashDaysLeft, type Section } from "@/lib/domain";
+import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { formatDate, formatDay, formatInstant } from "@/lib/dates";
+import { waLink } from "@/lib/whatsapp";
 import { restoreEventAction, trashEventAction } from "./actions";
 import { NewEventForm } from "./NewEventForm";
 import { SamplesLink, Welcome } from "./Welcome";
@@ -21,7 +23,7 @@ export default function EventosPage({ searchParams }: PageProps<"/eventos">) {
   );
 }
 
-const WHATSAPP_PROLINK = "https://wa.me/526681305828?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20Espacios%203D";
+const ACTIVATE_PLAN_LINK = waLink(CONTACT_WHATSAPP, "Hola, quiero activar mi plan de Plantea");
 
 const COPY: Record<Section, { empty: string; title: string; hint: string }> = {
   salones: {
@@ -80,7 +82,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
             Tus proyectos siguen guardados, pero ya no se pueden abrir ni crear nuevos. Escríbenos y lo activamos el mismo día.
           </p>
           <a
-            href={WHATSAPP_PROLINK}
+            href={ACTIVATE_PLAN_LINK}
             target="_blank"
             rel="noopener"
             className="mt-3 inline-flex h-11 items-center rounded-xl bg-red-700 px-4 text-sm font-medium text-white active:bg-red-800"

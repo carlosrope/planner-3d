@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PROLINK_SITE } from "@/lib/prolink";
+import { PARTNER_SITE } from "@/lib/brand";
 
 /** Pie de toda la app: la marca, "Hecho por ProLink365" y los enlaces de siempre. */
 export function Footer() {
@@ -14,7 +14,7 @@ export function Footer() {
           </p>
           <p className="mt-3 text-sm text-stone-600">
             Hecho por{" "}
-            <a href={PROLINK_SITE} target="_blank" rel="noopener" className="font-semibold text-[#0d8a4f]">
+            <a href={PARTNER_SITE} target="_blank" rel="noopener" className="font-semibold text-[#0d8a4f]">
               ProLink365
             </a>
             {" · "}Automatización empresarial con IA · Los Mochis, Sinaloa
@@ -30,9 +30,9 @@ export function Footer() {
           <Link href="/alta" className="text-stone-700 hover:underline">
             Registra tu lugar
           </Link>
-          <a href={`${PROLINK_SITE}/espacios-3d.html#planes`} target="_blank" rel="noopener" className="text-stone-700 hover:underline">
+          <Link href="/planes" className="text-stone-700 hover:underline">
             Planes y precios
-          </a>
+          </Link>
           <Link href="/privacidad" className="text-stone-500 hover:underline">
             Aviso de privacidad
           </Link>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { getCurrentUser, requireOrg } from "@/lib/dal";
 import { isOwnerKind } from "@/lib/domain";
-import { PRICES_URL } from "@/lib/prolink";
+import { PRICES_URL } from "@/lib/brand";
 import { AltaForm } from "./AltaForm";
 
 export const metadata: Metadata = {
@@ -28,9 +28,9 @@ export default function AltaPage() {
       </ol>
       <p className="mt-3 text-sm text-stone-500">
         Los planes y precios están en{" "}
-        <a href={PRICES_URL} className="underline" target="_blank" rel="noopener">
-          prolink365.com.mx
-        </a>
+        <Link href={PRICES_URL} className="underline">
+          plantea.com.mx/planes
+        </Link>
         .
       </p>
       <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-4 sm:p-5">

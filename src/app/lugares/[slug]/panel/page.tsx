@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getOwnedVenue, requireOrg, requireUser } from "@/lib/dal";
 import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, VENUE_STATUS_LABELS } from "@/lib/domain";
-import { siteOrigin } from "@/lib/prolink";
+import { siteOrigin } from "@/lib/brand";
 import { formatWhatsapp, waLink } from "@/lib/whatsapp";
 import { ReferralSection } from "@/app/negocio/ReferralSection";
 import { CopyField } from "./CopyField";

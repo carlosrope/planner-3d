@@ -1,5 +1,5 @@
 import { listReferralCodes, referralAllowance, type Org } from "@/lib/dal";
-import { siteOrigin } from "@/lib/prolink";
+import { siteOrigin } from "@/lib/brand";
 import { ReferralForm } from "./ReferralForm";
 import { formatDay, formatInstant } from "@/lib/dates";
 
