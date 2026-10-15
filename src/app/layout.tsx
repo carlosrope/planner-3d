@@ -7,6 +7,7 @@ import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/site";
+import { Suspense } from "react";
 import "./globals.css";
 
 // Tipografías de la marca (docs/marca-plantea.md): Sora para títulos, DM Sans para texto.
@@ -47,7 +48,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Header />
         <div className="flex-1">{children}</div>
         <Footer />
-        <WhatsAppFloat href={waLink(CONTACT_WHATSAPP, "Hola, quiero saber más de Plantea.")} />
+        {/* Lee la ruta para ocultarse en las páginas de trabajo: va en Suspense para no bloquear el prerender. */}
+        <Suspense fallback={null}>
+          <WhatsAppFloat href={waLink(CONTACT_WHATSAPP, "Hola, quiero saber más de Plantea.")} />
+        </Suspense>
         {process.env.SENTRY_DSN ? <ErrorReporter /> : null}
       </body>
     </html>

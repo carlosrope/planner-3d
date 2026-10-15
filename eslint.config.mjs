@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     ".venv-cad/**",
     // Pruebas de punta a punta: servidor propio y resultados de Playwright.
     ".next-e2e/**",
+    ".next-build/**",
     "test-results/**",
     "playwright-report/**",
   ]),
