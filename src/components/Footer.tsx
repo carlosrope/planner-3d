@@ -30,6 +30,9 @@ export function Footer() {
           <Link href="/alta" className="text-stone-700 hover:underline">
             Registra tu lugar
           </Link>
+          <Link href="/para-salones" className="text-stone-700 hover:underline">
+            Para dueños de salón
+          </Link>
           <Link href="/planes" className="text-stone-700 hover:underline">
             Planes y precios
           </Link>

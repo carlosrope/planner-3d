@@ -3,6 +3,9 @@ import { DM_Sans, Sora } from "next/font/google";
 import { ErrorReporter } from "@/components/ErrorReporter";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { WhatsAppFloat } from "@/components/WhatsAppFloat";
+import { CONTACT_WHATSAPP } from "@/lib/brand";
+import { waLink } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -44,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Header />
         <div className="flex-1">{children}</div>
         <Footer />
+        <WhatsAppFloat href={waLink(CONTACT_WHATSAPP, "Hola, quiero saber más de Plantea.")} />
         {process.env.SENTRY_DSN ? <ErrorReporter /> : null}
       </body>
     </html>

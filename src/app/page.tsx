@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { EnPlantea } from "@/components/EnPlantea";
 import { PageLink } from "@/components/PageLink";
 import { jsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/site";
 
@@ -11,8 +13,8 @@ const PASOS = [
 ];
 
 const QUIEN = [
-  { t: "Salones de eventos", p: "Tu salón en el catálogo con su enlace y QR; tus clientes arman su fiesta ahí con un código tuyo.", href: "/alta", cta: "Registra tu salón" },
-  { t: "Planners y organizadores", p: "Todos tus eventos en cualquier salón: distribuciones A, B y C, hojas para imprimir y el enlace con tu marca.", href: "/registro", cta: "Crear cuenta" },
+  { t: "Salones de eventos", p: "Tu salón en el catálogo con su enlace y QR; tus clientes arman su fiesta ahí con un código tuyo.", href: "/para-salones", cta: "Así funciona para tu salón" },
+  { t: "Planners y organizadores", p: "Todos tus eventos en cualquier salón: distribuciones A, B y C, hojas para imprimir y el enlace con tu marca.", href: "/planes#planner", cta: "Ver planes para planners" },
   { t: "Novios, quinceañeras y familias", p: "Si ya apartaste el salón, pídele tu código: armas tu evento sin costo y lo compartes con tu familia.", href: "/salones", cta: "Buscar mi salón" },
   { t: "Inmobiliarias y desarrolladoras", p: "Cada modelo de casa amueblado, con pisos y recorrido guiado, para mostrarlo con tu marca.", href: "/casas", cta: "Ver modelos" },
 ];
@@ -34,7 +36,7 @@ export default function Home() {
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <PageLink href="/disenador/salon-demo" className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white shadow-lg shadow-[#b5653a]/25 hover:bg-[#a4552d]">
-                Probar con un salón
+                Mira ahora en 3D
               </PageLink>
               <PageLink href="/disenador/chardonnay" className="flex h-12 items-center justify-center rounded-xl border border-stone-900 bg-white px-5 font-semibold text-stone-900 hover:bg-stone-50">
                 Probar con una casa
@@ -48,10 +50,20 @@ export default function Home() {
             </p>
           </div>
           <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element -- captura propia */}
-            <img src="/portada/espacios-salon-3d.jpg" alt="Un salón de eventos en 3D con mesas, pista y escenario" width={800} height={575} className="w-full rounded-2xl border border-stone-200 shadow-2xl shadow-stone-900/15" />
-            {/* eslint-disable-next-line @next/next/no-img-element -- captura propia */}
-            <img src="/portada/espacios-salon-2d.jpg" alt="El mismo salón en plano 2D" width={800} height={575} className="absolute -bottom-6 -left-4 w-[44%] rotate-[-4deg] rounded-xl border border-stone-200 shadow-xl sm:-left-8" />
+            {/* Grabación real del Salón Demostración: el plano 2D pasa a 3D (8 s, sin sonido, se repite). */}
+            <video
+              src="/portada/plano-a-3d.mp4"
+              poster="/portada/plano-a-3d.jpg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label="El plano 2D del salón se convierte en el salón en 3D"
+              width={640}
+              height={602}
+              className="w-full rounded-2xl border border-stone-200 bg-[#e6e2dc] shadow-2xl shadow-stone-900/15"
+            />
             <div className="absolute -right-3 -top-3 flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium shadow-lg">
               {/* eslint-disable-next-line @next/next/no-img-element -- símbolo */}
               <img src="/marca/plantea-symbol-color.svg" alt="" className="h-5 w-5" />
@@ -93,6 +105,11 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Salones reales y testimonios: solo si hay algo real que mostrar */}
+      <Suspense fallback={null}>
+        <EnPlantea />
+      </Suspense>
 
       {/* Catálogo + registro */}
       <section className="mx-auto max-w-5xl px-4 py-10 md:py-14">

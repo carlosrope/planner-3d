@@ -38,6 +38,9 @@ function PublicLinks({ className = "" }: { className?: string }) {
       <Link href="/casas" className={`${link} ${className}`}>
         Casas
       </Link>
+      <Link href="/planes" className={`${link} ${className}`}>
+        Planes
+      </Link>
       <Link href="/alta" className={`${link} ${className}`}>
         Registra tu lugar
       </Link>
