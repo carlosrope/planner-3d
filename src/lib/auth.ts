@@ -57,6 +57,20 @@ export const auth = betterAuth({
     // Al cambiarla se cierran las demás sesiones abiertas.
     revokeSessionsOnPasswordReset: true,
   },
+  // Límite de intentos por IP (Better Auth ya trae uno; aquí quedan explícitos los valores). En memoria: basta con
+  // un solo servidor en Railway; se reinicia al desplegar. Activo en producción, o en local con AUTH_RATE_LIMIT=1.
+  rateLimit: {
+    enabled: process.env.NODE_ENV === "production" || process.env.AUTH_RATE_LIMIT === "1",
+    window: 60,
+    max: 100,
+    customRules: {
+      // 10 intentos de entrar cada 15 minutos por IP.
+      "/sign-in/email": { window: 15 * 60, max: 10 },
+      "/sign-up/email": { window: 60 * 60, max: 10 },
+      "/request-password-reset": { window: 60 * 60, max: 5 },
+      "/reset-password": { window: 15 * 60, max: 10 },
+    },
+  },
   hooks: {
     // Con SIGNUP_CODES o SIGNUP_CODE definidos, crear cuenta pide un código de invitación; el código decide
     // el tipo de negocio, el plan, los módulos y, en una prueba, cuándo vence.

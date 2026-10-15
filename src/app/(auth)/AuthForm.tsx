@@ -45,7 +45,9 @@ export function AuthForm({
     setBusy(false);
     if (error) {
       setError(
-        error.status === 401 || error.code === "INVALID_EMAIL_OR_PASSWORD"
+        error.status === 429
+          ? "Demasiados intentos. Espera unos minutos y vuelve a intentar."
+          : error.status === 401 || error.code === "INVALID_EMAIL_OR_PASSWORD"
           ? "Correo o contraseña incorrectos."
           : error.code === "USER_ALREADY_EXISTS" || error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
             ? "Ya existe una cuenta con ese correo."
