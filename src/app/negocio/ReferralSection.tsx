@@ -1,9 +1,8 @@
 import { listReferralCodes, referralAllowance, type Org } from "@/lib/dal";
 import { siteOrigin } from "@/lib/prolink";
 import { ReferralForm } from "./ReferralForm";
+import { formatDay, formatInstant } from "@/lib/dates";
 
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-const fechaCorta = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" });
 
 /**
  * Códigos para los clientes del negocio: el dueño de un salón (o la planner) genera uno por cliente; el cliente
@@ -49,13 +48,13 @@ export async function ReferralSection({ org, venues, venueId }: { org: Org; venu
                 <p className="font-mono text-base font-semibold tracking-wide">{c.code}</p>
                 <p className="text-sm text-stone-600">
                   {c.guestName}
-                  {c.eventDate ? ` · ${fecha.format(new Date(c.eventDate))}` : ""}
+                  {c.eventDate ? ` · ${formatDay(c.eventDate)}` : ""}
                   {venueId ? "" : ` · ${c.venueName}`}
                 </p>
               </div>
               {c.usedAt ? (
                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-900">
-                  {c.eventId ? "Evento armado" : "Cuenta creada"} · {fechaCorta.format(c.usedAt)}
+                  {c.eventId ? "Evento armado" : "Cuenta creada"} · {formatInstant(c.usedAt, "dayMonthShort")}
                 </span>
               ) : (
                 <a

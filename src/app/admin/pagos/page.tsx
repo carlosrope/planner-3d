@@ -4,6 +4,7 @@ import { adminListPayments, requireAdmin } from "@/lib/dal";
 import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS } from "@/lib/domain";
 import { AdminNav } from "../AdminNav";
 import { resolvePayment } from "../actions";
+import { formatDate } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Administración · Pagos" };
 
@@ -17,7 +18,6 @@ export default function AdminPagosPage() {
   );
 }
 
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" });
 
 async function Pagos() {
   await requireAdmin();
@@ -38,8 +38,8 @@ async function Pagos() {
                   {p.orgName} · {PLAN_LABELS[p.plan]} · {PAYMENT_PERIOD_LABELS[p.period]} · ${p.amount.toLocaleString("es-MX")}
                 </p>
                 <p className="text-sm text-stone-500">
-                  {fecha.format(p.createdAt)} · {PAYMENT_STATUS_LABELS[p.status]}
-                  {p.planEndsAt ? ` · plan hasta ${fecha.format(p.planEndsAt)}` : " · sin vencimiento"}
+                  {formatDate(p.createdAt)} · {PAYMENT_STATUS_LABELS[p.status]}
+                  {p.planEndsAt ? ` · plan hasta ${formatDate(p.planEndsAt)}` : " · sin vencimiento"}
                 </p>
               </div>
               <p className="mt-1 text-sm">

@@ -3,9 +3,8 @@ import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, TI
 import { PRICES_URL, PROLINK_WHATSAPP, spei } from "@/lib/prolink";
 import { waLink } from "@/lib/whatsapp";
 import { PaymentForm } from "./PaymentForm";
+import { formatDate, formatInstant } from "@/lib/dates";
 
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" });
-const fechaCorta = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" });
 
 /** Tu plan: qué incluye, cuándo vence, cómo pagar por transferencia y los comprobantes enviados. */
 export async function PlanSection({ org }: { org: Org }) {
@@ -40,8 +39,8 @@ export async function PlanSection({ org }: { org: Org }) {
         <p className="mt-1 text-sm">
           {org.planEndsAt
             ? expired
-              ? `Terminó el ${fecha.format(org.planEndsAt)}. Tus proyectos siguen guardados; al confirmar tu pago se reactivan el mismo día.`
-              : `Vigente hasta el ${fecha.format(org.planEndsAt)}${soon ? ` (quedan ${daysLeft} días)` : ""}.`
+              ? `Terminó el ${formatInstant(org.planEndsAt, "long")}. Tus proyectos siguen guardados; al confirmar tu pago se reactivan el mismo día.`
+              : `Vigente hasta el ${formatInstant(org.planEndsAt, "long")}${soon ? ` (quedan ${daysLeft} días)` : ""}.`
             : "Sin fecha de vencimiento."}
         </p>
         <p className="mt-2 text-sm">
@@ -93,7 +92,7 @@ export async function PlanSection({ org }: { org: Org }) {
                     {PLAN_LABELS[p.plan]} · {PAYMENT_PERIOD_LABELS[p.period]} · ${p.amount.toLocaleString("es-MX")}
                   </p>
                   <p className="text-stone-500">
-                    {fechaCorta.format(p.createdAt)}
+                    {formatDate(p.createdAt)}
                     {p.note ? ` · ${p.note}` : ""}
                   </p>
                 </div>

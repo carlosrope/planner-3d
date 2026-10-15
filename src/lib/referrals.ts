@@ -1,4 +1,5 @@
 import { TOKEN_CHARS } from "./tokens";
+import { monthOf, startOfDay } from "./dates";
 
 /**
  * Códigos de referido: el dueño de un salón (o una planner) genera uno por cliente; con él, el cliente crea su
@@ -37,8 +38,7 @@ export function normalizeReferralCode(raw: string): string | null {
 
 /** Primer instante del mes en curso (hora de México), para contar los códigos dados este mes. */
 export function monthStart(now = new Date()): Date {
-  const mx = new Date(now.toLocaleString("en-US", { timeZone: "America/Mazatlan" }));
-  return new Date(`${mx.getFullYear()}-${String(mx.getMonth() + 1).padStart(2, "0")}-01T00:00:00-07:00`);
+  return startOfDay(`${monthOf(now)}-01`);
 }
 
 /** Códigos que todavía puede dar este mes (null = sin tope). */

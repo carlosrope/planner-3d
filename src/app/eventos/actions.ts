@@ -10,6 +10,7 @@ import { SALON_EVENT_KINDS, isLitePlan, sectionOf } from "@/lib/domain";
 import { sampleGuests, seatGuests } from "@/lib/designer/samples";
 import { starterDesign, starterFurniture, type Template } from "@/lib/designer/starter";
 import type { DesignDoc, DesignerPlan } from "@/lib/designer/types";
+import { addDays, today } from "@/lib/dates";
 
 export type CreateEventState = { error?: string } | null;
 
@@ -107,7 +108,7 @@ export async function createSamples(): Promise<void> {
     moduleActive(org, "salon") ? pick("salon") : null,
     moduleActive(org, "casa") ? pick("casa") : null,
   ]);
-  const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const day = (n: number) => addDays(today(), n);
 
   const salonDoc = (plan: DesignerPlan, guests: number, kind: "boda" | "xv", template: Template): DesignDoc => {
     const furniture = starterFurniture(plan, { guests, kind, template });

@@ -1,3 +1,5 @@
+import { endOfDay } from "./dates";
+
 // Catálogos del negocio compartidos por la base de datos, el servidor y la interfaz.
 
 export const EVENT_KINDS = ["boda", "xv", "graduacion", "corporativo", "casa", "otro"] as const;
@@ -69,7 +71,7 @@ export const REFERRAL_DAYS_AFTER_EVENT = 30;
 export const REFERRAL_DAYS_WITHOUT_DATE = 90;
 /** Fin del plan de un cliente con código: 30 días después de su evento o 90 días desde hoy si no dio fecha. */
 export function referralPlanEnd(eventDate: string | null, now = new Date()): Date {
-  const base = eventDate ? new Date(`${eventDate}T23:59:59-07:00`) : now;
+  const base = eventDate ? endOfDay(eventDate) : now;
   return new Date(base.getTime() + (eventDate ? REFERRAL_DAYS_AFTER_EVENT : REFERRAL_DAYS_WITHOUT_DATE) * 86_400_000);
 }
 export const isSection = (value: unknown): value is Section => typeof value === "string" && value in SECTIONS;

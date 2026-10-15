@@ -17,6 +17,7 @@ import {
 import type { DesignerPlan } from "@/lib/designer/types";
 import { ORG_KINDS, PLANS, TIERS, VENUE_STATUSES, isSection } from "@/lib/domain";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
+import { endOfDay } from "@/lib/dates";
 
 // Acciones de la administración de ProLink. Todas piden requireAdmin.
 
@@ -155,7 +156,7 @@ export async function updateOrgPlan(formData: FormData): Promise<void> {
     tier: d.tier,
     modules: d.modules.filter(isSection),
     // Fin del día (hora de México) para que el último día cuente completo.
-    planEndsAt: d.planEndsAt ? new Date(`${d.planEndsAt}T23:59:59-07:00`) : null,
+    planEndsAt: d.planEndsAt ? endOfDay(d.planEndsAt) : null,
   });
   revalidatePath("/admin/cuentas");
   revalidatePath("/eventos");

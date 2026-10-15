@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { adminListVenues, requireAdmin } from "@/lib/dal";
 import { VENUE_KIND_LABELS, VENUE_STATUS_LABELS } from "@/lib/domain";
 import { AdminNav } from "./AdminNav";
+import { formatInstant } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Administración · Lugares" };
 
@@ -17,7 +18,6 @@ export default function AdminPage() {
   );
 }
 
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" });
 const STATUS_STYLE: Record<string, string> = {
   conversion: "bg-amber-100 text-amber-900",
   revision: "bg-sky-100 text-sky-900",
@@ -64,7 +64,7 @@ async function Lugares() {
               <td className="py-2">{v.ownerName ?? <span className="text-stone-400">sin cuenta</span>}</td>
               <td className="py-2">{v.hasPlan ? "Sí" : <span className="text-amber-700">Falta</span>}</td>
               <td className="py-2">{v.events}</td>
-              <td className="py-2 text-stone-500">{fecha.format(v.createdAt)}</td>
+              <td className="py-2 text-stone-500">{formatInstant(v.createdAt, "dayMonthShort")}</td>
             </tr>
           ))}
         </tbody>

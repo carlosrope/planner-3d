@@ -40,6 +40,7 @@ import { monthStart, newReferralCode, referralLeft } from "./referrals";
 import { slugify, uniqueSlug } from "./slug";
 
 import { TOKEN_CHARS } from "./tokens";
+import { monthOf } from "./dates";
 export const newToken = (length = 20) => Array.from(randomBytes(length), (b) => TOKEN_CHARS[b % TOKEN_CHARS.length]).join("");
 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
@@ -568,10 +569,8 @@ export async function listOwnedVenues(orgId: string) {
   return rows.map((r) => ({ ...r, events: Number(r.events), pendingInquiries: Number(r.pendingInquiries) }));
 }
 
-const monthKey = (d: Date | string) => {
-  const date = new Date(d);
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-};
+/** Mes (hora de Los Mochis) en que cae un instante. */
+const monthKey = (d: Date | string) => monthOf(new Date(d));
 
 /** Un lugar del negocio con todo lo que muestra su panel. */
 export async function getOwnedVenue(orgId: string, slugOrId: string) {
@@ -590,9 +589,12 @@ export async function getOwnedVenue(orgId: string, slugOrId: string) {
     .where(and(bySlugOrId(slugOrId), eq(venue.ownerOrgId, orgId)))
     .limit(1);
   if (!found) return null;
-  const since = new Date();
-  since.setUTCMonth(since.getUTCMonth() - 5, 1);
-  since.setUTCHours(0, 0, 0, 0);
+  // Reporte de 6 meses (el actual y 5 atrás), por mes de Los Mochis.
+  const [y, mo] = monthOf(new Date()).split("-").map(Number);
+  const monthKeys = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(Date.UTC(y, mo - 1 - 5 + i, 1));
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  });
   const [photos, files, events, inquiries, access] = await Promise.all([
     listVenuePhotos(found.id),
     db
@@ -630,12 +632,7 @@ export async function getOwnedVenue(orgId: string, slugOrId: string) {
       .orderBy(asc(organization.name)),
   ]);
   // Reporte de los últimos 6 meses: eventos planeados ahí y solicitudes recibidas, por mes.
-  const months: { month: string; events: number; inquiries: number }[] = [];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(since);
-    d.setUTCMonth(d.getUTCMonth() + i);
-    months.push({ month: monthKey(d), events: 0, inquiries: 0 });
-  }
+  const months = monthKeys.map((month) => ({ month, events: 0, inquiries: 0 }));
   const at = new Map(months.map((m) => [m.month, m]));
   for (const e of events) {
     const m = at.get(monthKey(e.createdAt));

@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getReferralOrigin, listEvents, listTrashedEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
 import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isLitePlan, sectionOf, trashDaysLeft, type Section } from "@/lib/domain";
-import { formatDate } from "@/lib/dates";
+import { formatDate, formatDay, formatInstant } from "@/lib/dates";
 import { restoreEventAction, trashEventAction } from "./actions";
 import { NewEventForm } from "./NewEventForm";
 import { SamplesLink, Welcome } from "./Welcome";
@@ -21,8 +21,6 @@ export default function EventosPage({ searchParams }: PageProps<"/eventos">) {
   );
 }
 
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-const fechaPlan = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long" });
 const WHATSAPP_PROLINK = "https://wa.me/526681305828?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20Espacios%203D";
 
 const COPY: Record<Section, { empty: string; title: string; hint: string }> = {
@@ -61,7 +59,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
   const count = (s: Section) => events.filter((e) => sectionOf(e.venueKind) === s).length;
   const planName = origin ? `Con código de ${origin.issuerName}` : PLAN_LABELS[org.plan];
   const planLine = org.planEndsAt
-    ? `${planName} · ${expired ? "terminó el" : "hasta el"} ${fechaPlan.format(org.planEndsAt)}`
+    ? `${planName} · ${expired ? "terminó el" : "hasta el"} ${formatInstant(org.planEndsAt, "dayMonth")}`
     : planName;
 
   return (
@@ -144,7 +142,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
               </div>
               <div className="shrink-0 text-right text-sm">
                 {section === "salones" && (
-                  <p className="font-medium">{e.eventDate ? fecha.format(new Date(e.eventDate)) : "Sin fecha"}</p>
+                  <p className="font-medium">{e.eventDate ? formatDay(e.eventDate) : "Sin fecha"}</p>
                 )}
                 <p className="text-stone-500">{EVENT_STATUS_LABELS[e.status]}</p>
               </div>

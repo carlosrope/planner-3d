@@ -10,6 +10,7 @@ import { formatWhatsapp, waLink } from "@/lib/whatsapp";
 import { ReferralSection } from "@/app/negocio/ReferralSection";
 import { CopyField } from "./CopyField";
 import { AccessForms, SeenButton } from "./PanelForms";
+import { formatDay, formatInstant } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Panel del lugar" };
 
@@ -23,9 +24,6 @@ export default function PanelPage({ params }: PageProps<"/lugares/[slug]/panel">
   );
 }
 
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-const fechaHora = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
-const mes = new Intl.DateTimeFormat("es-MX", { month: "short", year: "2-digit", timeZone: "UTC" });
 
 async function Panel({ params }: { params: PageProps<"/lugares/[slug]/panel">["params"] }) {
   const user = await requireUser("/lugares");
@@ -113,11 +111,11 @@ async function Panel({ params }: { params: PageProps<"/lugares/[slug]/panel">["p
                       </a>
                     </p>
                     <p className="text-sm font-normal text-stone-500">
-                      {[q.eventDate ? fecha.format(new Date(q.eventDate)) : null, q.guests ? `${q.guests} invitados` : null].filter(Boolean).join(" · ")}
+                      {[q.eventDate ? formatDay(q.eventDate) : null, q.guests ? `${q.guests} invitados` : null].filter(Boolean).join(" · ")}
                     </p>
                     {q.message && <p className="mt-1 text-sm font-normal text-stone-700">{q.message}</p>}
                   </div>
-                  <span className="shrink-0 text-xs font-normal text-stone-400">{fechaHora.format(q.createdAt)}</span>
+                  <span className="shrink-0 text-xs font-normal text-stone-400">{formatInstant(q.createdAt, "dateTime")}</span>
                 </div>
               </li>
             ))}
@@ -143,7 +141,7 @@ async function Panel({ params }: { params: PageProps<"/lugares/[slug]/panel">["p
             <tbody>
               {v.events.map((e) => (
                 <tr key={e.id} className="border-t border-stone-100">
-                  <td className="py-2">{e.eventDate ? fecha.format(new Date(e.eventDate)) : "Sin fecha"}</td>
+                  <td className="py-2">{e.eventDate ? formatDay(e.eventDate) : "Sin fecha"}</td>
                   <td className="py-2">{EVENT_KIND_LABELS[e.kind]}</td>
                   <td className="py-2">{salon ? (e.guestCount ?? "") : ""}</td>
                   <td className="py-2">{e.mine ? "Tu negocio" : e.orgName}</td>
@@ -180,7 +178,7 @@ async function Panel({ params }: { params: PageProps<"/lugares/[slug]/panel">["p
           <tbody>
             {v.months.map((m) => (
               <tr key={m.month} className="border-t border-stone-100">
-                <td className="py-2 capitalize">{mes.format(new Date(`${m.month}-01T00:00:00Z`))}</td>
+                <td className="py-2 capitalize">{formatDay(`${m.month}-01`, "month")}</td>
                 <td className="py-2">{m.events}</td>
                 <td className="py-2">{m.inquiries}</td>
               </tr>

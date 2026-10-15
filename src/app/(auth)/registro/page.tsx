@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getReferralInvite } from "@/lib/dal";
 import { normalizeReferralCode } from "@/lib/referrals";
 import { AuthForm } from "../AuthForm";
+import { formatDay } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Crear cuenta" };
 
@@ -17,7 +18,6 @@ export default function RegistroPage({ searchParams }: PageProps<"/registro">) {
   );
 }
 
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", timeZone: "UTC" });
 
 /** ?codigo=: código de referido de un salón o una planner; se valida y se llena solo. */
 async function Registro({ searchParams }: { searchParams: PageProps<"/registro">["searchParams"] }) {
@@ -39,7 +39,7 @@ async function Registro({ searchParams }: { searchParams: PageProps<"/registro">
       mode="registro"
       inviteRequired
       inviteValue={ref.code}
-      notice={`Código de ${ref.issuer.name} para ${ref.guestName}: tu evento en ${ref.venue.name}${ref.eventDate ? ` el ${fecha.format(new Date(ref.eventDate))}` : ""} en 3D, sin costo. Crea tu cuenta y arma tu plano.`}
+      notice={`Código de ${ref.issuer.name} para ${ref.guestName}: tu evento en ${ref.venue.name}${ref.eventDate ? ` el ${formatDay(ref.eventDate, "dayMonth")}` : ""} en 3D, sin costo. Crea tu cuenta y arma tu plano.`}
       next={`/eventos?lugar=${encodeURIComponent(slug)}`}
     />
   );

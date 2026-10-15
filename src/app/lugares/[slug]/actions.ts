@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createInquiry, getPublicVenue } from "@/lib/dal";
 import { normalizeWhatsapp, waLink } from "@/lib/whatsapp";
+import { formatDay } from "@/lib/dates";
 
 export type InquiryState = { ok?: boolean; whatsapp?: string | null; error?: string } | null;
 
@@ -15,7 +16,6 @@ const inquiry = z.object({
   message: z.string().trim().max(400),
 });
 
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 /** Solicitud de informes: se guarda para el panel del lugar y, si tiene WhatsApp, se abre con el mensaje listo. */
 export async function sendInquiry(_prev: InquiryState, formData: FormData): Promise<InquiryState> {
@@ -45,7 +45,7 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
   const lines = [
     `Hola, vi ${v.name} en 3D en Plantea y quiero informes.`,
     `Soy ${d.name}.`,
-    d.eventDate ? `Fecha: ${fecha.format(new Date(d.eventDate))}.` : "",
+    d.eventDate ? `Fecha: ${formatDay(d.eventDate, "long")}.` : "",
     d.guests !== "" ? `Invitados: ${d.guests}.` : "",
     d.message,
   ].filter(Boolean);

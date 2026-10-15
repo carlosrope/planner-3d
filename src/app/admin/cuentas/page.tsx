@@ -4,6 +4,7 @@ import { adminListOrgs, requireAdmin } from "@/lib/dal";
 import { ALL_SECTIONS, ORG_KINDS, ORG_KIND_LABELS, PLANS, PLAN_LABELS, SECTIONS, TIERS, TIER_LABELS, isLitePlan, planDaysLeft } from "@/lib/domain";
 import { AdminNav } from "../AdminNav";
 import { updateOrgPlan } from "../actions";
+import { dayOf, formatDate } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Administración · Cuentas" };
 
@@ -18,8 +19,8 @@ export default function AdminCuentasPage() {
 }
 
 const field = "h-10 rounded-xl border border-stone-300 bg-white px-2 text-sm outline-none focus:border-stone-800";
-const fecha = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" });
-const dateInput = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
+// El fin del plan se guarda a las 23:59 de Los Mochis: se lee como ese día (no el siguiente en UTC).
+const dateInput = (d: Date | null) => (d ? dayOf(d) : "");
 
 async function Cuentas() {
   await requireAdmin();
@@ -36,13 +37,13 @@ async function Cuentas() {
               <div>
                 <p className="font-semibold">{o.name}</p>
                 <p className="text-sm text-stone-500">
-                  {o.emails || "sin usuarios"} · {o.events} eventos · {o.venues} lugares · {o.referrals} códigos dados · desde {fecha.format(o.createdAt)}
+                  {o.emails || "sin usuarios"} · {o.events} eventos · {o.venues} lugares · {o.referrals} códigos dados · desde {formatDate(o.createdAt)}
                   {o.pendingPayments > 0 && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{o.pendingPayments} pago por revisar</span>}
                 </p>
               </div>
               <p className="text-sm">
                 {PLAN_LABELS[o.plan]}{isLitePlan(o.plan) || o.plan === "prueba" ? "" : ` ${TIER_LABELS[o.tier]}`} · {o.modules.map((m) => SECTIONS[m].label).join(" y ") || "sin módulos"} ·{" "}
-                {o.planEndsAt ? ((planDaysLeft(o.planEndsAt) ?? 1) <= 0 ? <span className="text-red-700">venció el {fecha.format(o.planEndsAt)}</span> : `hasta el ${fecha.format(o.planEndsAt)}`) : "sin vencimiento"}
+                {o.planEndsAt ? ((planDaysLeft(o.planEndsAt) ?? 1) <= 0 ? <span className="text-red-700">venció el {formatDate(o.planEndsAt)}</span> : `hasta el ${formatDate(o.planEndsAt)}`) : "sin vencimiento"}
               </p>
             </div>
             <form action={updateOrgPlan} className="mt-3 flex flex-wrap items-center gap-2">
