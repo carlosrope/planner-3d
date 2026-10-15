@@ -12,7 +12,7 @@ test("registro con código de invitación", async ({ page }) => {
   await signUp(page, { name: planner.name, email: planner.email, code: "NOEXISTE" });
   await expect(page.getByText("El código de invitación no es válido.")).toBeVisible();
 
-  // Con el código de 14 días queda en plan Prueba, solo con Eventos.
+  // Con el código de 7 días queda en plan Prueba, solo con Eventos.
   await signUp(page, { name: planner.name, email: planner.email, code: E2E.code });
   await expect(page).toHaveURL(/\/eventos/);
   await expect(page.getByRole("heading", { name: "Proyectos" })).toBeVisible();

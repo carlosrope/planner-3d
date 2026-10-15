@@ -28,8 +28,8 @@ describe("códigos de invitación", () => {
     expect(invites.get("VDEVACA")).toEqual({ kind: "venue", plan: "eventos", modules: ["salones"], days: null });
     expect(invites.get("OZMAN")).toEqual({ kind: "agency", plan: "casas", modules: ["casas"], days: null });
     expect(invites.get("TODO")).toEqual({ kind: "planner", plan: "ambos", modules: ["salones", "casas"], days: null });
-    // Valores desconocidos: planner en prueba de 14 días con los dos módulos.
-    expect(invites.get("RARO")).toEqual({ kind: "planner", plan: "prueba", modules: ["salones", "casas"], days: 14 });
+    // Valores desconocidos: planner en prueba de 7 días con los dos módulos.
+    expect(invites.get("RARO")).toEqual({ kind: "planner", plan: "prueba", modules: ["salones", "casas"], days: 7 });
   });
 
   it("la prueba vence a los días indicados", () => {

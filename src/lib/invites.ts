@@ -1,10 +1,13 @@
 import { ALL_SECTIONS, PLAN_MODULES, isOrgKind, isPlan, isSection, referralPlanEnd, sectionOf, type OrgKind, type Plan, type Section } from "./domain";
 
+/** Días de la prueba cuando el código no dice otra cosa (decisión del 15 de octubre de 2026: 7 días). */
+export const TRIAL_DAYS = 7;
+
 /**
  * Códigos de invitación para crear cuenta.
  *
  * - `SIGNUP_CODES`: JSON con un código por cliente o campaña, por ejemplo
- *   `{"PLANNER14":{"kind":"planner","plan":"prueba","modules":["salones"],"days":14},"VDEVACA":{"kind":"venue","plan":"eventos"}}`.
+ *   `{"PLANNER7":{"kind":"planner","plan":"prueba","modules":["salones"],"days":7},"VDEVACA":{"kind":"venue","plan":"eventos"}}`.
  *   `days` solo aplica a `prueba`; sin `modules`, la prueba abre los dos módulos.
  * - `SIGNUP_CODE`: un solo código con acceso completo y sin vencimiento (compatibilidad con la prueba inicial).
  *
@@ -42,7 +45,7 @@ export function parseInvites(codesJson: string | undefined, legacyCode: string |
       kind: isOrgKind(o.kind) ? o.kind : "planner",
       plan,
       modules,
-      days: plan === "prueba" ? (typeof o.days === "number" && o.days > 0 ? Math.floor(o.days) : 14) : null,
+      days: plan === "prueba" ? (typeof o.days === "number" && o.days > 0 ? Math.floor(o.days) : TRIAL_DAYS) : null,
     });
   }
   return invites;

@@ -16,7 +16,7 @@ export const E2E = {
   port: 3100,
   databaseUrl: localUrl,
   adminEmail: "admin-e2e@planner3d.test",
-  code: "E2E14",
+  code: "E2E7",
 };
 process.env.E2E_DATABASE_URL = localUrl;
 
@@ -46,7 +46,7 @@ export default defineConfig({
       DATABASE_URL: localUrl,
       BETTER_AUTH_URL: `http://localhost:${E2E.port}`,
       BETTER_AUTH_SECRET: "e2e-solo-para-pruebas-no-es-secreto-0000",
-      SIGNUP_CODES: JSON.stringify({ [E2E.code]: { kind: "planner", plan: "prueba", modules: ["salones"], days: 14 } }),
+      SIGNUP_CODES: JSON.stringify({ [E2E.code]: { kind: "planner", plan: "prueba", modules: ["salones"], days: 7 } }),
       ADMIN_EMAILS: E2E.adminEmail,
       // Datos de pago de EJEMPLO (no son reales).
       SPEI_BANK: "Banco de prueba",
