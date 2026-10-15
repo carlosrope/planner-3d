@@ -14,7 +14,7 @@ export default function PrivacidadPage() {
     <Legal
       tag="Plantea · Legal"
       title="Aviso de privacidad"
-      updated="14 de octubre de 2026"
+      updated="15 de octubre de 2026"
       intro={
         <p>
           <b>En corto:</b> Plantea guarda lo mínimo para que funcione tu cuenta, tu lugar y tus eventos. <b>El plano de tu salón o de tu casa
@@ -31,7 +31,7 @@ export default function PrivacidadPage() {
           Reglamento.
         </p>
         <p>
-          Plantea es la aplicación que vive en este sitio y en sus dominios asociados. Los demás servicios de ProLink365 tienen su propio aviso en{" "}
+          Plantea es la aplicación que vive en este sitio y en sus dominios asociados. {RESPONSABLE.nombre} también opera ProLink365, cuyos servicios tienen su propio aviso en{" "}
           <a href="https://prolink365.com.mx/privacidad.html" className="underline" target="_blank" rel="noopener">
             prolink365.com.mx/privacidad
           </a>

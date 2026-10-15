@@ -26,8 +26,8 @@ export function Seccion({ n, title, children }: { n: string; title: string; chil
 
 export const RESPONSABLE = {
   nombre: "Carlos Manuel Robles Pérez",
-  marca: "ProLink365",
+  marca: "Plantea",
   ciudad: "Los Mochis, Sinaloa, México",
-  correo: "carlosrope@prolink365.com.mx",
+  correo: "hola@plantea.com.mx",
   whatsapp: "+52 668 130 5828",
 };

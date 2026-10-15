@@ -15,7 +15,7 @@ export default function TerminosPage() {
     <Legal
       tag="Plantea · Legal"
       title="Términos de servicio"
-      updated="14 de octubre de 2026"
+      updated="15 de octubre de 2026"
       intro={
         <p>
           <b>En corto:</b> Plantea es una herramienta para planear eventos y mostrar casas en 2D y 3D. Tu contenido (planos, fotos, eventos) sigue siendo
@@ -58,10 +58,10 @@ export default function TerminosPage() {
         <ul className={li}>
           <li>
             Los planes, lo que incluye cada uno y sus precios se publican en{" "}
-            <a href={PRICES_URL} className="underline" target="_blank" rel="noopener">
-              prolink365.com.mx/espacios-3d
-            </a>
-            . La aplicación no muestra precios.
+            <Link href={PRICES_URL} className="underline">
+              plantea.com.mx/planes
+            </Link>
+            .
           </li>
           <li>El plan se paga por adelantado, por mes o por año, por transferencia (SPEI). Queda activo cuando confirmamos el pago, normalmente el mismo día hábil. Emitimos factura CFDI.</li>
           <li>Precio fijo durante 12 meses desde tu primer pago. Si cambia después, te avisaremos con 30 días de anticipación.</li>
