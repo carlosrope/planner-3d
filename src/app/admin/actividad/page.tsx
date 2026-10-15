@@ -43,7 +43,7 @@ async function Actividad() {
       <AdminNav current="/admin/actividad" />
       <h1 className="text-2xl font-semibold">Actividad</h1>
       <p className="mt-1 text-sm text-stone-500">
-        Qué hizo cada cuenta (la "última sesión" solo se ve mientras la sesión sigue abierta; al cerrarla o vencer se borra): entrar, armar un evento propio (los de ejemplo no cuentan), compartir el enlace y si su cliente lo abrió. Las vistas previas
+        Qué hizo cada cuenta (la «última sesión» solo se ve mientras la sesión sigue abierta; al cerrarla o vencer se borra): entrar, armar un evento propio (los de ejemplo no cuentan), compartir el enlace y si su cliente lo abrió. Las vistas previas
         de WhatsApp no se cuentan como visitas. Horas de Los Mochis.
       </p>
       {trials.length > 0 && (
