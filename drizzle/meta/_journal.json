@@ -78,6 +78,13 @@
       "when": 1791927097241,
       "tag": "0010_codigos-de-referido",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792076514665,
+      "tag": "0011_papelera",
+      "breakpoints": true
     }
   ]
 }

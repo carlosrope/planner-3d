@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   adminAddVenueFiles,
+  adminRestoreEvent,
+  adminTrashVenue,
   adminDeleteVenueFile,
   adminResolvePayment,
   adminSetVenuePlan,
@@ -171,6 +173,26 @@ export async function resolvePayment(formData: FormData): Promise<void> {
   revalidatePath("/admin/cuentas");
   revalidatePath("/eventos");
   revalidatePath("/negocio");
+}
+
+/** Manda un lugar a la papelera (30 días) o lo saca de ella. */
+export async function trashVenue(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const parsed = z.object({ venueId: id, restore: z.string().optional() }).safeParse({ venueId: formData.get("venueId"), restore: formData.get("restore") ?? undefined });
+  if (!parsed.success) return;
+  await adminTrashVenue(parsed.data.venueId, parsed.data.restore !== "1");
+  revalidate(parsed.data.venueId);
+  revalidatePath("/admin/papelera");
+}
+
+/** Saca de la papelera el evento de cualquier cuenta. */
+export async function restoreEventAdmin(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const eventId = id.safeParse(formData.get("eventId"));
+  if (!eventId.success) return;
+  await adminRestoreEvent(eventId.data);
+  revalidatePath("/admin/papelera");
+  revalidatePath("/eventos");
 }
 
 function revalidate(venueId: string) {

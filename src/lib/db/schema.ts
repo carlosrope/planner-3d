@@ -219,6 +219,8 @@ export const venue = pgTable("venue", {
   /** Plano para el diseñador (muros, puertas, cuartos en mm); sin él no se puede abrir el lugar. */
   plan: jsonb("plan").$type<DesignerPlan>(),
   version: integer("version").notNull().default(1),
+  /** Papelera: se oculta en todas partes y se borra de verdad a los 30 días (TRASH_DAYS). */
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -320,6 +322,8 @@ export const event = pgTable(
     /** Casas: ficha de la propiedad que ve el cliente (precio, m², recámaras…). */
     details: jsonb("details").$type<PropertyDetails>(),
     status: text("status").$type<EventStatus>().notNull().default("borrador"),
+    /** Papelera: se oculta en todas partes y se borra de verdad a los 30 días (TRASH_DAYS). */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

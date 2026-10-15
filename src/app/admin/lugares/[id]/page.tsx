@@ -9,7 +9,7 @@ import { ORG_KIND_LABELS, VENUE_KIND_LABELS, VENUE_STATUSES, VENUE_STATUS_LABELS
 import { siteOrigin } from "@/lib/prolink";
 import { formatWhatsapp, waLink } from "@/lib/whatsapp";
 import { AdminNav } from "../../AdminNav";
-import { addFiles, deleteFile, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
+import { addFiles, deleteFile, trashVenue, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
 import { CopyField } from "@/app/lugares/[slug]/panel/CopyField";
 
 export const metadata: Metadata = { title: "Administración · Lugar" };
@@ -52,6 +52,14 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
         </Link>
       </p>
       <h1 className="mt-1 text-2xl font-semibold">{v.name}</h1>
+      {v.deletedAt && (
+        <form action={trashVenue} className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+          <input type="hidden" name="venueId" value={v.id} />
+          <input type="hidden" name="restore" value="1" />
+          En la papelera: no aparece en ninguna parte y se borra a los 30 días.
+          <button className="h-9 rounded-lg bg-red-700 px-3 font-medium text-white">Restaurar</button>
+        </form>
+      )}
       <p className="text-stone-500">
         {VENUE_KIND_LABELS[v.kind]} · {v.city} · {VENUE_STATUS_LABELS[v.status]} · {v.viewCount} aperturas
         {v.status === "publicado" && (
@@ -248,6 +256,19 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
           <button className={`${btn} sm:col-span-2`}>Guardar ficha</button>
         </form>
       </section>
+      {!v.deletedAt && (
+        <section className="mt-8 rounded-2xl border border-red-200 p-4">
+          <h2 className="text-lg font-semibold text-red-800">Mandar a la papelera</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            Desaparece del catálogo, de las planners y de sus eventos. Se puede restaurar desde Papelera durante 30 días; después se borra de verdad
+            (solo si ya no tiene eventos).
+          </p>
+          <form action={trashVenue} className="mt-3">
+            <input type="hidden" name="venueId" value={v.id} />
+            <button className="h-10 rounded-xl border border-red-300 bg-white px-4 text-sm font-medium text-red-700">Mandar a la papelera</button>
+          </form>
+        </section>
+      )}
     </>
   );
 }

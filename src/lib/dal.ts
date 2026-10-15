@@ -32,6 +32,7 @@ import {
   type Plan,
   type Section,
   type Tier,
+  TRASH_DAYS,
   type VenueKind,
   type VenueStatus,
 } from "./domain";
@@ -105,14 +106,18 @@ export const moduleActive = (org: { modules: Org["modules"]; planEndsAt: Org["pl
 const memberOfEventOrg = (userId: string) =>
   and(eq(membership.orgId, event.orgId), eq(membership.userId, userId));
 
-const published = eq(venue.status, "publicado");
+// Papelera: lo que tiene deletedAt no existe para nadie salvo la propia papelera.
+const venueAlive = isNull(venue.deletedAt);
+const eventAlive = isNull(event.deletedAt);
+
+const published = and(eq(venue.status, "publicado"), venueAlive);
 
 /**
  * Lugares donde el negocio puede crear proyectos: los publicados del catálogo, los suyos (en cualquier estado),
  * los que le compartieron y, si entró con un código de referido, el lugar de ese código.
  */
 const venueVisibleTo = (orgId: string) =>
-  or(
+  and(venueAlive, or(
     and(published, eq(venue.isPublic, true)),
     eq(venue.ownerOrgId, orgId),
     sql`exists (select 1 from referral_code rc join organization o on o.referral_code_id = rc.id where o.id = ${orgId} and rc.venue_id = venue.id)`,
@@ -125,7 +130,7 @@ const venueVisibleTo = (orgId: string) =>
           .where(and(eq(venueAccess.venueId, venue.id), eq(venueAccess.orgId, orgId))),
       ),
     ),
-  );
+  ));
 
 export async function listVenues(orgId: string, onlyVenueId?: string | null) {
   return db
@@ -140,7 +145,7 @@ export async function countEvents(orgId: string, onlyActive = false) {
   const [row] = await db
     .select({ n: count() })
     .from(event)
-    .where(and(eq(event.orgId, orgId), onlyActive ? or(eq(event.status, "borrador"), eq(event.status, "confirmado")) : undefined));
+    .where(and(eq(event.orgId, orgId), eventAlive, onlyActive ? or(eq(event.status, "borrador"), eq(event.status, "confirmado")) : undefined));
   return Number(row?.n ?? 0);
 }
 
@@ -167,7 +172,7 @@ export async function listEvents(orgId: string) {
     })
     .from(event)
     .innerJoin(venue, eq(event.venueId, venue.id))
-    .where(eq(event.orgId, orgId))
+    .where(and(eq(event.orgId, orgId), eventAlive, venueAlive))
     .orderBy(sql`${event.eventDate} asc nulls last`, desc(event.createdAt));
 }
 
@@ -179,7 +184,7 @@ export async function getEditableEvent(eventId: string, userId: string) {
     .innerJoin(venue, eq(event.venueId, venue.id))
     .innerJoin(membership, memberOfEventOrg(userId))
     .innerJoin(organization, eq(organization.id, event.orgId))
-    .where(eq(event.id, eventId))
+    .where(and(eq(event.id, eventId), eventAlive, venueAlive))
     .limit(1);
   if (!row || !moduleActive(row.org, row.venue.kind)) return null;
   const layouts = await db
@@ -198,7 +203,7 @@ export async function canEditEvent(eventId: string, userId: string) {
     .innerJoin(venue, eq(event.venueId, venue.id))
     .innerJoin(membership, memberOfEventOrg(userId))
     .innerJoin(organization, eq(organization.id, event.orgId))
-    .where(eq(event.id, eventId))
+    .where(and(eq(event.id, eventId), eventAlive, venueAlive))
     .limit(1);
   return Boolean(row && moduleActive(row, row.venueKind));
 }
@@ -212,7 +217,7 @@ export async function canEditLayout(layoutId: string, userId: string) {
     .innerJoin(venue, eq(event.venueId, venue.id))
     .innerJoin(membership, memberOfEventOrg(userId))
     .innerJoin(organization, eq(organization.id, event.orgId))
-    .where(eq(layout.id, layoutId))
+    .where(and(eq(layout.id, layoutId), eventAlive, venueAlive))
     .limit(1);
   return Boolean(row && moduleActive(row, row.venueKind));
 }
@@ -230,7 +235,7 @@ export async function getSharedEvent(token: string) {
     .from(shareLink)
     .innerJoin(event, eq(shareLink.eventId, event.id))
     .innerJoin(venue, eq(event.venueId, venue.id))
-    .where(and(eq(shareLink.token, token), or(isNull(shareLink.expiresAt), gt(shareLink.expiresAt, new Date()))))
+    .where(and(eq(shareLink.token, token), eventAlive, venueAlive, or(isNull(shareLink.expiresAt), gt(shareLink.expiresAt, new Date()))))
     .limit(1);
   if (!row) return null;
   const layouts = await db
@@ -371,7 +376,7 @@ export async function listCatalogCities(kind: VenueKind) {
   return rows.map((r) => ({ city: r.city, slug: slugify(r.city), total: Number(r.total) }));
 }
 
-const bySlugOrId = (slugOrId: string) => or(eq(venue.slug, slugOrId), eq(venue.id, slugOrId));
+const bySlugOrId = (slugOrId: string) => and(or(eq(venue.slug, slugOrId), eq(venue.id, slugOrId)), venueAlive);
 
 const ownerBrandFields = {
   name: organization.name,
@@ -510,7 +515,7 @@ export async function getVenueForReview(token: string) {
     .select({ venue: catalogFields, reviewNotes: venue.reviewNotes, owner: ownerBrandFields })
     .from(venue)
     .leftJoin(organization, eq(organization.id, venue.ownerOrgId))
-    .where(eq(venue.reviewToken, token))
+    .where(and(eq(venue.reviewToken, token), venueAlive))
     .limit(1);
   if (!row) return null;
   const photos = await listVenuePhotos(row.venue.id);
@@ -522,7 +527,7 @@ export async function confirmVenueReview(token: string) {
   const [row] = await db
     .update(venue)
     .set({ status: "publicado", publishedAt: new Date(), reviewNotes: null })
-    .where(and(eq(venue.reviewToken, token), isNotNull(venue.plan), sql`${venue.status} in ('revision', 'conversion')`))
+    .where(and(eq(venue.reviewToken, token), venueAlive, isNotNull(venue.plan), sql`${venue.status} in ('revision', 'conversion')`))
     .returning({ id: venue.id, slug: venue.slug });
   return row ?? null;
 }
@@ -532,7 +537,7 @@ export async function requestVenueCorrections(token: string, notes: string) {
   const [row] = await db
     .update(venue)
     .set({ status: "conversion", reviewNotes: notes })
-    .where(and(eq(venue.reviewToken, token), sql`${venue.status} in ('revision', 'conversion')`))
+    .where(and(eq(venue.reviewToken, token), venueAlive, sql`${venue.status} in ('revision', 'conversion')`))
     .returning({ id: venue.id });
   return row ?? null;
 }
@@ -551,14 +556,14 @@ export async function createInquiry(
 // ---------------------------------------------------------------------------
 // Panel del dueño (salón o desarrolladora): sus lugares, eventos ahí, solicitudes y planners invitadas
 
-const eventsAt = sql<number>`(select count(*) from event e where e.venue_id = venue.id)`;
+const eventsAt = sql<number>`(select count(*) from event e where e.venue_id = venue.id and e.deleted_at is null)`;
 const pendingInquiriesAt = sql<number>`(select count(*) from venue_inquiry q where q.venue_id = venue.id and q.seen_at is null)`;
 
 export async function listOwnedVenues(orgId: string) {
   const rows = await db
     .select({ ...catalogFields, reviewNotes: venue.reviewNotes, events: eventsAt, pendingInquiries: pendingInquiriesAt, createdAt: venue.createdAt })
     .from(venue)
-    .where(and(eq(venue.ownerOrgId, orgId), sql`${venue.status} <> 'retirado'`))
+    .where(and(eq(venue.ownerOrgId, orgId), venueAlive, sql`${venue.status} <> 'retirado'`))
     .orderBy(asc(venue.name));
   return rows.map((r) => ({ ...r, events: Number(r.events), pendingInquiries: Number(r.pendingInquiries) }));
 }
@@ -608,7 +613,7 @@ export async function getOwnedVenue(orgId: string, slugOrId: string) {
       })
       .from(event)
       .innerJoin(organization, eq(organization.id, event.orgId))
-      .where(eq(event.venueId, found.id))
+      .where(and(eq(event.venueId, found.id), eventAlive))
       .orderBy(sql`${event.eventDate} desc nulls last`, desc(event.createdAt))
       .limit(100),
     db
@@ -864,6 +869,7 @@ export async function adminListVenues() {
     })
     .from(venue)
     .leftJoin(organization, eq(organization.id, venue.ownerOrgId))
+    .where(venueAlive)
     .orderBy(
       sql`case ${venue.status} when 'conversion' then 0 when 'revision' then 1 when 'publicado' then 2 else 3 end`,
       desc(venue.createdAt),
@@ -882,6 +888,7 @@ export async function adminGetVenue(id: string) {
       reviewNotes: venue.reviewNotes,
       publishedAt: venue.publishedAt,
       createdAt: venue.createdAt,
+      deletedAt: venue.deletedAt,
       ownerName,
     })
     .from(venue)
@@ -1055,4 +1062,86 @@ export async function adminResolvePayment(paymentId: string, status: "confirmado
     }
     return p;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Papelera (borrado suave): eventos y lugares se ocultan con deletedAt y se borran de verdad a los 30 días.
+
+const trashCutoff = () => new Date(Date.now() - TRASH_DAYS * 86_400_000);
+
+/** Borra de verdad lo que lleva más de 30 días en la papelera (se llama al abrir una papelera). */
+export async function purgeTrash() {
+  const cutoff = trashCutoff();
+  await db.delete(event).where(and(isNotNull(event.deletedAt), sql`${event.deletedAt} < ${cutoff}`));
+  // Un lugar solo se borra si ya no le queda ningún evento (la llave de event.venue_id es restrict).
+  await db
+    .delete(venue)
+    .where(and(isNotNull(venue.deletedAt), sql`${venue.deletedAt} < ${cutoff}`, sql`not exists (select 1 from event e where e.venue_id = venue.id)`));
+}
+
+/** El miembro de un negocio manda su evento a la papelera. */
+export async function trashEvent(eventId: string, userId: string) {
+  const [row] = await db
+    .update(event)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(event.id, eventId), eventAlive, sql`exists (select 1 from membership m where m.org_id = event.org_id and m.user_id = ${userId})`))
+    .returning({ id: event.id, title: event.title });
+  return row ?? null;
+}
+
+/** Saca un evento de la papelera (solo el negocio dueño). */
+export async function restoreEvent(eventId: string, userId: string) {
+  const [row] = await db
+    .update(event)
+    .set({ deletedAt: null })
+    .where(and(eq(event.id, eventId), isNotNull(event.deletedAt), sql`exists (select 1 from membership m where m.org_id = event.org_id and m.user_id = ${userId})`))
+    .returning({ id: event.id });
+  return row ?? null;
+}
+
+/** Eventos del negocio en la papelera (más recientes primero). */
+export async function listTrashedEvents(orgId: string) {
+  await purgeTrash();
+  return db
+    .select({ id: event.id, title: event.title, venueName: venue.name, deletedAt: event.deletedAt })
+    .from(event)
+    .innerJoin(venue, eq(event.venueId, venue.id))
+    .where(and(eq(event.orgId, orgId), isNotNull(event.deletedAt)))
+    .orderBy(desc(event.deletedAt));
+}
+
+/** ProLink manda un lugar a la papelera o lo saca de ella. */
+export async function adminTrashVenue(id: string, trashed: boolean) {
+  const [row] = await db
+    .update(venue)
+    .set({ deletedAt: trashed ? new Date() : null })
+    .where(and(eq(venue.id, id), trashed ? venueAlive : isNotNull(venue.deletedAt)))
+    .returning({ id: venue.id, name: venue.name });
+  return row ?? null;
+}
+
+/** ProLink saca de la papelera el evento de cualquier negocio. */
+export async function adminRestoreEvent(eventId: string) {
+  const [row] = await db.update(event).set({ deletedAt: null }).where(and(eq(event.id, eventId), isNotNull(event.deletedAt))).returning({ id: event.id });
+  return row ?? null;
+}
+
+/** Papelera completa para /admin: lugares y eventos de todas las cuentas. */
+export async function adminListTrash() {
+  await purgeTrash();
+  const [venues, events] = await Promise.all([
+    db
+      .select({ id: venue.id, name: venue.name, city: venue.city, kind: venue.kind, deletedAt: venue.deletedAt })
+      .from(venue)
+      .where(isNotNull(venue.deletedAt))
+      .orderBy(desc(venue.deletedAt)),
+    db
+      .select({ id: event.id, title: event.title, orgName: organization.name, venueName: venue.name, deletedAt: event.deletedAt })
+      .from(event)
+      .innerJoin(organization, eq(organization.id, event.orgId))
+      .innerJoin(venue, eq(venue.id, event.venueId))
+      .where(isNotNull(event.deletedAt))
+      .orderBy(desc(event.deletedAt)),
+  ]);
+  return { venues, events };
 }

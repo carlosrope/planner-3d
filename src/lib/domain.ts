@@ -156,3 +156,11 @@ export type MemberRole = "owner" | "assistant" | "staff";
 
 export const SHARE_ROLES = ["cliente", "staff", "proveedor", "salon"] as const;
 export type ShareRole = (typeof SHARE_ROLES)[number];
+
+/** Días que un evento o un lugar se queda en la papelera antes de borrarse de verdad. */
+export const TRASH_DAYS = 30;
+/** Cuándo se borra de verdad algo que se mandó a la papelera en `deletedAt`. */
+export const trashPurgeAt = (deletedAt: Date) => new Date(deletedAt.getTime() + TRASH_DAYS * 86_400_000);
+/** Días que le quedan en la papelera (0 = se borra hoy). */
+export const trashDaysLeft = (deletedAt: Date, now = new Date()) =>
+  Math.max(0, Math.ceil((trashPurgeAt(deletedAt).getTime() - now.getTime()) / 86_400_000));

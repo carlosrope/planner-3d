@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
-import { getReferralOrigin, listEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
-import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isLitePlan, sectionOf, type Section } from "@/lib/domain";
+import { getReferralOrigin, listEvents, listTrashedEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
+import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isLitePlan, sectionOf, trashDaysLeft, type Section } from "@/lib/domain";
+import { formatDate } from "@/lib/dates";
+import { restoreEventAction, trashEventAction } from "./actions";
 import { NewEventForm } from "./NewEventForm";
 import { SamplesLink, Welcome } from "./Welcome";
 
@@ -46,7 +48,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
   const visible: Section[] = expired ? org.modules : active;
   // Con código: solo el lugar del código y un solo evento. Personal: un evento activo a la vez.
   const origin = await getReferralOrigin(org);
-  const [events, venues] = await Promise.all([listEvents(org.id), listVenues(org.id, origin?.venueId)]);
+  const [events, venues, trashed] = await Promise.all([listEvents(org.id), listVenues(org.id, origin?.venueId), listTrashedEvents(org.id)]);
   const lite = isLitePlan(org.plan);
   const limitReached =
     org.plan === "invitado" ? events.length > 0 : org.plan === "personal" ? events.some((e) => e.status === "borrador" || e.status === "confirmado") : false;
@@ -127,10 +129,10 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
           </p>
         ) : (
           mine.map((e) => (
+            <div key={e.id} className="flex items-stretch gap-2">
             <PageLink
-              key={e.id}
               href={`/eventos/${e.id}`}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4 active:bg-stone-50"
+              className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4 active:bg-stone-50"
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">{e.title}</p>
@@ -147,6 +149,19 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
                 <p className="text-stone-500">{EVENT_STATUS_LABELS[e.status]}</p>
               </div>
             </PageLink>
+            <form action={trashEventAction} className="flex">
+              <input type="hidden" name="eventId" value={e.id} />
+              <button
+                aria-label={`Mandar ${e.title} a la papelera`}
+                title="Mandar a la papelera"
+                className="w-11 rounded-2xl border border-stone-200 bg-white text-stone-500 active:bg-red-50 active:text-red-700"
+              >
+                <svg viewBox="0 0 24 24" className="mx-auto h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </form>
+            </div>
           ))
         )}
       </section>
@@ -166,6 +181,28 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         </section>
       )}
       {events.length > 0 && !expired && !lite && <SamplesLink />}
+      {trashed.length > 0 && (
+        <details className="mt-8 rounded-2xl border border-stone-200 bg-white p-4">
+          <summary className="cursor-pointer font-medium">Papelera ({trashed.length})</summary>
+          <p className="mt-1 text-sm text-stone-500">Lo que borras se queda aquí 30 días y después se borra para siempre.</p>
+          <ul className="mt-3 space-y-2">
+            {trashed.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{t.title}</p>
+                  <p className="truncate text-stone-500">
+                    {t.venueName} · borrado el {formatDate(t.deletedAt!)} · quedan {trashDaysLeft(t.deletedAt!)} días
+                  </p>
+                </div>
+                <form action={restoreEventAction}>
+                  <input type="hidden" name="eventId" value={t.id} />
+                  <button className="h-9 shrink-0 rounded-lg border border-stone-300 px-3 font-medium">Restaurar</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </>
   );
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { attachReferralEvent, countEvents, getReferralOrigin, getVenueForOrg, listVenues, moduleActive, requireOrg, requireUser } from "@/lib/dal";
+import { attachReferralEvent, countEvents, restoreEvent, trashEvent, getReferralOrigin, getVenueForOrg, listVenues, moduleActive, requireOrg, requireUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { event, layout } from "@/lib/db/schema";
 import { SALON_EVENT_KINDS, isLitePlan, sectionOf } from "@/lib/domain";
@@ -184,5 +184,23 @@ export async function createSamples(): Promise<void> {
       );
     }
   });
+  revalidatePath("/eventos");
+}
+
+/** Manda un evento o proyecto a la papelera (se puede restaurar durante 30 días). */
+export async function trashEventAction(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const eventId = z.string().min(1).max(64).safeParse(formData.get("eventId"));
+  if (!eventId.success) return;
+  await trashEvent(eventId.data, user.id);
+  revalidatePath("/eventos");
+}
+
+/** Saca un evento de la papelera. */
+export async function restoreEventAction(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const eventId = z.string().min(1).max(64).safeParse(formData.get("eventId"));
+  if (!eventId.success) return;
+  await restoreEvent(eventId.data, user.id);
   revalidatePath("/eventos");
 }

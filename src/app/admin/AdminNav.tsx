@@ -4,13 +4,14 @@ const TABS = [
   { href: "/admin", label: "Lugares" },
   { href: "/admin/cuentas", label: "Cuentas" },
   { href: "/admin/pagos", label: "Pagos" },
+  { href: "/admin/papelera", label: "Papelera" },
 ] as const;
 
 export function AdminNav({ current }: { current: (typeof TABS)[number]["href"] }) {
   return (
     <header className="mb-5">
       <p className="text-sm text-stone-500">ProLink365 · administración de Plantea</p>
-      <nav className="mt-2 flex gap-2" aria-label="Secciones">
+      <nav className="mt-2 flex flex-wrap gap-2" aria-label="Secciones">
         {TABS.map((t) => (
           <Link
             key={t.href}
