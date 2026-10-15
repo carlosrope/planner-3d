@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PROLINK_SITE } from "@/lib/prolink";
 
-/** Pie de toda la app: la marca, "por ProLink365" y los enlaces de siempre. */
+/** Pie de toda la app: la marca, "Hecho por ProLink365" y los enlaces de siempre. */
 export function Footer() {
   return (
     <footer className="mt-16 border-t border-stone-200 bg-[#f3ece2]">
@@ -13,7 +13,7 @@ export function Footer() {
             Plantea tu evento o tu casa en 3D antes de vivirlo. Salones y casas reales de Los Mochis, desde el celular.
           </p>
           <p className="mt-3 text-sm text-stone-600">
-            por{" "}
+            Hecho por{" "}
             <a href={PROLINK_SITE} target="_blank" rel="noopener" className="font-semibold text-[#0d8a4f]">
               ProLink365
             </a>
