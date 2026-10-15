@@ -30,9 +30,15 @@ async function NegocioContent() {
   const venues = lite ? [] : (await listVenues(org.id)).filter((v) => v.kind === "salon");
   return (
     <>
-      {!lite && <BrandForm brand={brand} />}
-      <PlanSection org={org} />
+      {/* Primero los códigos: es lo que el dueño usa cada vez que le rentan el salón. */}
       {!lite && <ReferralSection org={org} venues={venues} />}
+      <PlanSection org={org} />
+      {!lite && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-xl font-semibold">Tu marca</h2>
+          <BrandForm brand={brand} />
+        </section>
+      )}
     </>
   );
 }

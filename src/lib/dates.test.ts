@@ -25,3 +25,16 @@ describe("fechas en America/Mazatlan", () => {
     expect(addDays("2026-12-30", 3)).toBe("2027-01-02");
   });
 });
+
+import { monthGrid } from "../components/DateField";
+
+describe("calendario", () => {
+  it("la cuadrícula empieza en lunes y trae 6 semanas", () => {
+    // Octubre de 2026 empieza en jueves: la cuadrícula arranca el lunes 28 de septiembre.
+    const g = monthGrid(2026, 9);
+    expect(g).toHaveLength(42);
+    expect(g[0]).toBe("2026-09-28");
+    expect(g[3]).toBe("2026-10-01");
+    expect(g[41]).toBe("2026-11-08");
+  });
+});

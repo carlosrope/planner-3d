@@ -75,7 +75,7 @@ export async function submitPayment(_prev: PaymentState, formData: FormData): Pr
   return { ok: true };
 }
 
-export type ReferralState = { code?: string; error?: string } | null;
+export type ReferralState = { code?: string; guestName?: string; venueId?: string; eventDate?: string | null; error?: string } | null;
 
 const referralBody = z.object({
   venueId: z.string().min(1).max(64),
@@ -94,5 +94,5 @@ export async function createReferral(_prev: ReferralState, formData: FormData): 
   if ("error" in result) return { error: result.error };
   revalidatePath("/negocio");
   revalidatePath("/lugares", "layout");
-  return { code: result.code };
+  return { code: result.code, guestName: d.guestName, venueId: d.venueId, eventDate: d.eventDate || null };
 }

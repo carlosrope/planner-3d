@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { sendInquiry } from "./actions";
+import { DateField } from "@/components/DateField";
 
 const field = "h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base outline-none focus:border-stone-800";
 
@@ -36,7 +37,7 @@ export function InquiryForm({ venueId, salon }: { venueId: string; salon: boolea
         <>
           <label className="space-y-1">
             <span className="text-sm text-stone-600">Fecha del evento</span>
-            <input name="eventDate" type="date" className={field} />
+            <DateField name="eventDate" min="today" />
           </label>
           <label className="space-y-1">
             <span className="text-sm text-stone-600">Invitados (aprox.)</span>

@@ -153,7 +153,11 @@ async function Panel({ params }: { params: PageProps<"/lugares/[slug]/panel">["p
         )}
       </section>
 
-      {v.status === "publicado" && v.hasPlan && <ReferralSection org={org} venues={[{ id: v.id, name: v.name }]} venueId={v.id} />}
+      {v.status === "publicado" && v.hasPlan && (
+        <div className="mt-4">
+          <ReferralSection org={org} venues={[{ id: v.id, name: v.name }]} venueId={v.id} />
+        </div>
+      )}
 
       <section className="mt-4 rounded-2xl border border-stone-200 bg-white p-4">
         <h2 className="text-lg font-semibold">Planners con acceso</h2>
