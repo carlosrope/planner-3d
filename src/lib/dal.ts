@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { db } from "./db";
 import {
+  auditLog,
   comment,
   event,
   layout,
@@ -23,6 +24,9 @@ import {
 import type { DesignerPlan } from "./designer/types";
 import {
   activeModules,
+  changedFields,
+  venueStatusAction,
+  type AuditAction,
   PLAN_MODULES,
   planEndAfterPayment,
   referralQuota,
@@ -46,6 +50,30 @@ export const newToken = (length = 20) => Array.from(randomBytes(length), (b) => 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
 
 export type CurrentUser = { id: string; name: string; email: string };
+
+/** Quién hizo un cambio que queda en el rastro: un usuario con sesión, o una descripción (p. ej. el dueño con su enlace). */
+export type Actor = CurrentUser | { label: string };
+type Db = typeof db;
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+/** Agrega una línea al rastro (audit_log). Va dentro de la misma transacción que el cambio cuando la hay. */
+async function audit(
+  conn: Db | Tx,
+  actor: Actor,
+  action: AuditAction,
+  target: { type: "payment" | "organization" | "venue"; id: string; label: string },
+  details: Record<string, unknown> = {},
+) {
+  await conn.insert(auditLog).values({
+    actorUserId: "id" in actor ? actor.id : null,
+    actor: "id" in actor ? actor.email : actor.label,
+    action,
+    targetType: target.type,
+    targetId: target.id,
+    targetLabel: target.label,
+    details,
+  });
+}
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const s = await auth.api.getSession({ headers: await headers() });
@@ -525,12 +553,16 @@ export async function getVenueForReview(token: string) {
 
 /** El dueño confirma su lugar: se publica (si ya tiene plano). */
 export async function confirmVenueReview(token: string) {
-  const [row] = await db
-    .update(venue)
-    .set({ status: "publicado", publishedAt: new Date(), reviewNotes: null })
-    .where(and(eq(venue.reviewToken, token), venueAlive, isNotNull(venue.plan), sql`${venue.status} in ('revision', 'conversion')`))
-    .returning({ id: venue.id, slug: venue.slug });
-  return row ?? null;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(venue)
+      .set({ status: "publicado", publishedAt: new Date(), reviewNotes: null })
+      .where(and(eq(venue.reviewToken, token), venueAlive, isNotNull(venue.plan), sql`${venue.status} in ('revision', 'conversion')`))
+      .returning({ id: venue.id, slug: venue.slug, name: venue.name, contactName: venue.contactName });
+    if (!row) return null;
+    await audit(tx, { label: `Dueño con su enlace de revisión${row.contactName ? ` (${row.contactName})` : ""}` }, "lugar_publicado", { type: "venue", id: row.id, label: row.name });
+    return { id: row.id, slug: row.slug };
+  });
 }
 
 /** El dueño pide correcciones: vuelve a conversión con sus notas. */
@@ -918,16 +950,25 @@ export type AdminVenuePatch = Partial<{
 }>;
 
 /** Cambios de ProLink a un lugar; al publicar se marca la fecha y al pasar a revisión se asegura el enlace del dueño. */
-export async function adminUpdateVenue(id: string, patch: AdminVenuePatch) {
-  const extra: Partial<typeof venue.$inferInsert> = {};
-  if (patch.status === "publicado") extra.publishedAt = new Date();
-  if (patch.status === "revision" || patch.status === "publicado") extra.reviewToken = sql`coalesce(${venue.reviewToken}, ${newToken(24)})` as unknown as string;
-  const [row] = await db
-    .update(venue)
-    .set({ ...patch, ...extra })
-    .where(eq(venue.id, id))
-    .returning({ id: venue.id, reviewToken: venue.reviewToken });
-  return row ?? null;
+export async function adminUpdateVenue(id: string, patch: AdminVenuePatch, actor: Actor) {
+  return db.transaction(async (tx) => {
+    const [before] = await tx.select({ name: venue.name, status: venue.status, isPublic: venue.isPublic, ownerOrgId: venue.ownerOrgId }).from(venue).where(eq(venue.id, id)).limit(1);
+    if (!before) return null;
+    const extra: Partial<typeof venue.$inferInsert> = {};
+    if (patch.status === "publicado" && before.status !== "publicado") extra.publishedAt = new Date();
+    if (patch.status === "revision" || patch.status === "publicado") extra.reviewToken = sql`coalesce(${venue.reviewToken}, ${newToken(24)})` as unknown as string;
+    const [row] = await tx
+      .update(venue)
+      .set({ ...patch, ...extra })
+      .where(eq(venue.id, id))
+      .returning({ id: venue.id, reviewToken: venue.reviewToken });
+    // Al rastro: el estado, si se abre o cierra a todas las planners y el dueño (no los datos de la ficha).
+    const changes = changedFields(before, { status: patch.status, isPublic: patch.isPublic, ownerOrgId: patch.ownerOrgId });
+    if (Object.keys(changes).length) {
+      await audit(tx, actor, changes.status ? venueStatusAction(patch.status!) : "lugar_estado", { type: "venue", id, label: patch.name ?? before.name }, changes);
+    }
+    return row ?? null;
+  });
 }
 
 /** ProLink carga el plano del diseñador (JSON de tools/cad-import): el lugar pasa a "por confirmar". */
@@ -1001,9 +1042,20 @@ export async function adminListOrgs() {
 export async function adminUpdateOrg(
   orgId: string,
   patch: { kind: OrgKind; plan: Plan; modules: Section[]; planEndsAt: Date | null; tier: Tier },
+  actor: Actor,
 ) {
-  const [row] = await db.update(organization).set(patch).where(eq(organization.id, orgId)).returning({ id: organization.id });
-  return row ?? null;
+  return db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ name: organization.name, kind: organization.kind, plan: organization.plan, modules: organization.modules, planEndsAt: organization.planEndsAt, tier: organization.tier })
+      .from(organization)
+      .where(eq(organization.id, orgId))
+      .limit(1);
+    if (!before) return null;
+    const [row] = await tx.update(organization).set(patch).where(eq(organization.id, orgId)).returning({ id: organization.id });
+    const changes = changedFields(before, patch);
+    if (Object.keys(changes).length) await audit(tx, actor, "plan_cambiado", { type: "organization", id: orgId, label: before.name }, changes);
+    return row ?? null;
+  });
 }
 
 export async function adminListPayments() {
@@ -1038,25 +1090,35 @@ export async function adminGetReceipt(paymentId: string) {
 }
 
 /** Confirmar un pago activa el plan (y lo alarga un mes o un año); rechazarlo solo deja la nota. */
-export async function adminResolvePayment(paymentId: string, status: "confirmado" | "rechazado", note: string | null) {
+export async function adminResolvePayment(paymentId: string, status: "confirmado" | "rechazado", note: string | null, actor: Actor) {
   return db.transaction(async (tx) => {
     const [p] = await tx
       .update(payment)
       .set({ status, note, resolvedAt: new Date() })
       .where(and(eq(payment.id, paymentId), eq(payment.status, "pendiente")))
-      .returning({ orgId: payment.orgId, plan: payment.plan, period: payment.period });
+      .returning({ orgId: payment.orgId, plan: payment.plan, period: payment.period, amount: payment.amount });
     if (!p) return null;
+    const [org] = await tx
+      .select({ name: organization.name, plan: organization.plan, planEndsAt: organization.planEndsAt })
+      .from(organization)
+      .where(eq(organization.id, p.orgId))
+      .limit(1);
+    const details: Record<string, unknown> = { monto: p.amount, plan: p.plan, periodo: p.period, nota: note, negocio: org?.name };
     if (status === "confirmado") {
-      const [org] = await tx.select({ planEndsAt: organization.planEndsAt }).from(organization).where(eq(organization.id, p.orgId)).limit(1);
+      const planEndsAt = planEndAfterPayment(org?.planEndsAt ?? null, p.period);
       await tx
         .update(organization)
         .set({
           plan: p.plan,
           modules: p.plan === "prueba" || p.plan === "invitado" ? undefined : [...PLAN_MODULES[p.plan]],
-          planEndsAt: planEndAfterPayment(org?.planEndsAt ?? null, p.period),
+          planEndsAt,
         })
         .where(eq(organization.id, p.orgId));
+      details.planAntes = org?.plan;
+      details.finAntes = org?.planEndsAt?.toISOString() ?? null;
+      details.finDespues = planEndsAt.toISOString();
     }
+    await audit(tx, actor, status === "confirmado" ? "pago_confirmado" : "pago_rechazado", { type: "payment", id: paymentId, label: org?.name ?? p.orgId }, details);
     return p;
   });
 }
@@ -1108,13 +1170,21 @@ export async function listTrashedEvents(orgId: string) {
 }
 
 /** ProLink manda un lugar a la papelera o lo saca de ella. */
-export async function adminTrashVenue(id: string, trashed: boolean) {
-  const [row] = await db
-    .update(venue)
-    .set({ deletedAt: trashed ? new Date() : null })
-    .where(and(eq(venue.id, id), trashed ? venueAlive : isNotNull(venue.deletedAt)))
-    .returning({ id: venue.id, name: venue.name });
-  return row ?? null;
+export async function adminTrashVenue(id: string, trashed: boolean, actor: Actor) {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(venue)
+      .set({ deletedAt: trashed ? new Date() : null })
+      .where(and(eq(venue.id, id), trashed ? venueAlive : isNotNull(venue.deletedAt)))
+      .returning({ id: venue.id, name: venue.name });
+    if (row) await audit(tx, actor, trashed ? "lugar_papelera" : "lugar_restaurado", { type: "venue", id, label: row.name });
+    return row ?? null;
+  });
+}
+
+/** Rastro para /admin/rastro: lo más reciente primero. */
+export async function adminListAudit(limit = 300) {
+  return db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(limit);
 }
 
 /** ProLink saca de la papelera el evento de cualquier negocio. */

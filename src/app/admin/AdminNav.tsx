@@ -5,6 +5,7 @@ const TABS = [
   { href: "/admin/cuentas", label: "Cuentas" },
   { href: "/admin/pagos", label: "Pagos" },
   { href: "/admin/papelera", label: "Papelera" },
+  { href: "/admin/rastro", label: "Rastro" },
 ] as const;
 
 export function AdminNav({ current }: { current: (typeof TABS)[number]["href"] }) {

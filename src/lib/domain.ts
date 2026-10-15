@@ -159,6 +159,33 @@ export type MemberRole = "owner" | "assistant" | "staff";
 export const SHARE_ROLES = ["cliente", "staff", "proveedor", "salon"] as const;
 export type ShareRole = (typeof SHARE_ROLES)[number];
 
+/** Acciones que quedan en el rastro (tabla audit_log, visible en /admin/rastro). */
+export const AUDIT_ACTIONS = ["pago_confirmado", "pago_rechazado", "plan_cambiado", "lugar_estado", "lugar_publicado", "lugar_retirado", "lugar_papelera", "lugar_restaurado"] as const;
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
+export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
+  pago_confirmado: "Confirmó un pago",
+  pago_rechazado: "Rechazó un pago",
+  plan_cambiado: "Cambió el plan",
+  lugar_estado: "Cambió el estado del lugar",
+  lugar_publicado: "Publicó el lugar",
+  lugar_retirado: "Retiró el lugar",
+  lugar_papelera: "Mandó el lugar a la papelera",
+  lugar_restaurado: "Restauró el lugar",
+};
+/** Acción del rastro para un cambio de estado de un lugar. */
+export const venueStatusAction = (status: VenueStatus): AuditAction =>
+  status === "publicado" ? "lugar_publicado" : status === "retirado" ? "lugar_retirado" : "lugar_estado";
+/** Diferencias entre dos versiones de un objeto (para el rastro): solo los campos que cambiaron. */
+export function changedFields<T extends Record<string, unknown>>(before: T, after: Partial<T>) {
+  const norm = (v: unknown) => (v instanceof Date ? v.toISOString() : Array.isArray(v) ? [...v].sort().join(",") : v ?? null);
+  const out: Record<string, { antes: unknown; despues: unknown }> = {};
+  for (const k of Object.keys(after)) {
+    if (after[k] === undefined) continue;
+    if (norm(before[k]) !== norm(after[k])) out[k] = { antes: norm(before[k]), despues: norm(after[k]) };
+  }
+  return out;
+}
+
 /** Días que un evento o un lugar se queda en la papelera antes de borrarse de verdad. */
 export const TRASH_DAYS = 30;
 /** Cuándo se borra de verdad algo que se mandó a la papelera en `deletedAt`. */

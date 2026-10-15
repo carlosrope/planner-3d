@@ -27,7 +27,7 @@ const optionalNumber = (max: number) =>
   z.union([z.literal(""), z.coerce.number().min(0).max(max)]).transform((n) => (n === "" || n === 0 ? null : n));
 
 export async function updateVenueState(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = z
     .object({ venueId: id, status: z.enum(VENUE_STATUSES), ownerOrgId: z.string().max(64), isPublic: z.string().optional() })
     .safeParse({
@@ -38,12 +38,12 @@ export async function updateVenueState(formData: FormData): Promise<void> {
     });
   if (!parsed.success) return;
   const d = parsed.data;
-  await adminUpdateVenue(d.venueId, { status: d.status, ownerOrgId: d.ownerOrgId || null, isPublic: d.isPublic === "on" });
+  await adminUpdateVenue(d.venueId, { status: d.status, ownerOrgId: d.ownerOrgId || null, isPublic: d.isPublic === "on" }, admin);
   revalidate(d.venueId);
 }
 
 export async function updateVenueData(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = z
     .object({
       venueId: id,
@@ -72,7 +72,7 @@ export async function updateVenueData(formData: FormData): Promise<void> {
   if (!parsed.success) return;
   const { venueId, contactPhone, capacity, ...rest } = parsed.data;
   const phone = normalizeWhatsapp(contactPhone);
-  await adminUpdateVenue(venueId, { ...rest, capacity: capacity === null ? null : Math.round(capacity), contactPhone: phone === undefined ? undefined : phone });
+  await adminUpdateVenue(venueId, { ...rest, capacity: capacity === null ? null : Math.round(capacity), contactPhone: phone === undefined ? undefined : phone }, admin);
   revalidate(venueId);
 }
 
@@ -130,7 +130,7 @@ export async function deleteFile(formData: FormData): Promise<void> {
 }
 
 export async function updateOrgPlan(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = z
     .object({
       orgId: id,
@@ -157,19 +157,21 @@ export async function updateOrgPlan(formData: FormData): Promise<void> {
     modules: d.modules.filter(isSection),
     // Fin del día (hora de México) para que el último día cuente completo.
     planEndsAt: d.planEndsAt ? endOfDay(d.planEndsAt) : null,
-  });
+  }, admin);
+  revalidatePath("/admin/rastro");
   revalidatePath("/admin/cuentas");
   revalidatePath("/eventos");
   revalidatePath("/negocio");
 }
 
 export async function resolvePayment(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = z
     .object({ paymentId: id, status: z.enum(["confirmado", "rechazado"]), note: z.string().trim().max(200) })
     .safeParse({ paymentId: formData.get("paymentId"), status: formData.get("status"), note: formData.get("note") ?? "" });
   if (!parsed.success) return;
-  await adminResolvePayment(parsed.data.paymentId, parsed.data.status, parsed.data.note || null);
+  await adminResolvePayment(parsed.data.paymentId, parsed.data.status, parsed.data.note || null, admin);
+  revalidatePath("/admin/rastro");
   revalidatePath("/admin/pagos");
   revalidatePath("/admin/cuentas");
   revalidatePath("/eventos");
@@ -178,10 +180,10 @@ export async function resolvePayment(formData: FormData): Promise<void> {
 
 /** Manda un lugar a la papelera (30 días) o lo saca de ella. */
 export async function trashVenue(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = z.object({ venueId: id, restore: z.string().optional() }).safeParse({ venueId: formData.get("venueId"), restore: formData.get("restore") ?? undefined });
   if (!parsed.success) return;
-  await adminTrashVenue(parsed.data.venueId, parsed.data.restore !== "1");
+  await adminTrashVenue(parsed.data.venueId, parsed.data.restore !== "1", admin);
   revalidate(parsed.data.venueId);
   revalidatePath("/admin/papelera");
 }
@@ -198,6 +200,7 @@ export async function restoreEventAdmin(formData: FormData): Promise<void> {
 
 function revalidate(venueId: string) {
   revalidatePath("/admin");
+  revalidatePath("/admin/rastro");
   revalidatePath(`/admin/lugares/${venueId}`);
   revalidatePath("/salones", "layout");
   revalidatePath("/casas", "layout");

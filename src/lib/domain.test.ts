@@ -13,3 +13,18 @@ describe("papelera", () => {
     expect(trashDaysLeft(deleted, new Date("2026-12-01T00:00:00Z"))).toBe(0);
   });
 });
+
+import { changedFields, venueStatusAction } from "./domain";
+
+describe("rastro", () => {
+  it("solo guarda los campos que cambiaron", () => {
+    const before = { plan: "prueba", modules: ["casas", "salones"], planEndsAt: new Date("2026-10-31T06:59:59Z"), tier: "pro" };
+    const changes = changedFields(before, { plan: "ambos", modules: ["salones", "casas"], planEndsAt: new Date("2026-10-31T06:59:59Z"), tier: undefined });
+    expect(changes).toEqual({ plan: { antes: "prueba", despues: "ambos" } });
+  });
+  it("publicar y retirar tienen su propia acción", () => {
+    expect(venueStatusAction("publicado")).toBe("lugar_publicado");
+    expect(venueStatusAction("retirado")).toBe("lugar_retirado");
+    expect(venueStatusAction("revision")).toBe("lugar_estado");
+  });
+});

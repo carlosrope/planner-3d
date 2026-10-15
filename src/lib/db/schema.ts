@@ -13,6 +13,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import type {
+  AuditAction,
   EventKind,
   EventStatus,
   Layer,
@@ -287,6 +288,30 @@ export const payment = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("payment_org_idx").on(t.orgId)],
+);
+
+/**
+ * Rastro de lo que cuesta dinero o cambia lo público: quién confirmó o rechazó un pago, cambió un plan, publicó,
+ * retiró o mandó a la papelera un lugar. Solo se agrega; nunca se edita ni se borra.
+ */
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: id(),
+    /** Quién lo hizo (vacío: el dueño desde su enlace de revisión, o una cuenta ya borrada). */
+    actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
+    /** Correo o descripción de quién lo hizo, guardado tal cual (sobrevive a que se borre la cuenta). */
+    actor: text("actor").notNull(),
+    action: text("action").$type<AuditAction>().notNull(),
+    targetType: text("target_type").$type<"payment" | "organization" | "venue">().notNull(),
+    targetId: text("target_id").notNull(),
+    /** Nombre legible del negocio o del lugar al momento del cambio. */
+    targetLabel: text("target_label").notNull(),
+    /** Antes y después, monto, nota… */
+    details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: createdAt(),
+  },
+  (t) => [index("audit_log_created_idx").on(t.createdAt), index("audit_log_target_idx").on(t.targetType, t.targetId)],
 );
 
 /** Planners a las que un salón les comparte su modelo. */
