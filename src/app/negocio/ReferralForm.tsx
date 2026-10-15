@@ -3,12 +3,13 @@
 import { useActionState } from "react";
 import { DateField } from "@/components/DateField";
 import { createReferral } from "./actions";
+import type { MessageSetting } from "@/lib/referral-message";
 import { CodeCard } from "./CodeCard";
 
 const field = "h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base outline-none focus:border-stone-800";
 
 /** Genera un código para un cliente (lugar, nombre y fecha) y lo deja listo para mandar por WhatsApp. */
-export function ReferralForm({ venues, venueId, origin, template }: { venues: { id: string; name: string }[]; venueId?: string; origin: string; template: string | null }) {
+export function ReferralForm({ venues, venueId, origin, setting }: { venues: { id: string; name: string }[]; venueId?: string; origin: string; setting: MessageSetting }) {
   const [state, action, pending] = useActionState(createReferral, null);
   const venueName = venues.find((v) => v.id === state?.venueId)?.name ?? venues[0]?.name ?? "";
   return (
@@ -16,7 +17,7 @@ export function ReferralForm({ venues, venueId, origin, template }: { venues: { 
       {state?.code && (
         <div className="mb-4">
           <p className="mb-2 text-sm font-medium text-emerald-800">Código creado. Mándaselo a tu cliente:</p>
-          <CodeCard highlight origin={origin} template={template} info={{ code: state.code, guestName: state.guestName ?? "", venueName, eventDate: state.eventDate ?? null }} />
+          <CodeCard highlight origin={origin} setting={setting} info={{ code: state.code, guestName: state.guestName ?? "", venueName, eventDate: state.eventDate ?? null }} />
         </div>
       )}
       <form action={action} key={state?.code ?? "nuevo"} className="grid gap-3 sm:grid-cols-2">

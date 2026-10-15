@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createPayment, createReferralCode, requireOrg, requireUser, setReferralTemplate } from "@/lib/dal";
-import { DEFAULT_REFERRAL_TEMPLATE, MAX_TEMPLATE_LENGTH, templateWarnings } from "@/lib/referral-message";
+import { MAX_BODY_LENGTH, MESSAGE_STYLES, serializeSetting } from "@/lib/referral-message";
 import { db } from "@/lib/db";
 import { organization } from "@/lib/db/schema";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
@@ -98,20 +98,19 @@ export async function createReferral(_prev: ReferralState, formData: FormData): 
   return { code: result.code, guestName: d.guestName, venueId: d.venueId, eventDate: d.eventDate || null };
 }
 
-export type MessageState = { ok?: boolean; warning?: string; error?: string } | null;
+export type MessageState = { ok?: boolean; error?: string } | null;
 
-/** Guarda el mensaje con el que el negocio manda sus códigos; "restaurar" vuelve al sugerido. */
+/** Guarda el estilo y el párrafo propio con que el negocio manda sus códigos; "restaurar" vuelve al sugerido. */
 export async function saveReferralMessage(_prev: MessageState, formData: FormData): Promise<MessageState> {
   const user = await requireUser("/negocio");
   const org = await requireOrg(user);
   const restore = formData.get("restore") === "1";
-  const text = String(formData.get("template") ?? "").replace(/\r\n/g, "\n").trim();
-  if (!restore && text.length < 10) return { error: "El mensaje está muy corto." };
-  if (text.length > MAX_TEMPLATE_LENGTH) return { error: `El mensaje puede tener hasta ${MAX_TEMPLATE_LENGTH} caracteres.` };
-  const value = restore || text === DEFAULT_REFERRAL_TEMPLATE ? null : text;
-  await setReferralTemplate(org.id, user.id, value);
+  const parsed = z
+    .object({ style: z.enum(MESSAGE_STYLES), body: z.string().max(MAX_BODY_LENGTH) })
+    .safeParse({ style: formData.get("style") ?? "cercano", body: String(formData.get("body") ?? "").replace(/\r\n/g, "\n") });
+  if (!parsed.success) return { error: `El texto puede tener hasta ${MAX_BODY_LENGTH} caracteres.` };
+  await setReferralTemplate(org.id, user.id, restore ? null : serializeSetting(parsed.data));
   revalidatePath("/negocio");
   revalidatePath("/lugares", "layout");
-  const missing = value ? templateWarnings(value) : [];
-  return { ok: true, warning: missing.length ? `Ojo: al mensaje le falta ${missing.join(" y ")}; sin eso tu cliente no puede entrar.` : undefined };
+  return { ok: true };
 }

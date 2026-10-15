@@ -1,6 +1,7 @@
 import { getReferralTemplate, listReferralCodes, referralAllowance, type Org } from "@/lib/dal";
 import { siteOrigin } from "@/lib/brand";
 import { formatInstant } from "@/lib/dates";
+import { parseSetting } from "@/lib/referral-message";
 import { CodeCard } from "./CodeCard";
 import { MessageEditor } from "./MessageEditor";
 import { ReferralForm } from "./ReferralForm";
@@ -13,6 +14,7 @@ export async function ReferralSection({ org, venues, venueId }: { org: Org; venu
   const [allowance, codes, template] = await Promise.all([referralAllowance(org), listReferralCodes(org.id, venueId), getReferralTemplate(org.id)]);
   if (allowance.quota === 0 && codes.length === 0) return null;
   const origin = siteOrigin();
+  const setting = parseSetting(template);
   const places = venueId ? venues.filter((v) => v.id === venueId) : venues;
   const pending = codes.filter((c) => !c.usedAt);
   const used = codes.filter((c) => c.usedAt);
@@ -47,14 +49,14 @@ export async function ReferralSection({ org, venues, venueId }: { org: Org; venu
         </div>
       ) : null}
 
-      {allowance.left !== 0 && places.length > 0 && <ReferralForm venues={places} venueId={venueId} origin={origin} template={template} />}
+      {allowance.left !== 0 && places.length > 0 && <ReferralForm venues={places} venueId={venueId} origin={origin} setting={setting} />}
       {allowance.left === 0 && (
         <p className="mt-4 rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
           Ya diste los códigos de este mes. Con el plan Ilimitado no hay tope: escríbenos por WhatsApp.
         </p>
       )}
 
-      <MessageEditor template={template} origin={origin} venueName={places[0]?.name ?? ""} />
+      <MessageEditor setting={setting} origin={origin} venueName={places[0]?.name ?? ""} />
 
       {pending.length > 0 && (
         <div className="mt-6">
@@ -62,7 +64,7 @@ export async function ReferralSection({ org, venues, venueId }: { org: Org; venu
           <ul className="mt-2 space-y-3">
             {pending.map((c) => (
               <li key={c.id}>
-                <CodeCard origin={origin} template={template} info={{ code: c.code, guestName: c.guestName, venueName: c.venueName, eventDate: c.eventDate }} />
+                <CodeCard origin={origin} setting={setting} info={{ code: c.code, guestName: c.guestName, venueName: c.venueName, eventDate: c.eventDate }} />
               </li>
             ))}
           </ul>

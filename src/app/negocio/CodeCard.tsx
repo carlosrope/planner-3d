@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { referralMessage, whatsappShare } from "@/lib/referral-message";
+import { referralMessage, whatsappShare, type MessageSetting } from "@/lib/referral-message";
 
 export type CodeInfo = { code: string; guestName: string; venueName: string; eventDate: string | null };
 
 const day = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 /** Un código listo para mandar: grande para dictarlo, con WhatsApp y copiar el mensaje. */
-export function CodeCard({ info, origin, template = null, highlight = false }: { info: CodeInfo; origin: string; template?: string | null; highlight?: boolean }) {
+export function CodeCard({ info, origin, setting, highlight = false }: { info: CodeInfo; origin: string; setting?: MessageSetting; highlight?: boolean }) {
   const [copied, setCopied] = useState(false);
-  const message = referralMessage(info, origin, template);
+  const message = referralMessage(info, origin, setting);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(message);

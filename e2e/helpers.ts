@@ -4,6 +4,15 @@ import { expect, type Page } from "@playwright/test";
 export async function open(page: Page, path: string) {
   await page.goto(path);
   await page.waitForLoadState("networkidle");
+  // Espera a que React tome el formulario (hidratación): antes de eso, escribir o hacer clic no hace nada.
+  await page.waitForFunction(
+    () => {
+      const form = [...document.querySelectorAll("form")].find((f) => f.offsetParent !== null);
+      return Boolean(form && Object.keys(form).some((k) => k.startsWith("__react")));
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
 }
 
 /** Campo visible por su name: mientras llega el contenido de <Suspense> hay dos formularios en la página. */
