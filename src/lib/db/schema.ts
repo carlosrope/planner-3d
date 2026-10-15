@@ -394,6 +394,9 @@ export const shareLink = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     /** Imagen de vista previa del enlace (JPEG en data URL) para WhatsApp. */
     preview: text("preview"),
+    /** Veces que una persona abrió el enlace (sin contar las vistas previas de WhatsApp y los buscadores). */
+    viewCount: integer("view_count").notNull().default(0),
+    lastViewedAt: timestamp("last_viewed_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [index("share_link_event_idx").on(t.eventId)],

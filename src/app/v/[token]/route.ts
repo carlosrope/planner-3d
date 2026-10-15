@@ -1,4 +1,5 @@
-import { getEffectiveBrand, getSharedEvent, listComments } from "@/lib/dal";
+import { isPreviewBot } from "@/lib/activity";
+import { bumpShareView, getEffectiveBrand, getSharedEvent, listComments } from "@/lib/dal";
 import { brandOf, designerResponse, hostFor, publicOrigin } from "@/lib/designer/page";
 import { withStarter } from "@/lib/designer/starter";
 
@@ -9,6 +10,8 @@ export async function GET(request: Request, ctx: RouteContext<"/v/[token]">) {
   const data = await getSharedEvent(token);
   const plan = data?.venue.plan;
   if (!data || !plan) return new Response("Este enlace ya no está disponible.", { status: 404 });
+  // Cuenta la visita de una persona (no la vista previa que arma WhatsApp al pegar el enlace).
+  if (!isPreviewBot(request.headers.get("user-agent"))) await bumpShareView(token);
   const url = new URL(request.url);
   const wanted = url.searchParams.get("d") ?? data.firstLayoutId;
   // ?visita: el enlace abre directo la visita guiada (lo arranca host.js)

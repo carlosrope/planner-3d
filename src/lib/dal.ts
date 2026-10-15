@@ -1212,3 +1212,50 @@ export async function adminListTrash() {
   ]);
   return { venues, events };
 }
+
+// ---------------------------------------------------------------------------
+// Actividad de las cuentas (/admin/actividad)
+
+/** Una persona abrió el enlace de solo vista (la ruta ya descartó los robots de vista previa). */
+export async function bumpShareView(token: string) {
+  await db
+    .update(shareLink)
+    .set({ viewCount: sql`${shareLink.viewCount} + 1`, lastViewedAt: new Date() })
+    .where(eq(shareLink.token, token));
+}
+
+/** Por cuenta: último inicio de sesión, eventos propios (sin los de ejemplo), última edición, enlaces y vistas. */
+export async function adminListActivity() {
+  const rows = await db
+    .select({
+      id: organization.id,
+      name: organization.name,
+      kind: organization.kind,
+      plan: organization.plan,
+      planEndsAt: organization.planEndsAt,
+      createdAt: organization.createdAt,
+      emails: sql<string>`(select coalesce(string_agg(u.email, ', ' order by m.created_at), '') from membership m join "user" u on u.id = m.user_id where m.org_id = organization.id)`,
+      lastLogin: sql<Date | null>`(select max(s.created_at) from session s join membership m on m.user_id = s.user_id where m.org_id = organization.id)`,
+      ownEvents: sql<number>`(select count(*) from event e where e.org_id = organization.id and e.deleted_at is null and e.title not like '%(ejemplo)%' and e.title not like '%(muestra)%')`,
+      sampleEvents: sql<number>`(select count(*) from event e where e.org_id = organization.id and e.deleted_at is null and (e.title like '%(ejemplo)%' or e.title like '%(muestra)%'))`,
+      lastEdit: sql<Date | null>`(select max(l.updated_at) from layout l join event e on e.id = l.event_id where e.org_id = organization.id and e.deleted_at is null)`,
+      shares: sql<number>`(select count(*) from share_link sl join event e on e.id = sl.event_id where e.org_id = organization.id and e.deleted_at is null)`,
+      shareViews: sql<number>`(select coalesce(sum(sl.view_count), 0) from share_link sl join event e on e.id = sl.event_id where e.org_id = organization.id and e.deleted_at is null)`,
+      lastShareView: sql<Date | null>`(select max(sl.last_viewed_at) from share_link sl join event e on e.id = sl.event_id where e.org_id = organization.id and e.deleted_at is null)`,
+      comments: sql<number>`(select count(*) from comment c join layout l on l.id = c.layout_id join event e on e.id = l.event_id where e.org_id = organization.id and e.deleted_at is null)`,
+    })
+    .from(organization)
+    .orderBy(desc(organization.createdAt));
+  const date = (v: Date | string | null) => (v ? new Date(v) : null);
+  return rows.map((r) => ({
+    ...r,
+    lastLogin: date(r.lastLogin),
+    lastEdit: date(r.lastEdit),
+    lastShareView: date(r.lastShareView),
+    ownEvents: Number(r.ownEvents),
+    sampleEvents: Number(r.sampleEvents),
+    shares: Number(r.shares),
+    shareViews: Number(r.shareViews),
+    comments: Number(r.comments),
+  }));
+}
