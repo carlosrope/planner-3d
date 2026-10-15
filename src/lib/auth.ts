@@ -12,6 +12,14 @@ import { normalizeReferralCode } from "./referrals";
 import { lanOrigins } from "./lan";
 import { passwordResetEmail, sendEmail } from "./email";
 
+/** plantea.com.mx, www y la dirección de Railway; AUTH_TRUSTED_ORIGINS (separados por coma) agrega otros. */
+const publicOrigins = () => [
+  "https://plantea.com.mx",
+  "https://www.plantea.com.mx",
+  "https://planner-3d-production.up.railway.app",
+  ...(process.env.AUTH_TRUSTED_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean),
+];
+
 const invites = parseInvites(process.env.SIGNUP_CODES, process.env.SIGNUP_CODE);
 
 /** Código de referido sin usar, de un lugar que sigue en el catálogo y de un negocio con el plan vigente. */
@@ -87,7 +95,9 @@ export const auth = betterAuth({
     }),
   },
   // En desarrollo se permite entrar desde el iPhone por la red local.
-  trustedOrigins: process.env.NODE_ENV === "production" ? [] : lanOrigins(),
+  // Dominios desde los que se puede entrar: el principal (BETTER_AUTH_URL) y los demás de Plantea, para que el
+  // inicio de sesión funcione igual en plantea.com.mx y en la dirección de Railway (enlaces y QR viejos).
+  trustedOrigins: process.env.NODE_ENV === "production" ? publicOrigins() : lanOrigins(),
   databaseHooks: {
     user: {
       create: {
