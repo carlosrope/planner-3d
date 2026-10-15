@@ -40,6 +40,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Tipos de las rutas de Next (PageProps, RouteContext)
+        run: npx next typegen
       - name: Tipos
         run: npm run typecheck
       - name: Lint
