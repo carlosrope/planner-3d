@@ -108,6 +108,10 @@ export function hostFor(
 const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const json = (v: unknown) => JSON.stringify(v).replace(/</g, "\\u003c");
 const inline = (code: string) => `<script>\n${code}\n</script>\n`;
+/** Igual que components/ErrorReporter.tsx, para las páginas del diseñador (no pasan por el layout de React). */
+const ERROR_REPORTER = `(function(){var n=0;function s(m,t,k){if(n>=5||!m)return;n++;var b=JSON.stringify({message:String(m).slice(0,2000),type:t,stack:k&&String(k).slice(0,8000),url:location.href.slice(0,500)});try{navigator.sendBeacon("/api/errores",new Blob([b],{type:"application/json"}))}catch(e){}}
+addEventListener("error",function(e){s(e.message,e.error&&e.error.name,e.error&&e.error.stack)});
+addEventListener("unhandledrejection",function(e){var r=e.reason;s(r&&r.message||String(r),r&&r.name||"UnhandledRejection",r&&r.stack)})})();`;
 
 /** Aviso del 3D público de un lugar del catálogo (o de su revisión por el dueño): lo pinta src/designer/demo.js. */
 export type VenueNotice = {
@@ -128,6 +132,8 @@ export async function designerResponse(
 ) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
+  // Errores del diseñador (el celular de la planner) → /api/errores → Sentry; solo con SENTRY_DSN.
+  if (process.env.SENTRY_DSN) head = inline(ERROR_REPORTER) + head;
   if (plan.kind === "salon") {
     head += inline(`window.__EVENTOS__ = ${await file("eventos/catalogo.json")};`);
     head += inline(await file("eventos/modelos.js"));
