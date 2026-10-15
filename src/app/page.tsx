@@ -30,7 +30,7 @@ export default function Home() {
               Plantea tu evento o tu casa <span className="text-[#b5653a]">en 3D antes de vivirlo.</span>
             </h1>
             <p className="mt-4 max-w-lg text-lg text-stone-600">
-              Acomoda las mesas sobre el salón real, sienta a tus invitados y recórrelo desde el celular. Para salones, planners, familias e inmobiliarias de Los Mochis.
+              Acomoda las mesas sobre el salón real, sienta a tus invitados y recórrelo desde el celular. Para salones, planners, familias e inmobiliarias de México.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <PageLink href="/disenador/salon-demo" className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white shadow-lg shadow-[#b5653a]/25 hover:bg-[#a4552d]">
@@ -102,7 +102,7 @@ export default function Home() {
             <img src="/portada/espacios-salon-2d.jpg" alt="" className="aspect-[16/9] w-full object-cover transition group-hover:scale-[1.02]" />
             <div className="p-5">
               <h3 className="text-lg font-semibold text-stone-900">Salones de eventos en 3D</h3>
-              <p className="mt-1 text-stone-600">Recorre los salones de Los Mochis, prueba el montaje y pide informes directo al salón.</p>
+              <p className="mt-1 text-stone-600">Recorre los salones del catálogo, prueba el montaje y pide informes directo al salón.</p>
             </div>
           </Link>
           <Link href="/casas" className="group relative overflow-hidden rounded-2xl border border-stone-200 bg-white">

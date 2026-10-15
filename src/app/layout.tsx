@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image" },
   title: { default: "Plantea · tu evento o tu casa en 3D", template: "%s · Plantea" },
-  description: "Plantea tu evento o tu casa en 3D antes de vivirlo: planos 2D y recorridos 3D de salones y casas reales de Los Mochis, desde el celular.",
+  description: "Plantea tu evento o tu casa en 3D antes de vivirlo: planos 2D y recorridos 3D de salones y casas reales de México, desde el celular.",
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "48x48" }, { url: "/favicon.svg", type: "image/svg+xml" }],
     apple: "/apple-touch-icon.png",

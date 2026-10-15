@@ -10,14 +10,14 @@ export function Footer() {
           {/* eslint-disable-next-line @next/next/no-img-element -- logo en SVG */}
           <img src="/marca/plantea-horizontal-color.svg" alt="Plantea" className="h-7 w-auto" />
           <p className="mt-2 max-w-md text-sm text-stone-600">
-            Plantea tu evento o tu casa en 3D antes de vivirlo. Salones y casas reales de Los Mochis, desde el celular.
+            Plantea tu evento o tu casa en 3D antes de vivirlo. Salones y casas reales de México, desde el celular.
           </p>
           <p className="mt-3 text-sm text-stone-600">
             Hecho por{" "}
             <a href={PARTNER_SITE} target="_blank" rel="noopener" className="font-semibold text-[#0d8a4f]">
               ProLink365
             </a>
-            {" · "}Automatización empresarial con IA · Los Mochis, Sinaloa
+            {" · "}Automatización empresarial con IA · México
           </p>
         </div>
         <nav className="grid gap-1 text-sm sm:text-right" aria-label="Más">

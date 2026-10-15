@@ -55,7 +55,7 @@ function layout(body: string, why = "Recibes este correo porque tienes una cuent
 ${body}
 </div>
 <p style="max-width:520px;margin:16px auto 0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#78716c;text-align:center">
-${escape(why)}<br>Plantea · Los Mochis, Sinaloa · ${escape(siteName())}</p>
+${escape(why)}<br>Plantea · México · ${escape(siteName())}</p>
 </body></html>`;
 }
 
@@ -71,7 +71,7 @@ ${url}
 
 Si no lo pediste tú, ignora este correo: tu contraseña sigue igual y nadie puede cambiarla sin este enlace.
 
-Plantea · Los Mochis, Sinaloa`;
+Plantea · México`;
   const html = layout(
     `<p style="margin:0 0 16px">${escape(hello)}</p>
 <p style="margin:0 0 20px">Recibimos una solicitud para cambiar la contraseña de tu cuenta de Plantea (<strong>${escape(to)}</strong>).</p>

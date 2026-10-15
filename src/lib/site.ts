@@ -16,8 +16,8 @@ export const organizationJsonLd = () => ({
   name: "Plantea",
   url: SITE_URL,
   logo: `${SITE_URL}/icon-512.png`,
-  areaServed: { "@type": "City", name: "Los Mochis" },
-  description: "Planos 2D y recorridos 3D de salones de eventos y casas reales de Los Mochis, para planear desde el celular.",
+  areaServed: { "@type": "Country", name: "México" },
+  description: "Planos 2D y recorridos 3D de salones de eventos y casas reales de México, para planear desde el celular.",
 });
 
 export const websiteJsonLd = () => ({
