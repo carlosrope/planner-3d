@@ -40,7 +40,12 @@ export default function Home() {
                 Probar con una casa
               </PageLink>
             </div>
-            <p className="mt-3 text-sm text-stone-500">Sin cuenta y sin costo: es un salón y una casa de ejemplo. Nada se guarda.</p>
+            <p className="mt-3 text-sm text-stone-500">
+              Sin cuenta y sin costo: es un salón y una casa de ejemplo. Nada se guarda.{" "}
+              <Link href="/planes" className="font-semibold text-[#b5653a] underline">
+                Ver planes y precios
+              </Link>
+            </p>
           </div>
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element -- captura propia */}

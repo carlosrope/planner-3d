@@ -25,7 +25,7 @@ describe("códigos de referido", () => {
   });
 
   it("el tope de códigos depende del tipo de cuenta y del nivel", () => {
-    expect(referralQuota({ kind: "venue", plan: "eventos", tier: "pro" })).toBe(50);
+    expect(referralQuota({ kind: "venue", plan: "eventos", tier: "pro" })).toBe(10);
     expect(referralQuota({ kind: "developer", plan: "ambos", tier: "pro" })).toBe(50);
     expect(referralQuota({ kind: "planner", plan: "eventos", tier: "pro" })).toBe(5);
     expect(referralQuota({ kind: "venue", plan: "eventos", tier: "ilimitado" })).toBeNull();

@@ -58,13 +58,13 @@ export const isTier = (value: unknown): value is Tier => value === "pro" || valu
  */
 export const isLitePlan = (plan: Plan) => plan === "personal" || plan === "invitado";
 /**
- * Códigos de referido que puede dar una cuenta cada mes: el dueño de un salón o desarrolladora 50 (Pro) o sin
+ * Códigos de referido que puede dar una cuenta cada mes: el dueño de un salón 10 (Pro; decisión del 15 de octubre de 2026), la desarrolladora 50, o sin
  * tope (Ilimitado); la planner o inmobiliaria 5 (Pro) o sin tope. `null` = sin tope; 0 = no reparte códigos.
  */
 export function referralQuota(org: { kind: OrgKind; plan: Plan; tier: Tier }): number | null {
   if (org.plan === "prueba" || isLitePlan(org.plan)) return 0;
   if (org.tier === "ilimitado") return null;
-  return isOwnerKind(org.kind) ? 50 : 5;
+  return org.kind === "venue" ? 10 : org.kind === "developer" ? 50 : 5;
 }
 /** Días que dura la cuenta de un cliente con código después de la fecha de su evento (o desde que entra, sin fecha). */
 export const REFERRAL_DAYS_AFTER_EVENT = 30;
