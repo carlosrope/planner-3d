@@ -39,7 +39,7 @@ conteos que la original (3 cuentas, 4 lugares, 10 eventos, 15 distribuciones, 6 
      (`${{Postgres.DATABASE_URL}}`) si el servicio está en el mismo proyecto.
    - `S3_BUCKET=plantea-respaldos`, `S3_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com`,
      `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION=auto`, `S3_PREFIX=plantea`.
-   - Si el Postgres de Railway es más nuevo que 17, cambiar `ARG PG_VERSION` en `backup/Dockerfile`
+   - Si el Postgres de Railway es más nuevo que 18, cambiar `ARG PG_VERSION` en `backup/Dockerfile`
      (`pg_dump` tiene que ser igual o más nuevo que el servidor; se ve en la pestaña del Postgres en Railway).
 4. Probarlo una vez a mano: en el servicio de respaldo, *Deploy* → *Run now* (o quitar el cron, desplegar y ver el
    log: debe terminar con `[respaldo] subido y verificado`). Después revisar en R2 que exista el archivo.
