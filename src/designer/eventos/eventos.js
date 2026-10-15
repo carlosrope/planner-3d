@@ -273,8 +273,8 @@
   async function applyTemplate(kind, opts = {}) {
     const guests = guestsOf(state) || list(state).length || 200;
     const where = host()?.eventId ? `evento=${encodeURIComponent(host().eventId)}` : `lugar=${encodeURIComponent(window.__CASA__.id)}`;
-    if (!opts.confirmed && !confirm(t(`Replace the furniture with the “${TEMPLATES[kind][0]}” template for ${guests} guests? You can undo it.`,
-      `¿Reemplazar los muebles con la plantilla “${TEMPLATES[kind][1]}” para ${guests} invitados? Se puede deshacer.`))) return;
+    if (!opts.confirmed && !(await window.plConfirm(t(`Replace the furniture with the “${TEMPLATES[kind][0]}” template for ${guests} guests? You can undo it.`,
+      `¿Reemplazar los muebles con la plantilla “${TEMPLATES[kind][1]}” para ${guests} invitados? Se puede deshacer.`), { ok: t('Replace', 'Reemplazar'), cancel: t('Cancel', 'Cancelar') }))) return;
     let data;
     try {
       const r = await fetch(`/api/plantilla?${kind ? `tipo=${kind}&` : ''}clase=${encodeURIComponent(opts.eventKind || kindOf(state))}&invitados=${guests}&${where}`);
@@ -299,7 +299,8 @@
     const kindSel = document.getElementById('xKind');
     if (kindSel) kindSel.onchange = async () => {
       const k = kindSel.value, prev = kindOf(state);
-      if (!confirm(t(`Rebuild the layout for “${kindLabel(k)}”? You can undo it.`, `¿Rearmar el montaje para “${kindLabel(k)}”? Se puede deshacer.`))) { kindSel.value = prev; return; }
+      if (!(await window.plConfirm(t(`Rebuild the layout for “${kindLabel(k)}”? You can undo it.`, `¿Rearmar el montaje para “${kindLabel(k)}”? Se puede deshacer.`),
+        { ok: t('Rebuild', 'Rearmar'), cancel: t('Cancel', 'Cancelar') }))) { kindSel.value = prev; return; }
       if (host()) await host().setKind(k);
       else mutate(() => { state.eventKind = k; });
       await applyTemplate(null, { confirmed: true, eventKind: k });
@@ -500,8 +501,9 @@
     $1('gPrintTables').onclick = () => printByTable(state);
     $1('gPrintAbc').onclick = () => printAbc(state);
     $1('gCsv').onclick = () => exportCsv(state);
-    $1('gClear').onclick = () => {
-      if (confirm(t('Delete the whole guest list? You can undo it.', '¿Borrar toda la lista de invitados? Se puede deshacer.'))) mutate(() => { state.guestList = []; });
+    $1('gClear').onclick = async () => {
+      if (await window.plConfirm(t('Delete the whole guest list? You can undo it.', '¿Borrar toda la lista de invitados? Se puede deshacer.'),
+        { ok: t('Delete', 'Borrar'), cancel: t('Cancel', 'Cancelar'), danger: true })) mutate(() => { state.guestList = []; });
     };
     $1('gBack').onclick = () => select(null);
   }

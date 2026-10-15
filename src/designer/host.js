@@ -76,17 +76,17 @@
         if (e.status === 400) {
           conflict = true;
           setStatus(t('Not saved', 'Sin guardar'));
-          alert(t('This change could not be saved (invalid data). Reload the page; if it happens again, let us know.',
+          window.plAlert(t('This change could not be saved (invalid data). Reload the page; if it happens again, let us know.',
             'Este cambio no se pudo guardar (datos inválidos). Recarga la página; si vuelve a pasar, avísanos.'));
         } else if (e.status === 401 || e.status === 404) {
           conflict = true;
           setStatus(t('Not saved', 'Sin guardar'));
-          alert(t('Your session ended. Sign in again in another tab and reload this page; your last change was not saved.',
+          window.plAlert(t('Your session ended. Sign in again in another tab and reload this page; your last change was not saved.',
             'Tu sesión terminó. Vuelve a entrar en otra pestaña y recarga esta página; el último cambio no se guardó.'));
         } else if (e.status === 409) {
           conflict = true;
           setStatus(t('Not saved', 'Sin guardar'));
-          alert(t('Someone else saved this layout. Reload the page to see the latest version.',
+          window.plAlert(t('Someone else saved this layout. Reload the page to see the latest version.',
             'Otra persona guardó cambios en esta distribución. Recarga la página para ver la versión más reciente.'));
         } else {
           pending = true;
@@ -163,7 +163,8 @@
 
   async function remove(dist) {
     if (dists.length < 2) return api.toast(t('At least one layout must remain', 'Siempre debe quedar al menos una distribución'));
-    if (!confirm(t(`Delete layout ${dist.name}? This cannot be undone.`, `¿Eliminar la distribución ${dist.name}? No se puede deshacer.`))) return;
+    if (!(await window.plConfirm(t(`Delete layout ${dist.name}? This cannot be undone.`, `¿Eliminar la distribución ${dist.name}? No se puede deshacer.`),
+      { ok: t('Delete', 'Eliminar'), cancel: t('Cancel', 'Cancelar'), danger: true }))) return;
     try {
       if (dist === active) { await flush(); pending = false; }
       await request('DELETE', `/api/layouts/${dist.id}`);

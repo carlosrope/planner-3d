@@ -1944,6 +1944,13 @@ sub(
     "$('#tgLib').onclick = () => drawer('lib');\ndocument.querySelectorAll('aside [data-back]').forEach(b => b.onclick = () => drawer(null));",
 )
 
+# Confirmaciones con la ventana de Plantea (src/designer/dialogo.js) en lugar de confirm() del navegador.
+sub("function clearLayout(){", "async function clearLayout(){")
+sub("  if (!confirm(tr(`确定清空全部 ${n} 件家具 / 家电吗？", "  if (!(await window.plConfirm(tr(`确定清空全部 ${n} 件家具 / 家电吗？")
+sub("Los muros, pisos y medidas se conservan. Puedes deshacerlo.`))) return;", "Los muros, pisos y medidas se conservan. Puedes deshacerlo.`)))) return;")
+sub("$('#reset').onclick = () => { if (confirm(tr('恢复为默认设计方案？（可撤销）', 'Reset to the default design? (undoable)'))){",
+    "$('#reset').onclick = async () => { if (await window.plConfirm(tr('恢复为默认设计方案？（可撤销）', 'Reset to the default design? (undoable)'))){")
+
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")

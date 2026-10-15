@@ -1067,10 +1067,10 @@ function renderFab(){
   })[b.dataset.a]());
 }
 
-function clearLayout(){
+async function clearLayout(){
   const n = state.furniture.length;
   if (!n) return toast(tr('当前没有布置任何家具', 'There is no furniture to clear'));
-  if (!confirm(tr(`确定清空全部 ${n} 件家具 / 家电吗？\n墙体、地面材料和测量线会保留，可点「撤销」恢复。`, `Remove all ${n} furniture / appliance items?\nWalls, flooring and measurements are kept. You can Undo this.`, `¿Quitar los ${n} muebles y electrodomésticos?\nLos muros, pisos y medidas se conservan. Puedes deshacerlo.`))) return;
+  if (!(await window.plConfirm(tr(`确定清空全部 ${n} 件家具 / 家电吗？\n墙体、地面材料和测量线会保留，可点「撤销」恢复。`, `Remove all ${n} furniture / appliance items?\nWalls, flooring and measurements are kept. You can Undo this.`, `¿Quitar los ${n} muebles y electrodomésticos?\nLos muros, pisos y medidas se conservan. Puedes deshacerlo.`)))) return;
   ui.sel = null; mutate(() => state.furniture = []);
   toast(tr('已清空布置，可点「撤销」恢复', 'Layout cleared — Undo to restore'));
 }
@@ -1596,7 +1596,7 @@ $('#fileIn').onchange = e => {
   });
   e.target.value = '';
 };
-$('#reset').onclick = () => { if (confirm(tr('恢复为默认设计方案？（可撤销）', 'Reset to the default design? (undoable)'))){ const b = snap(); state = defaultState(); ui.sel = null; commit(b); renderAll(); } };
+$('#reset').onclick = async () => { if (await window.plConfirm(tr('恢复为默认设计方案？（可撤销）', 'Reset to the default design? (undoable)'))){ const b = snap(); state = defaultState(); ui.sel = null; commit(b); renderAll(); } };
 // 横竖屏切换、表头换行等都会改变画布尺寸；尺寸从 0 恢复（如首次布局）时重新适应窗口
 // 其余尺寸变化（收起 / 展开面板等）保持画面中心不动
 let lastW = 0, lastH = 0;
