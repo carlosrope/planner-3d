@@ -1259,3 +1259,17 @@ export async function adminListActivity() {
     comments: Number(r.comments),
   }));
 }
+
+/** Mensaje propio del negocio para mandar los códigos (null = el sugerido). */
+export async function getReferralTemplate(orgId: string) {
+  const [row] = await db.select({ t: organization.referralMessage }).from(organization).where(eq(organization.id, orgId)).limit(1);
+  return row?.t ?? null;
+}
+
+/** Guarda el mensaje de los códigos de un negocio del que el usuario es miembro (null = volver al sugerido). */
+export async function setReferralTemplate(orgId: string, userId: string, template: string | null) {
+  await db
+    .update(organization)
+    .set({ referralMessage: template })
+    .where(and(eq(organization.id, orgId), sql`exists (select 1 from membership m where m.org_id = ${orgId} and m.user_id = ${userId})`));
+}

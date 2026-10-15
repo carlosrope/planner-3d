@@ -3,7 +3,8 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createPayment, createReferralCode, requireOrg, requireUser } from "@/lib/dal";
+import { createPayment, createReferralCode, requireOrg, requireUser, setReferralTemplate } from "@/lib/dal";
+import { DEFAULT_REFERRAL_TEMPLATE, MAX_TEMPLATE_LENGTH, templateWarnings } from "@/lib/referral-message";
 import { db } from "@/lib/db";
 import { organization } from "@/lib/db/schema";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
@@ -95,4 +96,22 @@ export async function createReferral(_prev: ReferralState, formData: FormData): 
   revalidatePath("/negocio");
   revalidatePath("/lugares", "layout");
   return { code: result.code, guestName: d.guestName, venueId: d.venueId, eventDate: d.eventDate || null };
+}
+
+export type MessageState = { ok?: boolean; warning?: string; error?: string } | null;
+
+/** Guarda el mensaje con el que el negocio manda sus códigos; "restaurar" vuelve al sugerido. */
+export async function saveReferralMessage(_prev: MessageState, formData: FormData): Promise<MessageState> {
+  const user = await requireUser("/negocio");
+  const org = await requireOrg(user);
+  const restore = formData.get("restore") === "1";
+  const text = String(formData.get("template") ?? "").replace(/\r\n/g, "\n").trim();
+  if (!restore && text.length < 10) return { error: "El mensaje está muy corto." };
+  if (text.length > MAX_TEMPLATE_LENGTH) return { error: `El mensaje puede tener hasta ${MAX_TEMPLATE_LENGTH} caracteres.` };
+  const value = restore || text === DEFAULT_REFERRAL_TEMPLATE ? null : text;
+  await setReferralTemplate(org.id, user.id, value);
+  revalidatePath("/negocio");
+  revalidatePath("/lugares", "layout");
+  const missing = value ? templateWarnings(value) : [];
+  return { ok: true, warning: missing.length ? `Ojo: al mensaje le falta ${missing.join(" y ")}; sin eso tu cliente no puede entrar.` : undefined };
 }

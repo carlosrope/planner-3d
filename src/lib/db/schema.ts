@@ -134,6 +134,8 @@ export const organization = pgTable("organization", {
   tier: text("tier").$type<Tier>().notNull().default("pro"),
   /** Cuenta creada con un código de referido: el código que la abrió (dice el lugar y quién la invitó). */
   referralCodeId: text("referral_code_id"),
+  /** Mensaje propio para mandar los códigos por WhatsApp (vacío = el sugerido; src/lib/referral-message.ts). */
+  referralMessage: text("referral_message"),
   createdAt: createdAt(),
 });
 
