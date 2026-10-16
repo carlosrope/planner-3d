@@ -66,6 +66,7 @@ const FAQ = [
   { q: "¿Mi cliente necesita crear una cuenta?", a: "No. Recibe un enlace de solo vista con tu marca y puede dejarte comentarios." },
   { q: "¿Qué necesitan de mi salón o de mis casas?", a: "El plano (CAD o PDF) o un croquis con medidas y fotos. Lo convertimos a 3D y lo revisas antes de publicarlo." },
   { q: "¿Los precios incluyen IVA?", a: "Sí, todos los precios son en pesos con IVA incluido. Te damos factura." },
+  { q: "¿Cómo sé que Plantea es real?", a: "En plantea.com.mx/nosotros están quién es el responsable, cómo contactarnos y cómo comprobarlo antes de pagar. La demo es gratis y sin cuenta." },
   { q: "¿Cómo pago?", a: "Por transferencia (SPEI) desde tu cuenta en Plantea; subes el comprobante y activamos tu plan el mismo día." },
 ];
 

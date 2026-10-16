@@ -15,3 +15,14 @@ export const spei = () =>
 
 /** Origen público de la app para armar enlaces absolutos fuera de una petición (páginas). */
 export const siteOrigin = () => process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "";
+
+/**
+ * Datos opcionales para verificar a Plantea (página /nosotros y datos estructurados). Solo se muestran si existen
+ * en las variables de Railway: no se inventa ninguno.
+ */
+export const trustData = () => ({
+  rfc: process.env.PLANTEA_RFC?.trim() || null,
+  instagram: process.env.PLANTEA_INSTAGRAM?.trim() || null,
+  facebook: process.env.PLANTEA_FACEBOOK?.trim() || null,
+  google: process.env.PLANTEA_GOOGLE_PROFILE?.trim() || null,
+});

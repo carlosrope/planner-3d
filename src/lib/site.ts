@@ -10,12 +10,17 @@ export const LEGACY_HOST = "planner-3d-production.up.railway.app";
 export const PRIVATE_PATHS = ["/admin", "/api", "/eventos", "/negocio", "/lugares/*/panel", "/revisar", "/v/", "/olvide", "/restablecer", "/alta/gracias"];
 
 /** Datos estructurados (schema.org) de la marca, para la portada. */
-export const organizationJsonLd = () => ({
+export const organizationJsonLd = (extra: { sameAs?: string[] } = {}) => ({
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "Plantea",
   url: SITE_URL,
   logo: `${SITE_URL}/icon-512.png`,
+  email: "hola@plantea.com.mx",
+  founder: { "@type": "Person", name: "Carlos Manuel Robles Pérez" },
+  address: { "@type": "PostalAddress", addressLocality: "Los Mochis", addressRegion: "Sinaloa", addressCountry: "MX" },
+  contactPoint: { "@type": "ContactPoint", contactType: "customer service", email: "hola@plantea.com.mx", telephone: "+52-668-130-5828", areaServed: "MX", availableLanguage: "es" },
+  sameAs: ["https://prolink365.com.mx", ...(extra.sameAs ?? [])],
   areaServed: { "@type": "Country", name: "México" },
   description: "Planos 2D y recorridos 3D de salones de eventos y casas reales de México, para planear desde el celular.",
 });

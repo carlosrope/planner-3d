@@ -36,6 +36,9 @@ export function Footer() {
           <Link href="/planes" className="text-stone-700 hover:underline">
             Planes y precios
           </Link>
+          <Link href="/nosotros" className="text-stone-700 hover:underline">
+            Quiénes somos
+          </Link>
           <Link href="/privacidad" className="text-stone-500 hover:underline">
             Aviso de privacidad
           </Link>
