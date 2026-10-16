@@ -1978,7 +1978,7 @@ sub(
     "  .paneHead.wide-only{display:flex;position:sticky;top:0;z-index:3;align-items:center;justify-content:space-between;gap:8px;\n"
     "    padding:8px 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}\n"
     "  .paneHead b{font-size:13px;font-weight:700;color:var(--ink,#1c1917)}\n"
-    "  .paneClose{width:22px;height:22px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:15px;line-height:1;\n"
+    "  .paneClose{width:20px;height:20px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:14px;line-height:1;\n"
     "    cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}\n"
     "  .paneClose:hover{background:#b3372a}\n  .paneClose:focus-visible{outline:3px solid #f3c9ad;outline-offset:2px}\n"
     "  #zoomMore{display:inline-block}\n  #zoomGrp:not(.open)>.zx{display:none}\n"
