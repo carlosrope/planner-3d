@@ -7,6 +7,7 @@ import { auth } from "./auth";
 import { db } from "./db";
 import {
   auditLog,
+  catalogSuggestion,
   comment,
   event,
   layout,
@@ -45,6 +46,7 @@ import { slugify, uniqueSlug } from "./slug";
 
 import { TOKEN_CHARS } from "./tokens";
 import { monthOf } from "./dates";
+import type { Suggestion } from "./suggestion";
 export const newToken = (length = 20) => Array.from(randomBytes(length), (b) => TOKEN_CHARS[b % TOKEN_CHARS.length]).join("");
 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
@@ -1273,4 +1275,27 @@ export async function setReferralTemplate(orgId: string, userId: string, templat
     .update(organization)
     .set({ referralMessage: template })
     .where(and(eq(organization.id, orgId), sql`exists (select 1 from membership m where m.org_id = ${orgId} and m.user_id = ${userId})`));
+}
+
+// ---------------------------------------------------------------------------
+// Sugerencias del catálogo (sin cuenta: llegan del diseñador; se ven en /admin/sugerencias)
+
+export async function createSuggestion(s: Suggestion) {
+  const [row] = await db
+    .insert(catalogSuggestion)
+    .values({ term: s.termino, category: s.categoria, use: s.uso, eventKind: s.tipoEvento, venue: s.lugar, page: s.pagina })
+    .returning({ id: catalogSuggestion.id });
+  return row.id;
+}
+
+export async function markSuggestionEmailed(id: string, ok: boolean, error?: string) {
+  await db.update(catalogSuggestion).set({ emailed: ok, emailError: ok ? null : (error ?? "sin detalle").slice(0, 200) }).where(eq(catalogSuggestion.id, id));
+}
+
+export async function adminListSuggestions() {
+  return db.select().from(catalogSuggestion).orderBy(sql`${catalogSuggestion.doneAt} is not null`, desc(catalogSuggestion.createdAt)).limit(300);
+}
+
+export async function adminMarkSuggestion(id: string, done: boolean) {
+  await db.update(catalogSuggestion).set({ doneAt: done ? new Date() : null }).where(eq(catalogSuggestion.id, id));
 }

@@ -120,6 +120,13 @@
       "when": 1792185205281,
       "tag": "0016_idioma",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792186704955,
+      "tag": "0017_sugerencias",
+      "breakpoints": true
     }
   ]
 }

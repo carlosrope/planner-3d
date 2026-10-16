@@ -24,7 +24,7 @@
   const dists = D.distributions;
   let active = dists.find(d => d.id === D.activeId) || dists[0];
   let api = null, levelId = null;
-  let timer = 0, saving = null, pending = false, conflict = false, warned = false, statusText = '';
+  let timer = 0, saving = null, pending = false, conflict = false, warned = false, statusText = '', saveKind = 'idle', savedAt = 0;
 
   const clone = v => JSON.parse(JSON.stringify(v));
   const t = (en, es) => api ? api.tr(en, en, es) : es;
@@ -44,10 +44,55 @@
   }
 
   // ---------------------------------------------------------------- guardado
-  function setStatus(s) {
-    statusText = s;
+  // Estado de guardado como icono de ancho fijo (el texto que cambiaba de largo movía toda la barra).
+  // kind: idle (nada que guardar), saving, saved, error (no se guardó) u offline (se reintentará).
+  const SAVE_ICONS = {
+    idle: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path d="m9.5 13.5 2 2 3.5-4"/>',
+    saved: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path d="m9.5 13.5 2 2 3.5-4"/>',
+    saving: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path class="giro" d="M12 10.5a3 3 0 1 0 3 3"/>',
+    error: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path d="M12 11v3M12 16.2v.01"/>',
+    offline: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path d="M4 4l16 16"/>',
+  };
+  const sinceSaved = ms => {
+    const s = Math.max(0, Math.round(ms / 1000));
+    if (s < 10) return t('just now', 'hace un momento');
+    if (s < 60) return t(`${s} s ago`, `hace ${s} s`);
+    const m = Math.round(s / 60);
+    if (m < 60) return t(`${m} min ago`, `hace ${m} min`);
+    return t(`${Math.round(m / 60)} h ago`, `hace ${Math.round(m / 60)} h`);
+  };
+  function saveText() {
+    if (saveKind === 'saving') return t('Saving your changes…', 'Guardando tus cambios…');
+    if (saveKind === 'saved') return `${t('Saved', 'Guardado')} · ${sinceSaved(Date.now() - savedAt)}`;
+    if (saveKind === 'error') return `${t('Not saved', 'Sin guardar')}: ${statusText}`;
+    if (saveKind === 'offline') return t('No connection: your changes will be saved when it returns', 'Sin conexión: tus cambios se guardan cuando vuelva');
+    return t('Everything is saved', 'Todo está guardado');
+  }
+  function paintStatus() {
     const el = document.getElementById('hostStatus');
-    if (el) el.textContent = s;
+    if (!el) return;
+    el.dataset.state = saveKind;
+    el.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SAVE_ICONS[saveKind]}</svg>`;
+    el.setAttribute('aria-label', saveText());
+    const tip = document.getElementById('hostStatusTip');
+    if (tip) tip.textContent = saveText();
+  }
+  function setStatus(kind, reason = '') {
+    saveKind = kind;
+    statusText = reason;
+    if (kind === 'saved') savedAt = Date.now();
+    paintStatus();
+  }
+  function statusTip(open) {
+    let tip = document.getElementById('hostStatusTip');
+    if (!open) { tip?.remove(); return; }
+    const el = document.getElementById('hostStatus');
+    if (!el) return;
+    if (!tip) { tip = document.createElement('div'); tip.id = 'hostStatusTip'; tip.setAttribute('role', 'status'); document.body.appendChild(tip); }
+    tip.textContent = saveText();
+    const r = el.getBoundingClientRect();
+    tip.style.top = `${r.bottom + 8}px`;
+    tip.style.left = `${Math.max(8, Math.min(innerWidth - tip.offsetWidth - 8, r.left + r.width / 2 - tip.offsetWidth / 2))}px`;
   }
 
   function save(lv, state) {
@@ -58,7 +103,7 @@
       return;
     }
     pending = true;
-    setStatus(t('Saving…', 'Guardando…'));
+    setStatus('saving');
     clearTimeout(timer);
     timer = setTimeout(flush, 700);
   }
@@ -71,27 +116,27 @@
     const dist = active;
     let failed = false;
     saving = request('PUT', `/api/layouts/${dist.id}`, { doc: dist.doc, revision: dist.revision })
-      .then(r => { dist.revision = r.revision; setStatus(pending ? t('Saving…', 'Guardando…') : t('Saved', 'Guardado')); })
+      .then(r => { dist.revision = r.revision; setStatus(pending ? 'saving' : 'saved'); })
       .catch(e => {
         if (e.status === 400) {
           conflict = true;
-          setStatus(t('Not saved', 'Sin guardar'));
+          setStatus('error', t('invalid data, reload the page', 'datos inválidos, recarga la página'));
           window.plAlert(t('This change could not be saved (invalid data). Reload the page; if it happens again, let us know.',
             'Este cambio no se pudo guardar (datos inválidos). Recarga la página; si vuelve a pasar, avísanos.'));
         } else if (e.status === 401 || e.status === 404) {
           conflict = true;
-          setStatus(t('Not saved', 'Sin guardar'));
+          setStatus('error', t('your session ended', 'tu sesión terminó'));
           window.plAlert(t('Your session ended. Sign in again in another tab and reload this page; your last change was not saved.',
             'Tu sesión terminó. Vuelve a entrar en otra pestaña y recarga esta página; el último cambio no se guardó.'));
         } else if (e.status === 409) {
           conflict = true;
-          setStatus(t('Not saved', 'Sin guardar'));
+          setStatus('error', t('someone else saved this layout', 'otra persona guardó esta distribución'));
           window.plAlert(t('Someone else saved this layout. Reload the page to see the latest version.',
             'Otra persona guardó cambios en esta distribución. Recarga la página para ver la versión más reciente.'));
         } else {
           pending = true;
           failed = true;
-          setStatus(t('Offline: will retry', 'Sin conexión: se reintentará'));
+          setStatus('offline');
           timer = setTimeout(flush, 4000);
         }
       })
@@ -183,7 +228,12 @@
   #hostBar .dist small{opacity:.7;overflow:hidden;text-overflow:ellipsis}
   #hostBar .star{color:#c9962b}
   #hostBar .btn.on .star{color:#f6d27a}
-  #hostStatus{color:var(--muted);font-size:12px;padding:0 8px;white-space:nowrap}
+  #hostStatus{width:36px;min-width:36px;color:#15803d;padding:6px 8px;display:inline-flex;align-items:center;justify-content:center}
+  #hostStatus[data-state=saving]{color:var(--muted)} #hostStatus[data-state=error]{color:#b3372a} #hostStatus[data-state=offline]{color:#b45309}
+  #hostStatus .giro{transform-origin:12px 13.5px;animation:hostGiro 1s linear infinite}
+  @keyframes hostGiro{to{transform:rotate(360deg)}}
+  #hostStatusTip{position:fixed;z-index:2147480000;background:#1c1917;color:#fff;font:13px/1.35 'DM Sans',system-ui,sans-serif;padding:7px 10px;border-radius:10px;
+    white-space:nowrap;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)}
   #hostBar .viewonly{color:var(--accent);font-size:12px;padding:0 8px;white-space:nowrap}
   dialog.hostDlg{border:1px solid var(--line);border-radius:14px;padding:18px;width:min(380px,92vw);background:var(--panel);color:var(--ink);
     box-shadow:0 20px 60px rgba(40,30,20,.25)}
@@ -393,7 +443,7 @@
          ${IS_CASA ? `<button class="btn" data-a="details">${t('Details', 'Ficha')}</button>` : ''}
          <button class="btn primary" data-a="share">${t('Share', 'Compartir')}</button>
          <button class="btn" data-a="comments" title="${t('Client comments', 'Comentarios del cliente')}">💬${pendingComments() ? `<span class="badge">${pendingComments()}</span>` : ''}</button>
-         <span id="hostStatus">${escape(statusText)}</span>`
+         <button type="button" class="btn ico" id="hostStatus" data-state="${saveKind}"></button>`
       : `${B.name ? `<span class="brandChip">${brandMark()}<span>${escape(B.name)}</span></span>` : ''}${tabs}
          ${B.whatsapp ? `<a class="btn primary" target="_blank" rel="noopener" href="${escape(waLink(t(`Hi, I saw the design of ${D.title}`, `Hola, vi el diseño de ${D.title}`)))}">WhatsApp</a>` : ''}
          ${IS_CASA && hasDetails() ? `<button class="btn" data-a="details">${t('Details', 'Ficha')}</button>` : ''}
@@ -407,6 +457,16 @@
     bar.querySelector('[data-a="new"]')?.addEventListener('click', () => create(active));
     bar.querySelector('[data-a="share"]')?.addEventListener('click', shareDialog);
     bar.querySelector('[data-a="comments"]')?.addEventListener('click', commentsDialog);
+    const st = bar.querySelector('#hostStatus');
+    if (st) {
+      paintStatus();
+      st.addEventListener('mouseenter', () => statusTip(true));
+      st.addEventListener('mouseleave', () => statusTip(false));
+      st.addEventListener('focus', () => statusTip(true));
+      st.addEventListener('blur', () => statusTip(false));
+      // En celular no hay cursor: un toque muestra el estado unos segundos.
+      st.addEventListener('click', () => { statusTip(true); clearTimeout(st._t); st._t = setTimeout(() => statusTip(false), 2500); });
+    }
     bar.querySelector('[data-a="comment"]')?.addEventListener('click', commentDialog);
     bar.querySelector('[data-a="details"]')?.addEventListener('click', detailsDialog);
     bar.querySelector('[data-a="furn"]')?.addEventListener('click', toggleFurniture);

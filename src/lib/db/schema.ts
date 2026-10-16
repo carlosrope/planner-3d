@@ -326,6 +326,27 @@ export const appSetting = pgTable("app_setting", {
   updatedAt: updatedAt(),
 });
 
+/** Lo que alguien buscó en el catálogo del diseñador y no encontró (src/lib/suggestion.ts). Sin datos de la persona. */
+export const catalogSuggestion = pgTable(
+  "catalog_suggestion",
+  {
+    id: id(),
+    term: text("term").notNull(),
+    category: text("category").notNull(),
+    use: text("use").notNull().default(""),
+    eventKind: text("event_kind").notNull().default(""),
+    venue: text("venue").notNull().default(""),
+    page: text("page").notNull().default(""),
+    /** El correo a Plantea salió (o el motivo si falló). */
+    emailed: boolean("emailed").notNull().default(false),
+    emailError: text("email_error"),
+    /** Ya se agregó al catálogo (lo marca la administración). */
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("catalog_suggestion_created_idx").on(t.createdAt)],
+);
+
 /** Planners a las que un salón les comparte su modelo. */
 export const venueAccess = pgTable(
   "venue_access",

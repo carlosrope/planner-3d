@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   adminAddVenueFiles,
+  adminMarkSuggestion,
   adminRestoreEvent,
   adminTrashVenue,
   adminDeleteVenueFile,
@@ -205,4 +206,13 @@ function revalidate(venueId: string) {
   revalidatePath("/salones", "layout");
   revalidatePath("/casas", "layout");
   revalidatePath("/lugares", "layout");
+}
+
+/** Marca una sugerencia del catálogo como agregada (o la regresa a pendiente). */
+export async function markSuggestion(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const parsed = z.object({ id, done: z.enum(["1", "0"]) }).safeParse({ id: formData.get("id"), done: formData.get("done") });
+  if (!parsed.success) return;
+  await adminMarkSuggestion(parsed.data.id, parsed.data.done === "1");
+  revalidatePath("/admin/sugerencias");
 }
