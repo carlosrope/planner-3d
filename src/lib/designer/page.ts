@@ -138,6 +138,8 @@ export async function designerResponse(
   let head = inline(`window.__CASA__ = ${json(plan)};`);
   // Ventanas de confirmación y aviso de Plantea (reemplazan confirm() y alert() del navegador).
   head += inline(await file("dialogo.js"));
+  // Orden de las secciones de Propiedades elegido por cada persona.
+  head += inline(await file("panelorden.js"));
   // Errores del diseñador (el celular de la planner) → /api/errores → Sentry; solo con SENTRY_DSN.
   if (process.env.SENTRY_DSN) head = inline(ERROR_REPORTER) + head;
   if (plan.kind === "salon") {

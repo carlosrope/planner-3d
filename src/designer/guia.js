@@ -1,5 +1,5 @@
 // Guía en pantalla del diseñador: ventana al centro con 4 pasos (Siguiente / Saltar) que se abre
-// una vez por proyecto (en la demo y el 3D público, una vez por dispositivo; localStorage) y se vuelve a
+// una sola vez por dispositivo y tipo (salón o casa; aparte la demo y la edición de proyectos: localStorage) y se vuelve a
 // abrir con el botón "?" junto al título. Datos: window.__GUIA__ = { kind: "salon" | "casa",
 // mode: "demo" | "lugar" | "edit", eventId?, eventKind?: "boda" | "xv" | "graduacion" | "corporativo" | "otro" }.
 // La carga src/lib/designer/page.ts → designerResponse (no en el enlace de solo vista del cliente).
@@ -7,11 +7,17 @@
 (function () {
   const G = window.__GUIA__;
   if (!G) return;
-  const KEY = 'plantea-guia-' + (G.eventId ? 'evento-' + G.eventId : (G.kind === 'salon' ? 'salon' : 'casa') + '-v1');
+  // Una vez vista, no vuelve a salir en ningún otro proyecto (antes era por proyecto y salía en cada uno nuevo).
+  const tipo = G.kind === 'salon' ? 'salon' : 'casa';
+  const KEY = G.mode === 'edit' ? `plantea-guia-proyectos-${tipo}-v1` : `plantea-guia-${tipo}-v1`;
+  try {
+    // Quien ya cerró la guía en algún proyecto (clave vieja por evento) no la vuelve a ver.
+    if (G.mode === 'edit' && !localStorage.getItem(KEY) && Object.keys(localStorage).some(k => k.startsWith('plantea-guia-evento-'))) localStorage.setItem(KEY, '1');
+  } catch { /* sin almacenamiento */ }
   // Un solo ejemplo, el que le toca al proyecto: una mesa con nombre según el tipo de evento.
-  const MESA = { boda: 'Familia de la novia', xv: 'Amigas de la quinceañera', graduacion: 'Generación 2026', corporativo: 'Recursos Humanos', otro: 'Familia' };
+  const MESA = { boda: 'Familia de la novia', xv: 'Amigas de la quinceañera', cumpleanos: 'Amigos del festejado', bautizo: 'Padrinos', graduacion: 'Generación 2026', infantil: 'Primos', corporativo: 'Recursos Humanos', posada: 'Ventas', otro: 'Familia' };
   const mesa = MESA[G.eventKind] || MESA.boda;
-  const QUIEN = { boda: 'a tu familia y a tus invitados', xv: 'a tu familia', graduacion: 'a tu generación', corporativo: 'a tu equipo', otro: 'a tu familia' };
+  const QUIEN = { boda: 'a tu familia y a tus invitados', xv: 'a tu familia', cumpleanos: 'a tus invitados', bautizo: 'a tu familia', graduacion: 'a tu generación', infantil: 'a las familias invitadas', corporativo: 'a tu equipo', posada: 'a tu equipo', otro: 'a tu familia' };
   const quien = QUIEN[G.eventKind] || QUIEN.boda;
   const touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
   const dedo = touch ? 'con el dedo' : 'con el mouse';

@@ -304,6 +304,19 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
   aside{overflow-x:hidden}
   aside.lib>div{min-width:220px} #panel{min-width:284px}   /* 收起动画中内容不被挤压变形 */
 }
+.wide-only{display:none}
+#zoomMore{display:none}
+@media (min-width:1101px){
+  .paneHead.wide-only{display:flex;position:sticky;top:0;z-index:3;align-items:center;justify-content:space-between;gap:8px;
+    padding:8px 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .paneHead b{font-size:13px;font-weight:700;color:var(--ink,#1c1917)}
+  .paneClose{width:30px;height:30px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:20px;line-height:1;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .paneClose:hover{background:#b3372a}
+  .paneClose:focus-visible{outline:3px solid #f3c9ad;outline-offset:2px}
+  #zoomMore{display:inline-block}
+  #zoomGrp:not(.open)>.zx{display:none}
+}
 .hscroll{display:contents}
 #paneBtns{order:-1}
 .lv-short{display:none}
@@ -386,12 +399,13 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
       <button class="btn" data-tool="measure" title="测量 (M)" data-en-title="Measure (M)" data-en="Measure">测量</button>
       <button class="btn" data-tool="demolish" title="拆改非承重墙 (X)" data-en-title="Demolish non-bearing walls (X)" data-en="Demolish">拆改墙体</button>
     </div>
-    <div class="grp only2d">
-      <button class="btn" id="zoomOut" title="缩小" data-en-title="Zoom out">−</button>
-      <button class="btn" id="zoomIn" title="放大" data-en-title="Zoom in">＋</button>
-      <button class="btn" id="fit" title="适应窗口 (F)" data-en-title="Fit to window (F)" data-en="Fit">适应</button>
-      <button class="btn" id="s60" title="按 1:60 显示（与原图同比例）" data-en-title="Show at 1:60 (same scale as the original plan)">1:60</button>
-      <button class="btn" id="s100" title="按 1:100 显示" data-en-title="Show at 1:100">1:100</button>
+    <div class="grp only2d" id="zoomGrp">
+      <button class="btn" id="zoomMore" title="Opciones de zoom" aria-expanded="false">Zoom ▸</button>
+      <button class="btn zx" id="zoomOut" title="缩小" data-en-title="Zoom out">−</button>
+      <button class="btn zx" id="zoomIn" title="放大" data-en-title="Zoom in">＋</button>
+      <button class="btn zx" id="fit" title="适应窗口 (F)" data-en-title="Fit to window (F)" data-en="Fit">适应</button>
+      <button class="btn zx" id="s60" title="按 1:60 显示（与原图同比例）" data-en-title="Show at 1:60 (same scale as the original plan)">1:60</button>
+      <button class="btn zx" id="s100" title="按 1:100 显示" data-en-title="Show at 1:100">1:100</button>
     </div>
     <div class="grp only3d" id="modes3d">
       <button class="btn on" data-mode="orbit" data-en="Orbit">鸟瞰</button>
@@ -443,6 +457,7 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
 
   <aside class="lib">
     <button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button>
+    <div class="paneHead wide-only"><b>Catálogo</b><button type="button" class="paneClose" data-close="lib" title="Cerrar catálogo" aria-label="Cerrar catálogo">×</button></div>
     <div id="lib3d" class="only3d">
       <h4 data-en="Rooms · click to fly there">房间 · 点击飞到该房间</h4>
       <div id="roomList"></div>
@@ -481,7 +496,7 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
     <div id="fab"></div>
   </main>
 
-  <aside class="right"><button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button><div id="panel"></div></aside>
+  <aside class="right"><button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button><div class="paneHead wide-only"><b>Propiedades</b><button type="button" class="paneClose" data-close="panel" title="Cerrar propiedades" aria-label="Cerrar propiedades">×</button></div><div id="panel"></div></aside>
 
   <footer>
     <span class="only2d">X <b id="cx">—</b></span><span class="only2d">Y <b id="cy">—</b></span>
@@ -955,6 +970,7 @@ function renderSel(){
   $('#gSel').innerHTML = s;
 }
 
+window.plRepintarPanel = () => renderPanel();
 function renderAll(){
   renderGrid(); renderRooms(); renderFurn(); renderWalls(); renderLabels(); renderMeasure(); renderSel(); renderPanel(); updateHeader();
   window.View3D?.sync();
@@ -976,7 +992,7 @@ function renderPanel(){
   if (ui.sel?.kind === 'ext' && EXT){ p.innerHTML = EXT.extPanel(ui.sel); EXT.bindExtPanel(ui.sel); if (p.innerHTML) return; ui.sel = null; }
   if (ui.sel?.kind === 'furn'){ const f = getF(ui.sel.id); if (f){ p.innerHTML = furnPanel(f); bindFurnPanel(f); return; } }
   if (ui.sel?.kind === 'room'){ p.innerHTML = roomPanel(ROOMS.find(r => r.id === ui.sel.id)); bindRoomPanel(); return; }
-  p.innerHTML = overviewPanel(); bindOverview();
+  p.innerHTML = overviewPanel(); bindOverview(); window.plOrdenPanel?.(p);
 }
 
 function overviewPanel(){
@@ -1553,6 +1569,8 @@ document.querySelectorAll('#layers .btn').forEach(b => b.onclick = () => {
 $('#zoomIn').onclick = () => zoomCenter(1.25);
 $('#zoomOut').onclick = () => zoomCenter(.8);
 $('#fit').onclick = fitView;
+$('#zoomMore').onclick = () => { const g = $('#zoomGrp'), on = g.classList.toggle('open'); $('#zoomMore').textContent = on ? 'Zoom ◂' : 'Zoom ▸'; $('#zoomMore').setAttribute('aria-expanded', on); };
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => drawer(b.dataset.close, false));
 $('#s60').onclick = () => { setRatio(60); toast(tr('已按 1:60 显示（与原始户型图同比例）', 'Showing at 1:60 (same scale as the original plan)')); };
 $('#s100').onclick = () => setRatio(100);
 $('#undo').onclick = undo; $('#redo').onclick = redo;

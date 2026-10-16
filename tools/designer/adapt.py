@@ -1951,6 +1951,49 @@ sub("Los muros, pisos y medidas se conservan. Puedes deshacerlo.`))) return;", "
 sub("$('#reset').onclick = () => { if (confirm(tr('恢复为默认设计方案？（可撤销）', 'Reset to the default design? (undoable)'))){",
     "$('#reset').onclick = async () => { if (await window.plConfirm(tr('恢复为默认设计方案？（可撤销）', 'Reset to the default design? (undoable)'))){")
 
+# Computadora: encabezado de cada panel con su nombre y una X roja para cerrarlo (además del botón de arriba).
+sub(
+    '  <aside class="lib">\n    <button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button>\n',
+    '  <aside class="lib">\n    <button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button>\n'
+    '    <div class="paneHead wide-only"><b>Catálogo</b><button type="button" class="paneClose" data-close="lib" title="Cerrar catálogo" aria-label="Cerrar catálogo">×</button></div>\n',
+)
+sub(
+    '<aside class="right"><button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button>',
+    '<aside class="right"><button type="button" class="btn drawerBack narrow-only" data-back>← Volver a la vista</button>'
+    '<div class="paneHead wide-only"><b>Propiedades</b><button type="button" class="paneClose" data-close="panel" title="Cerrar propiedades" aria-label="Cerrar propiedades">×</button></div>',
+)
+# Computadora: el zoom (−, +, encuadrar, 1:60, 1:100) se pliega en un botón; la rueda del mouse ya acerca y aleja.
+sub(
+    '<div class="grp only2d">\n      <button class="btn" id="zoomOut"',
+    '<div class="grp only2d" id="zoomGrp">\n      <button class="btn" id="zoomMore" title="Opciones de zoom" aria-expanded="false">Zoom ▸</button>\n      <button class="btn zx" id="zoomOut"',
+)
+sub('<button class="btn" id="zoomIn"', '<button class="btn zx" id="zoomIn"')
+sub('<button class="btn" id="fit"', '<button class="btn zx" id="fit"')
+sub('<button class="btn" id="s60"', '<button class="btn zx" id="s60"')
+sub('<button class="btn" id="s100"', '<button class="btn zx" id="s100"')
+sub(
+    ".hscroll{display:contents}",
+    ".wide-only{display:none}\n#zoomMore{display:none}\n"
+    "@media (min-width:1101px){\n"
+    "  .paneHead.wide-only{display:flex;position:sticky;top:0;z-index:3;align-items:center;justify-content:space-between;gap:8px;\n"
+    "    padding:8px 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}\n"
+    "  .paneHead b{font-size:13px;font-weight:700;color:var(--ink,#1c1917)}\n"
+    "  .paneClose{width:30px;height:30px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:20px;line-height:1;\n"
+    "    cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}\n"
+    "  .paneClose:hover{background:#b3372a}\n  .paneClose:focus-visible{outline:3px solid #f3c9ad;outline-offset:2px}\n"
+    "  #zoomMore{display:inline-block}\n  #zoomGrp:not(.open)>.zx{display:none}\n"
+    "}\n.hscroll{display:contents}",
+)
+sub(
+    "$('#fit').onclick = fitView;",
+    "$('#fit').onclick = fitView;\n"
+    "$('#zoomMore').onclick = () => { const g = $('#zoomGrp'), on = g.classList.toggle('open'); $('#zoomMore').textContent = on ? 'Zoom ◂' : 'Zoom ▸'; $('#zoomMore').setAttribute('aria-expanded', on); };\n"
+    "document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => drawer(b.dataset.close, false));",
+)
+# Orden de las secciones de Propiedades elegido por cada persona (src/designer/panelorden.js).
+sub("  p.innerHTML = overviewPanel(); bindOverview();", "  p.innerHTML = overviewPanel(); bindOverview(); window.plOrdenPanel?.(p);")
+sub("function renderAll(){", "window.plRepintarPanel = () => renderPanel();\nfunction renderAll(){")
+
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
