@@ -63,5 +63,7 @@
   }
 
   window.plConfirm = (message, opts) => open(message, opts);
+  /** Carga los estilos de la ventana (para otras ventanas con el mismo diseño, como la de sugerencias). */
+  window.plDialogStyle = style;
   window.plAlert = (message, opts) => open(message, { ...opts, single: true });
 })();

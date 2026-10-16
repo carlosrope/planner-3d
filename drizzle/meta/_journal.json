@@ -113,6 +113,13 @@
       "when": 1792182649750,
       "tag": "0015_interfaz",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792185205281,
+      "tag": "0016_idioma",
+      "breakpoints": true
     }
   ]
 }

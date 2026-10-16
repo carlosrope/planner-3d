@@ -305,12 +305,18 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
   aside.lib>div{min-width:220px} #panel{min-width:284px}   /* 收起动画中内容不被挤压变形 */
 }
 .wide-only{display:none}
+.btn.ico{display:inline-flex;align-items:center;justify-content:center;min-width:36px;padding:6px 8px}
+@media (min-width:1101px){
+  header>.brand{order:-10} header #hostBar{order:1} header #viewSeg{order:2} header #tools{order:3} header #paneBtns{order:4} header #zoomGrp{order:5} header #modes3d{order:6}
+  header .grp:has(#vIso){order:7} header .grp:has(#undo){order:8} header #layers{order:9} header .grp:has([data-cut]){order:10} header #toggles3d{order:11} header .grp:has(#sun){order:12}
+  header .spacer{order:13} #fullscreen{order:14} header details.menu{order:15}
+}
 #zoomMore{display:none}
 @media (min-width:1101px){
   .paneHead.wide-only{display:flex;position:sticky;top:0;z-index:3;align-items:center;justify-content:space-between;gap:8px;
     padding:8px 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
   .paneHead b{font-size:13px;font-weight:700;color:var(--ink,#1c1917)}
-  .paneClose{width:30px;height:30px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:20px;line-height:1;
+  .paneClose{width:22px;height:22px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:15px;line-height:1;
     cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
   .paneClose:hover{background:#b3372a}
   .paneClose:focus-visible{outline:3px solid #f3c9ad;outline-offset:2px}
@@ -393,6 +399,7 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
     <div class="grp" id="paneBtns">
       <button class="btn chip" id="tgLib" data-en="◧ Library">◧ 家具库</button>
       <button class="btn chip" id="tgPanel" data-en="Properties ◨">属性 ◨</button>
+      <button class="btn ico danger" id="clearAll" title="清空所有家具家电（可撤销）" data-en-title="Remove all furniture and appliances (undoable)" aria-label="Vaciar muebles"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
     </div>
     <div class="grp only2d" id="tools">
       <button class="btn on" data-tool="select" title="选择 / 移动 (V)" data-en-title="Select / Move (V)" data-en="Select">选择</button>
@@ -416,9 +423,8 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
       <button class="btn" id="vTop" data-en="Top">俯视</button>
     </div>
     <div class="grp">
-      <button class="btn" id="undo" title="撤销 (Ctrl+Z)" data-en-title="Undo (Ctrl+Z)" data-en="Undo">撤销</button>
-      <button class="btn" id="redo" title="重做 (Ctrl+Shift+Z)" data-en-title="Redo (Ctrl+Shift+Z)" data-en="Redo">重做</button>
-      <button class="btn danger" id="clearAll" title="清空所有家具家电（可撤销）" data-en-title="Remove all furniture and appliances (undoable)" data-en="Clear">清空布置</button>
+      <button class="btn ico" id="undo" title="撤销 (Ctrl+Z)" data-en-title="Undo (Ctrl+Z)" aria-label="Deshacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button class="btn ico" id="redo" title="重做 (Ctrl+Shift+Z)" data-en-title="Redo (Ctrl+Shift+Z)" aria-label="Rehacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
     </div>
     <div class="grp only2d" id="layers">
       <button class="btn chip on" data-layer="dims" data-en="Dims">尺寸</button>
@@ -439,10 +445,6 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
     </div>
     <div class="grp only3d"><label class="range"><span data-en="Sun">日照</span> <input type="range" id="sun" min="7" max="18" step=".25" value="10" style="width:84px"><span id="sunT">10:00</span></label></div>
     <div class="spacer"></div>
-    <div class="grp" id="langSel" role="group" aria-label="Language / 语言">
-      <button class="btn chip" data-lang="es" title="Español">ES</button>
-      <button class="btn chip" data-lang="en" title="English">EN</button>
-    </div>
     <button class="btn" id="fullscreen" title="全屏 (Shift+F)" style="border:1px solid var(--line);background:#fff">⛶ 全屏</button>
     <details class="menu"><summary class="btn" data-en="File ▾">文件 ▾</summary>
       <div class="menu-pop">
@@ -512,7 +514,7 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
 /* ======================= 多语言（中文 / English，默认中文） ======================= */
 const LANG_KEY = 'planner3d-lang';
 const LANGS = ['es', 'en', 'zh', 'zht'];             // 简体 / 繁體（台湾用字）/ English
-let LANG = (() => { try { const l = localStorage.getItem(LANG_KEY); return LANGS.includes(l) ? l : 'es'; } catch(e) { return 'es'; } })();
+let LANG = (() => { if (LANGS.includes(window.__LANG__)) return window.__LANG__; try { const l = localStorage.getItem(LANG_KEY); return LANGS.includes(l) ? l : 'es'; } catch(e) { return 'es'; } })();
 // 简 → 繁：先按词替换一字多义的字，再逐字查表（表由 OpenCC s2tw 按本页用到的字生成）
 const S2T_PHRASES = [['布置','佈置'],['布局','佈局'],['台面','檯面'],['复制','複製']];
 const S2T = new Map(('与與两兩个個为為书書于於仅僅从從价價会會传傳体體余餘侧側倾傾储儲儿兒关關内內写寫净淨准準击擊则則刚剛删刪制製办辦动動势勢区區单單占佔卧臥卫衛厅廳历歷压壓厨廚双雙发發变變叶葉后後吗嗎听聽启啟哑啞围圍图圖圆圓场場坐座块塊垫墊墙牆处處备備复復头頭妆妝婴嬰实實宽寬对對导導层層屉屜属屬岛島带帶干乾并並库庫应應开開当當径徑态態总總悬懸懒懶户戶护護拟擬择擇挂掛挡擋挤擠损損换換据據摆擺摇搖撑撐数數无無时時显顯暂暫机機杂雜杆桿条條来來松鬆构構柜櫃标標栈棧栏欄样樣梁樑棱稜椭橢横橫橱櫥气氣没沒注註浅淺测測浏瀏游遊滚滾满滿灯燈灵靈点點热熱状狀独獨环環现現电電画畫监監盖蓋盘盤砖磚确確离離积積称稱竖豎筑築签籤类類约約级級线線结結绕繞绘繪给給统統继繼绿綠缀綴编編缝縫缩縮网網联聯脚腳获獲虚虛装裝见見视視览覽触觸计計认認让讓议議记記设設识識译譯该該语語请請读讀调調负負败敗质質贴貼赶趕转轉轮輪软軟轴軸轻輕载載较較辅輔辑輯边邊过過这這进進远遠适適选選邻鄰里裡针針钢鋼钮鈕铰鉸铺鋪销銷锁鎖键鍵镜鏡长長门門闭閉闲閒间間阅閱阳陽阴陰阶階随隨隐隱静靜页頁顶頂项項顺順颜顏飘飄飞飛马馬鸟鳥齐齊龙龍').match(/../gu).map(p => [...p]));
@@ -1632,7 +1634,7 @@ function setLang(l){
   $('#tip').textContent = TIPS()[viewMode];
   window.View3D?.relang();
 }
-$('#langSel').onclick = e => { const l = e.target.closest('[data-lang]')?.dataset.lang; if (l && l !== LANG) setLang(l); };
+
 
 applyStaticLang(); syncFullscreen();
 buildDefs(); buildLib(); renderOpenings(); renderDims();

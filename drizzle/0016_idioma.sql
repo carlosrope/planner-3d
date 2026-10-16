@@ -1,0 +1,1 @@
+ALTER TABLE "organization" ADD COLUMN "language" text DEFAULT 'es' NOT NULL;

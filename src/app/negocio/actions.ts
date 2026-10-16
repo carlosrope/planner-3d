@@ -19,6 +19,7 @@ const brand = z.object({
   removeLogo: z.literal("1").optional(),
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   whatsapp: z.string().trim().max(30),
+  language: z.enum(["es", "en"]).catch("es"),
 });
 
 
@@ -31,6 +32,7 @@ export async function updateBrand(_prev: BrandState, formData: FormData): Promis
     removeLogo: formData.get("removeLogo") || undefined,
     brandColor: formData.get("brandColor"),
     whatsapp: formData.get("whatsapp") ?? "",
+    language: formData.get("language") ?? "es",
   });
   if (!parsed.success) return { error: "Revisa el nombre (mínimo 2 letras) y el logo (imagen PNG o JPG)." };
   const whatsapp = normalizeWhatsapp(parsed.data.whatsapp);
@@ -42,6 +44,7 @@ export async function updateBrand(_prev: BrandState, formData: FormData): Promis
       name: parsed.data.name,
       brandColor: parsed.data.brandColor,
       whatsapp,
+      language: parsed.data.language,
       ...(parsed.data.removeLogo ? { logoUrl: null } : parsed.data.logo ? { logoUrl: parsed.data.logo } : {}),
     })
     .where(eq(organization.id, org.id));

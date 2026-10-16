@@ -28,9 +28,7 @@
     const txt = [...h.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ').replace(/\s+/g, ' ').trim();
     return txt || h.textContent.trim().slice(0, 40);
   };
-  // Orden propio de la persona; si no tiene, el que dejó la administración para todos (window.__UI__.panelOrder).
-  const global = () => (window.__UI__ && Array.isArray(window.__UI__.panelOrder) ? window.__UI__.panelOrder : []);
-  const read = () => { try { const own = JSON.parse(localStorage.getItem(KEY) || '[]'); return own.length ? own : global(); } catch { return global(); } };
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
   const write = list => { try { if (list) localStorage.setItem(KEY, JSON.stringify(list)); else localStorage.removeItem(KEY); } catch { /* sin almacenamiento */ } };
   const sections = p => [...p.children].filter(el => el.tagName === 'SECTION' && !el.hidden && keyOf(el));
 
@@ -85,6 +83,5 @@
   }
 
   window.plOrdenPanel = p => { apply(p); decorate(p); };
-  /** Títulos de las secciones en el orden en que se ven ahora (para el editor de interfaz). */
-  window.plOrdenActual = () => { const p = document.getElementById('panel'); return p ? sections(p).map(keyOf) : []; };
+
 })();

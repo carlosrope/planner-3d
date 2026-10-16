@@ -1978,7 +1978,7 @@ sub(
     "  .paneHead.wide-only{display:flex;position:sticky;top:0;z-index:3;align-items:center;justify-content:space-between;gap:8px;\n"
     "    padding:8px 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}\n"
     "  .paneHead b{font-size:13px;font-weight:700;color:var(--ink,#1c1917)}\n"
-    "  .paneClose{width:30px;height:30px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:20px;line-height:1;\n"
+    "  .paneClose{width:22px;height:22px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:15px;line-height:1;\n"
     "    cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}\n"
     "  .paneClose:hover{background:#b3372a}\n  .paneClose:focus-visible{outline:3px solid #f3c9ad;outline-offset:2px}\n"
     "  #zoomMore{display:inline-block}\n  #zoomGrp:not(.open)>.zx{display:none}\n"
@@ -1993,6 +1993,42 @@ sub(
 # Orden de las secciones de Propiedades elegido por cada persona (src/designer/panelorden.js).
 sub("  p.innerHTML = overviewPanel(); bindOverview();", "  p.innerHTML = overviewPanel(); bindOverview(); window.plOrdenPanel?.(p);")
 sub("function renderAll(){", "window.plRepintarPanel = () => renderPanel();\nfunction renderAll(){")
+
+# Barra de arriba: deshacer y rehacer como iconos; Vaciar como bote de basura junto a Catálogo y Propiedades.
+sub(
+    '      <button class="btn" id="undo" title="撤销 (Ctrl+Z)" data-en-title="Undo (Ctrl+Z)" data-en="Undo">撤销</button>\n'
+    '      <button class="btn" id="redo" title="重做 (Ctrl+Shift+Z)" data-en-title="Redo (Ctrl+Shift+Z)" data-en="Redo">重做</button>\n'
+    '      <button class="btn danger" id="clearAll" title="清空所有家具家电（可撤销）" data-en-title="Remove all furniture and appliances (undoable)" data-en="Clear">清空布置</button>\n',
+    '      <button class="btn ico" id="undo" title="撤销 (Ctrl+Z)" data-en-title="Undo (Ctrl+Z)" aria-label="Deshacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>\n'
+    '      <button class="btn ico" id="redo" title="重做 (Ctrl+Shift+Z)" data-en-title="Redo (Ctrl+Shift+Z)" aria-label="Rehacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>\n',
+)
+sub(
+    '      <button class="btn chip" id="tgPanel" data-en="Properties ◨">属性 ◨</button>\n',
+    '      <button class="btn chip" id="tgPanel" data-en="Properties ◨">属性 ◨</button>\n'
+    '      <button class="btn ico danger" id="clearAll" title="清空所有家具家电（可撤销）" data-en-title="Remove all furniture and appliances (undoable)" aria-label="Vaciar muebles"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>\n',
+)
+# Sin selector de idioma en la barra: el idioma lo elige el negocio en Mi negocio (window.__LANG__).
+sub(
+    '    <div class="grp" id="langSel" role="group" aria-label="Language / 语言">\n'
+    '      <button class="btn chip" data-lang="es" title="Español">ES</button>\n'
+    '      <button class="btn chip" data-lang="en" title="English">EN</button>\n'
+    '    </div>\n',
+    '',
+)
+sub("$('#langSel').onclick = e => { const l = e.target.closest('[data-lang]')?.dataset.lang; if (l && l !== LANG) setLang(l); };", "")
+sub("let LANG = (() => { try { const l = localStorage.getItem(LANG_KEY); return LANGS.includes(l) ? l : 'es'; } catch(e) { return 'es'; } })();",
+    "let LANG = (() => { if (LANGS.includes(window.__LANG__)) return window.__LANG__; try { const l = localStorage.getItem(LANG_KEY); return LANGS.includes(l) ? l : 'es'; } catch(e) { return 'es'; } })();")
+# Orden definitivo de la barra en computadora (el que dejó la administración el 16 de octubre de 2026).
+sub(
+    ".wide-only{display:none}",
+    ".wide-only{display:none}\n"
+    ".btn.ico{display:inline-flex;align-items:center;justify-content:center;min-width:36px;padding:6px 8px}\n"
+    "@media (min-width:1101px){\n"
+    "  header>.brand{order:-10} header #hostBar{order:1} header #viewSeg{order:2} header #tools{order:3} header #paneBtns{order:4} header #zoomGrp{order:5} header #modes3d{order:6}\n"
+    "  header .grp:has(#vIso){order:7} header .grp:has(#undo){order:8} header #layers{order:9} header .grp:has([data-cut]){order:10} header #toggles3d{order:11} header .grp:has(#sun){order:12}\n"
+    "  header .spacer{order:13} #fullscreen{order:14} header details.menu{order:15}\n"
+    "}",
+)
 
 
 OUT.parent.mkdir(parents=True, exist_ok=True)

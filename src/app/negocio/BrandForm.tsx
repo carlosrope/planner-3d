@@ -30,7 +30,7 @@ async function shrink(file: File): Promise<string> {
 export function BrandForm({
   brand,
 }: {
-  brand: { name: string; logoUrl: string | null; brandColor: string | null; whatsapp: string | null };
+  brand: { name: string; logoUrl: string | null; brandColor: string | null; whatsapp: string | null; language?: string | null };
 }) {
   const [state, action, pending] = useActionState(updateBrand, null);
   const [logo, setLogo] = useState(brand.logoUrl ?? "");
@@ -108,6 +108,14 @@ export function BrandForm({
           />
         </label>
       </div>
+      <label className="block space-y-1">
+        <span className="text-sm text-stone-600">Idioma del diseñador</span>
+        <select name="language" defaultValue={brand.language === "en" ? "en" : "es"} className={field}>
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+        <span className="block text-xs text-stone-500">Así se ven el diseñador y los enlaces que compartes con tus clientes.</span>
+      </label>
       <p className="text-sm text-stone-500">
         Tu nombre, logo y WhatsApp aparecen en los enlaces que compartes con tus clientes.
       </p>

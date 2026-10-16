@@ -4,7 +4,6 @@ import path from "node:path";
 import { CONTACT_WHATSAPP } from "../brand";
 import { withoutVendors, type DesignerPlan, type PropertyDetails } from "./types";
 import { EVENT_KIND_LABELS, SALON_EVENT_KINDS } from "../domain";
-import { getCurrentUser, getUiConfig, isAdmin } from "../dal";
 
 // Arma la página del diseñador (src/designer/disenador.html, adaptación de
 // wy51ai/floorplan-3d, MIT © 2026 wuyi) con los datos del lugar y, si aplica,
@@ -133,18 +132,20 @@ export async function designerResponse(
   plan: DesignerPlan,
   host?: HostData,
   meta?: { image?: string; description?: string; url?: string; siteName?: string },
-  options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string; captura?: boolean },
+  options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string; captura?: boolean; lang?: string | null },
 ) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
+  // Idioma del diseñador que eligió el negocio en Mi negocio (sin él, español).
+  if (options?.lang === "en" || options?.lang === "es") head += inline(`window.__LANG__ = ${json(options.lang)};`);
   // Ventanas de confirmación y aviso de Plantea (reemplazan confirm() y alert() del navegador).
   head += inline(await file("dialogo.js"));
-  // Interfaz que define la administración para todos (orden y tamaños) y, si entra un administrador, su editor.
-  const [ui, viewer] = await Promise.all([getUiConfig(), getCurrentUser().catch(() => null)]);
-  head += inline(`window.__UI__ = ${json(ui)};${viewer && isAdmin(viewer) ? "window.__UI_ADMIN__ = true;" : ""}`);
-  // Orden de las secciones de Propiedades (el de la administración, o el que elija cada persona).
+  // Orden de las secciones de Propiedades que elija cada persona.
   head += inline(await file("panelorden.js"));
-  head += inline(await file("uieditor.js"));
+  // Ayudas animadas al pasar el cursor sobre Cotas, Cuartos, Muebles… (solo computadora).
+  head += inline(await file("ayudas.js"));
+  // Búsqueda en el catálogo y sugerencias de lo que no está (llegan por correo a Plantea).
+  head += inline(await file("buscar.js"));
   // Errores del diseñador (el celular de la planner) → /api/errores → Sentry; solo con SENTRY_DSN.
   if (process.env.SENTRY_DSN) head = inline(ERROR_REPORTER) + head;
   if (plan.kind === "salon") {

@@ -134,6 +134,8 @@ export const organization = pgTable("organization", {
   tier: text("tier").$type<Tier>().notNull().default("pro"),
   /** Cuenta creada con un código de referido: el código que la abrió (dice el lugar y quién la invitó). */
   referralCodeId: text("referral_code_id"),
+  /** Idioma del diseñador para este negocio y sus enlaces ("es" o "en"); se elige en Mi negocio. */
+  language: text("language").notNull().default("es"),
   /** Mensaje propio para mandar los códigos por WhatsApp (vacío = el sugerido; src/lib/referral-message.ts). */
   referralMessage: text("referral_message"),
   createdAt: createdAt(),
@@ -316,7 +318,7 @@ export const auditLog = pgTable(
   (t) => [index("audit_log_created_idx").on(t.createdAt), index("audit_log_target_idx").on(t.targetType, t.targetId)],
 );
 
-/** Ajustes de la app que define el administrador (por ejemplo, la interfaz del diseñador: src/lib/ui-config.ts). */
+/** Ajustes de la app (sin uso desde el 16 de octubre de 2026: la interfaz del diseñador quedó fija en el código). */
 export const appSetting = pgTable("app_setting", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<Record<string, unknown>>().notNull(),

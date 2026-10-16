@@ -22,5 +22,5 @@ export async function GET(request: Request, ctx: RouteContext<"/eventos/[id]">) 
   const [brand, comments] = await Promise.all([getEffectiveBrand(event.orgId), listComments(event.id)]);
   const host = hostFor("edit", event, layouts, wanted, brandOf(brand), comments, back);
   // Personal y Con código: sin hojas ni marcadores de proveedores.
-  return designerResponse({ ...plan, title: event.title }, { ...host, lite: isLitePlan(data.org.plan) }, undefined, { eventKind: event.kind });
+  return designerResponse({ ...plan, title: event.title }, { ...host, lite: isLitePlan(data.org.plan) }, undefined, { eventKind: event.kind, lang: brand?.language });
 }
