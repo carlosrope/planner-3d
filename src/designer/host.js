@@ -44,7 +44,7 @@
   }
 
   // ---------------------------------------------------------------- guardado
-  // Estado de guardado como icono 💾 de ancho fijo (el texto que cambiaba de largo movía toda la barra);
+  // Estado de guardado como icono 💾 del mismo tamaño que el 💬 de comentarios (el texto que cambiaba de largo movía toda la barra);
   // el estado se ve en el CSS por data-state: parpadeo al guardar y punto rojo o ámbar si falla.
   // kind: idle (nada que guardar), saving, saved, error (no se guardó) u offline (se reintentará).
   const sinceSaved = ms => {
@@ -222,11 +222,10 @@
   #hostBar .dist small{opacity:.7;overflow:hidden;text-overflow:ellipsis}
   #hostBar .star{color:#c9962b}
   #hostBar .btn.on .star{color:#f6d27a}
-  #hostStatus{position:relative;width:36px;min-width:36px;padding:6px 0;display:inline-flex;align-items:center;justify-content:center}
-  #hostStatus .disco{font-size:17px;line-height:1}
+  #hostStatus{position:relative}
   #hostStatus[data-state=saving] .disco{animation:hostParpadeo 1.2s ease-in-out infinite}
   @keyframes hostParpadeo{50%{opacity:.35}}
-  #hostStatus[data-state=error]::after,#hostStatus[data-state=offline]::after{content:'';position:absolute;top:4px;right:4px;width:8px;height:8px;
+  #hostStatus[data-state=error]::after,#hostStatus[data-state=offline]::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;
     border-radius:50%;background:#dc2626;box-shadow:0 0 0 2px var(--panel,#fff)}
   #hostStatus[data-state=offline]::after{background:#f59e0b}
   @media (prefers-reduced-motion:reduce){#hostStatus[data-state=saving] .disco{animation:none;opacity:.5}}
@@ -441,7 +440,7 @@
          ${IS_CASA ? `<button class="btn" data-a="details">${t('Details', 'Ficha')}</button>` : ''}
          <button class="btn primary" data-a="share">${t('Share', 'Compartir')}</button>
          <button class="btn" data-a="comments" title="${t('Client comments', 'Comentarios del cliente')}">💬${pendingComments() ? `<span class="badge">${pendingComments()}</span>` : ''}</button>
-         <button type="button" class="btn ico" id="hostStatus" data-state="${saveKind}"></button>`
+         <button type="button" class="btn" id="hostStatus" data-state="${saveKind}"></button>`
       : `${B.name ? `<span class="brandChip">${brandMark()}<span>${escape(B.name)}</span></span>` : ''}${tabs}
          ${B.whatsapp ? `<a class="btn primary" target="_blank" rel="noopener" href="${escape(waLink(t(`Hi, I saw the design of ${D.title}`, `Hola, vi el diseño de ${D.title}`)))}">WhatsApp</a>` : ''}
          ${IS_CASA && hasDetails() ? `<button class="btn" data-a="details">${t('Details', 'Ficha')}</button>` : ''}
