@@ -214,6 +214,8 @@
       : diff >= 0 ? t(`${diff} spare seats`, `Sobran ${diff} lugares`) : t(`${-diff} seats missing`, `Faltan ${-diff} lugares`);
     const names = list(state), seated = names.filter(g => isSeated(state, g)).length;
     const sw = c => `<span class="sw" style="background:${c}"></span>`;
+    // La hoja de montaje va al final de Manteles (o de la lista, si no hay mesas con mantel).
+    const printSetupBtn = `<div class="actions"><button class="btn" id="xPrintSetup">${t('Setup sheet (PDF)', 'Hoja de montaje (PDF)')}</button></div>`;
     const row = (a, b) => `<tr><td>${a}</td><td class="r">${b}</td></tr>`;
     return `<section><h3>${t('Guests & seats', 'Invitados y lugares')}</h3>
       <div class="stats">
@@ -225,22 +227,24 @@
       ${canSeeGuests() ? `<div class="actions"><button class="btn primary" id="xOpenGuests">${t('Guest list', 'Lista de invitados')} (${names.length})</button></div>
       ${names.length ? `<div class="muted" style="margin-top:6px">${t(`${seated} seated · ${names.length - seated} without a table`,
         `${seated} sentados · ${names.length - seated} sin mesa`)}</div>` : ''}` : ''}</section>
-    <section><h3>${t('Furniture list', 'Lista de mobiliario')} <small>${t('for rental and setup', 'para renta y montaje')}</small></h3>
-      <table>${pieces.map(([k, n]) => row(esc(k), n)).join('')}
-        ${chairs.map(([c, n]) => row(`${sw(c)}${t('Chairs', 'Sillas')} ${colorName(c).toLowerCase()}`, n)).join('')}</table>
-      ${tables.filter(isTable).length ? `<h3 style="margin-top:12px">${t('Tablecloths', 'Manteles')}</h3>
-        <table>${cloths.map(([c, n]) => row(`${sw(c)}${colorName(c)}`, n)).join('')}</table>` : ''}
-      <div class="actions"><button class="btn" id="xPrintSetup">${t('Setup sheet (PDF)', 'Hoja de montaje (PDF)')}</button></div></section>
-    ${staffSection(state)}
-    ${V?.section(state) ?? ''}
     ${canSeeGuests() ? `<section><h3>${t('Event type', 'Tipo de evento')}</h3>
       <select id="xKind" style="width:100%;font-size:15px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff">
         ${KINDS.map(([v, label]) => `<option value="${v}"${v === kindOf(state) ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select>
       <div class="muted" style="margin-top:6px">${t('Changing it rebuilds the layout with what that party needs; you can undo it.',
-        'Al cambiarlo se rearma el montaje con lo que lleva esa fiesta; se puede deshacer.')}</div></section>
-    <section><h3>${t('Layout template', 'Plantilla de montaje')} <small>${t(`for ${guests || 'your'} guests`, `para ${guests || 'tus'} invitados`)}</small></h3>
-      <div class="actions">${Object.entries(TEMPLATES).map(([k, [en, es]]) => `<button class="btn" data-template="${k}">${t(en, es)}</button>`).join('')}</div>
-      <div class="muted" style="margin-top:6px">${t('Replaces the furniture of this layout; you can undo it.', 'Reemplaza los muebles de esta distribución; se puede deshacer.')}</div></section>` : ''}`;
+        'Al cambiarlo se rearma el montaje con lo que lleva esa fiesta; se puede deshacer.')}</div>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">${t('Change layout template', 'Cambiar plantilla de montaje')}
+        <small class="muted">${t(`for ${guests || 'your'} guests`, `para ${guests || 'tus'} invitados`)}</small></summary>
+        <div class="actions">${Object.entries(TEMPLATES).map(([k, [en, es]]) => `<button class="btn" data-template="${k}">${t(en, es)}</button>`).join('')}</div>
+        <div class="muted" style="margin-top:6px">${t('Replaces the furniture of this layout; you can undo it.', 'Reemplaza los muebles de esta distribución; se puede deshacer.')}</div>
+      </details></section>` : ''}
+    <section><h3>${t('Furniture list', 'Lista de mobiliario')} <small>${t('for rental and setup', 'para renta y montaje')}</small></h3>
+      <table>${pieces.map(([k, n]) => row(esc(k), n)).join('')}
+        ${chairs.map(([c, n]) => row(`${sw(c)}${t('Chairs', 'Sillas')} ${colorName(c).toLowerCase()}`, n)).join('')}</table>
+      ${tables.filter(isTable).length ? '' : printSetupBtn}</section>
+    ${tables.filter(isTable).length ? `<section><h3>${t('Tablecloths', 'Manteles')}</h3>
+      <table>${cloths.map(([c, n]) => row(`${sw(c)}${colorName(c)}`, n)).join('')}</table>${printSetupBtn}</section>` : ''}
+    ${staffSection(state)}
+    ${V?.section(state) ?? ''}`;
   }
 
   function staffSection(st) {
