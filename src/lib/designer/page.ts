@@ -4,6 +4,7 @@ import path from "node:path";
 import { CONTACT_WHATSAPP } from "../brand";
 import { withoutVendors, type DesignerPlan, type PropertyDetails } from "./types";
 import { EVENT_KIND_LABELS, SALON_EVENT_KINDS } from "../domain";
+import { getCurrentUser, getUiConfig, isAdmin } from "../dal";
 
 // Arma la página del diseñador (src/designer/disenador.html, adaptación de
 // wy51ai/floorplan-3d, MIT © 2026 wuyi) con los datos del lugar y, si aplica,
@@ -138,8 +139,12 @@ export async function designerResponse(
   let head = inline(`window.__CASA__ = ${json(plan)};`);
   // Ventanas de confirmación y aviso de Plantea (reemplazan confirm() y alert() del navegador).
   head += inline(await file("dialogo.js"));
-  // Orden de las secciones de Propiedades elegido por cada persona.
+  // Interfaz que define la administración para todos (orden y tamaños) y, si entra un administrador, su editor.
+  const [ui, viewer] = await Promise.all([getUiConfig(), getCurrentUser().catch(() => null)]);
+  head += inline(`window.__UI__ = ${json(ui)};${viewer && isAdmin(viewer) ? "window.__UI_ADMIN__ = true;" : ""}`);
+  // Orden de las secciones de Propiedades (el de la administración, o el que elija cada persona).
   head += inline(await file("panelorden.js"));
+  head += inline(await file("uieditor.js"));
   // Errores del diseñador (el celular de la planner) → /api/errores → Sentry; solo con SENTRY_DSN.
   if (process.env.SENTRY_DSN) head = inline(ERROR_REPORTER) + head;
   if (plan.kind === "salon") {

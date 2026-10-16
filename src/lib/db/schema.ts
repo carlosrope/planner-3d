@@ -305,7 +305,7 @@ export const auditLog = pgTable(
     /** Correo o descripción de quién lo hizo, guardado tal cual (sobrevive a que se borre la cuenta). */
     actor: text("actor").notNull(),
     action: text("action").$type<AuditAction>().notNull(),
-    targetType: text("target_type").$type<"payment" | "organization" | "venue">().notNull(),
+    targetType: text("target_type").$type<"payment" | "organization" | "venue" | "setting">().notNull(),
     targetId: text("target_id").notNull(),
     /** Nombre legible del negocio o del lugar al momento del cambio. */
     targetLabel: text("target_label").notNull(),
@@ -315,6 +315,14 @@ export const auditLog = pgTable(
   },
   (t) => [index("audit_log_created_idx").on(t.createdAt), index("audit_log_target_idx").on(t.targetType, t.targetId)],
 );
+
+/** Ajustes de la app que define el administrador (por ejemplo, la interfaz del diseñador: src/lib/ui-config.ts). */
+export const appSetting = pgTable("app_setting", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<Record<string, unknown>>().notNull(),
+  updatedBy: text("updated_by").references(() => user.id, { onDelete: "set null" }),
+  updatedAt: updatedAt(),
+});
 
 /** Planners a las que un salón les comparte su modelo. */
 export const venueAccess = pgTable(

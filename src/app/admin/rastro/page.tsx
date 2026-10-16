@@ -54,7 +54,8 @@ function describe(details: Record<string, unknown>): string[] {
   return lines;
 }
 
-const href = (type: string, id: string) => (type === "venue" ? `/admin/lugares/${id}` : type === "payment" ? "/admin/pagos" : "/admin/cuentas");
+const href = (type: string, id: string) =>
+  type === "venue" ? `/admin/lugares/${id}` : type === "payment" ? "/admin/pagos" : type === "setting" ? "/disenador/salon-demo" : "/admin/cuentas";
 
 async function Rastro() {
   await requireAdmin();

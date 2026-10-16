@@ -164,7 +164,7 @@ export const SHARE_ROLES = ["cliente", "staff", "proveedor", "salon"] as const;
 export type ShareRole = (typeof SHARE_ROLES)[number];
 
 /** Acciones que quedan en el rastro (tabla audit_log, visible en /admin/rastro). */
-export const AUDIT_ACTIONS = ["pago_confirmado", "pago_rechazado", "plan_cambiado", "lugar_estado", "lugar_publicado", "lugar_retirado", "lugar_papelera", "lugar_restaurado"] as const;
+export const AUDIT_ACTIONS = ["pago_confirmado", "pago_rechazado", "plan_cambiado", "lugar_estado", "lugar_publicado", "lugar_retirado", "lugar_papelera", "lugar_restaurado", "interfaz_cambiada"] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   pago_confirmado: "Confirmó un pago",
@@ -175,6 +175,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   lugar_retirado: "Retiró el lugar",
   lugar_papelera: "Mandó el lugar a la papelera",
   lugar_restaurado: "Restauró el lugar",
+  interfaz_cambiada: "Cambió la interfaz del diseñador",
 };
 /** Acción del rastro para un cambio de estado de un lugar. */
 export const venueStatusAction = (status: VenueStatus): AuditAction =>

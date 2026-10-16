@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { db } from "./db";
 import {
+  appSetting,
   auditLog,
   comment,
   event,
@@ -45,6 +46,7 @@ import { slugify, uniqueSlug } from "./slug";
 
 import { TOKEN_CHARS } from "./tokens";
 import { monthOf } from "./dates";
+import { DEFAULT_UI, parseUi, UI_SETTING_KEY, type UiConfig } from "./ui-config";
 export const newToken = (length = 20) => Array.from(randomBytes(length), (b) => TOKEN_CHARS[b % TOKEN_CHARS.length]).join("");
 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
@@ -61,7 +63,7 @@ async function audit(
   conn: Db | Tx,
   actor: Actor,
   action: AuditAction,
-  target: { type: "payment" | "organization" | "venue"; id: string; label: string },
+  target: { type: "payment" | "organization" | "venue" | "setting"; id: string; label: string },
   details: Record<string, unknown> = {},
 ) {
   await conn.insert(auditLog).values({
@@ -1272,4 +1274,30 @@ export async function setReferralTemplate(orgId: string, userId: string, templat
     .update(organization)
     .set({ referralMessage: template })
     .where(and(eq(organization.id, orgId), sql`exists (select 1 from membership m where m.org_id = ${orgId} and m.user_id = ${userId})`));
+}
+
+// ---------------------------------------------------------------------------
+// Interfaz del diseñador que define el administrador para todos (src/lib/ui-config.ts)
+
+/** La interfaz guardada (o la normal, si nadie la ha cambiado o la base no responde). */
+export async function getUiConfig(): Promise<UiConfig> {
+  try {
+    const [row] = await db.select({ value: appSetting.value }).from(appSetting).where(eq(appSetting.key, UI_SETTING_KEY)).limit(1);
+    return parseUi(row?.value);
+  } catch {
+    return DEFAULT_UI;
+  }
+}
+
+/** Guarda la interfaz para todos; solo el administrador (la ruta llama antes a isAdmin). Queda en el rastro. */
+export async function setUiConfig(config: UiConfig, actor: CurrentUser) {
+  const value = parseUi(config);
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(appSetting)
+      .values({ key: UI_SETTING_KEY, value, updatedBy: actor.id })
+      .onConflictDoUpdate({ target: appSetting.key, set: { value, updatedBy: actor.id, updatedAt: new Date() } });
+    await audit(tx, actor, "interfaz_cambiada", { type: "setting", id: UI_SETTING_KEY, label: "Interfaz del diseñador" }, value);
+  });
+  return value;
 }
