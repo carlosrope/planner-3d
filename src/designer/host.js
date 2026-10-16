@@ -44,15 +44,9 @@
   }
 
   // ---------------------------------------------------------------- guardado
-  // Estado de guardado como icono de ancho fijo (el texto que cambiaba de largo movía toda la barra).
+  // Estado de guardado como icono 💾 de ancho fijo (el texto que cambiaba de largo movía toda la barra);
+  // el estado se ve en el CSS por data-state: parpadeo al guardar y punto rojo o ámbar si falla.
   // kind: idle (nada que guardar), saving, saved, error (no se guardó) u offline (se reintentará).
-  const SAVE_ICONS = {
-    idle: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path d="m9.5 13.5 2 2 3.5-4"/>',
-    saved: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path d="m9.5 13.5 2 2 3.5-4"/>',
-    saving: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path class="giro" d="M12 10.5a3 3 0 1 0 3 3"/>',
-    error: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path d="M12 11v3M12 16.2v.01"/>',
-    offline: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 10a4 4 0 0 1-1 8z"/><path d="M4 4l16 16"/>',
-  };
   const sinceSaved = ms => {
     const s = Math.max(0, Math.round(ms / 1000));
     if (s < 10) return t('just now', 'hace un momento');
@@ -72,7 +66,7 @@
     const el = document.getElementById('hostStatus');
     if (!el) return;
     el.dataset.state = saveKind;
-    el.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SAVE_ICONS[saveKind]}</svg>`;
+    if (!el.firstElementChild) el.innerHTML = '<span class="disco" aria-hidden="true">💾</span>';
     el.setAttribute('aria-label', saveText());
     const tip = document.getElementById('hostStatusTip');
     if (tip) tip.textContent = saveText();
@@ -228,10 +222,14 @@
   #hostBar .dist small{opacity:.7;overflow:hidden;text-overflow:ellipsis}
   #hostBar .star{color:#c9962b}
   #hostBar .btn.on .star{color:#f6d27a}
-  #hostStatus{width:36px;min-width:36px;color:#15803d;padding:6px 8px;display:inline-flex;align-items:center;justify-content:center}
-  #hostStatus[data-state=saving]{color:var(--muted)} #hostStatus[data-state=error]{color:#b3372a} #hostStatus[data-state=offline]{color:#b45309}
-  #hostStatus .giro{transform-origin:12px 13.5px;animation:hostGiro 1s linear infinite}
-  @keyframes hostGiro{to{transform:rotate(360deg)}}
+  #hostStatus{position:relative;width:36px;min-width:36px;padding:6px 0;display:inline-flex;align-items:center;justify-content:center}
+  #hostStatus .disco{font-size:17px;line-height:1}
+  #hostStatus[data-state=saving] .disco{animation:hostParpadeo 1.2s ease-in-out infinite}
+  @keyframes hostParpadeo{50%{opacity:.35}}
+  #hostStatus[data-state=error]::after,#hostStatus[data-state=offline]::after{content:'';position:absolute;top:4px;right:4px;width:8px;height:8px;
+    border-radius:50%;background:#dc2626;box-shadow:0 0 0 2px var(--panel,#fff)}
+  #hostStatus[data-state=offline]::after{background:#f59e0b}
+  @media (prefers-reduced-motion:reduce){#hostStatus[data-state=saving] .disco{animation:none;opacity:.5}}
   #hostStatusTip{position:fixed;z-index:2147480000;background:#1c1917;color:#fff;font:13px/1.35 'DM Sans',system-ui,sans-serif;padding:7px 10px;border-radius:10px;
     white-space:nowrap;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)}
   #hostBar .viewonly{color:var(--accent);font-size:12px;padding:0 8px;white-space:nowrap}
