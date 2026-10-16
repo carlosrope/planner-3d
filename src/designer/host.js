@@ -70,6 +70,7 @@
     el.setAttribute('aria-label', saveText());
     const tip = document.getElementById('hostStatusTip');
     if (tip) tip.textContent = saveText();
+    window.plAyuda?.refresh(el);
   }
   function setStatus(kind, reason = '') {
     saveKind = kind;
@@ -223,6 +224,10 @@
   #hostBar .star{color:#c9962b}
   #hostBar .btn.on .star{color:#f6d27a}
   #hostStatus{position:relative}
+  .guiaTitulo{display:flex;align-items:center;gap:8px;min-width:0}
+  #hostBack{width:28px;height:28px;border:1px solid #d8cbbd;border-radius:50%;background:#fffdf8;color:#a4552d;flex-shrink:0;
+    display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+  #hostBack:hover{background:#f6ece2}
   #hostStatus[data-state=saving] .disco{animation:hostParpadeo 1.2s ease-in-out infinite}
   @keyframes hostParpadeo{50%{opacity:.35}}
   #hostStatus[data-state=error]::after,#hostStatus[data-state=offline]::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;
@@ -428,14 +433,37 @@
     : `<span class="brandMark initial" style="background:${escape(brandColor())}">${escape((B.name || '?').trim().charAt(0).toUpperCase())}</span>`;
   const waLink = text => B.whatsapp ? `https://wa.me/${B.whatsapp}?text=${encodeURIComponent(text)}` : '';
 
+  // Volver (← a Eventos o Proyectos) en la esquina de arriba a la izquierda, en el mismo renglón que el nombre.
+  // guia.js pone su ? en ese renglón (.guiaTitulo); si aún no existe, se arma aquí.
+  function mountBack() {
+    if (!EDIT || !D.backHref || document.getElementById('hostBack')) return;
+    const title = document.getElementById('casaTitle');
+    if (!title) return;
+    let row = title.parentElement;
+    if (!row.classList.contains('guiaTitulo')) {
+      row = document.createElement('div');
+      row.className = 'guiaTitulo';
+      title.replaceWith(row);
+      row.append(title);
+    }
+    const label = t(`Back to ${D.backLabel || 'Projects'}`, `Volver a ${D.backLabel || 'Proyectos'}`);
+    const a = document.createElement('a');
+    a.id = 'hostBack';
+    a.href = D.backHref;
+    a.setAttribute('aria-label', label);
+    a.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>';
+    row.prepend(a);
+    window.plAyuda?.bind(a, 'back', { t: label });
+  }
   function renderBar() {
+    mountBack();
     const bar = document.getElementById('hostBar');
     if (!bar) return;
     bar.hidden = false;
     const tabs = dists.map(d => `<button class="btn dist ${d === active ? 'on' : ''}" data-dist="${d.id}"
       title="${escape(d.note || '')}"><b>${escape(d.name)}</b>${d.recommended ? '<span class="star">★</span>' : ''}${d.note ? `<small>${escape(d.note)}</small>` : ''}</button>`).join('');
     bar.innerHTML = EDIT
-      ? `${D.backHref ? `<a class="btn" href="${escape(D.backHref)}">← ${escape(D.backLabel || t('Projects', 'Proyectos'))}</a>` : ''}${tabs}
+      ? `${tabs}
          <button class="btn" data-a="new" title="${t('New layout (copy of the current one)', 'Nueva distribución (copia de la actual)')}">＋</button>
          ${IS_CASA ? `<button class="btn" data-a="details">${t('Details', 'Ficha')}</button>` : ''}
          <button class="btn primary" data-a="share">${t('Share', 'Compartir')}</button>
@@ -457,8 +485,12 @@
     const st = bar.querySelector('#hostStatus');
     if (st) {
       paintStatus();
-      st.addEventListener('mouseenter', () => statusTip(true));
-      st.addEventListener('mouseleave', () => statusTip(false));
+      // Con cursor, la tarjeta de ayudas.js muestra el estado (cambia en vivo con plAyuda.refresh).
+      window.plAyuda?.bind(st, 'status', { p: () => `${saveText()}. ${t('Changes save automatically.', 'Tus cambios se guardan solos.')}` });
+      if (!window.plAyuda?.hover) {
+        st.addEventListener('mouseenter', () => statusTip(true));
+        st.addEventListener('mouseleave', () => statusTip(false));
+      }
       st.addEventListener('focus', () => statusTip(true));
       st.addEventListener('blur', () => statusTip(false));
       // En celular no hay cursor: un toque muestra el estado unos segundos.

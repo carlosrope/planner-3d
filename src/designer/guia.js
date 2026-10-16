@@ -166,11 +166,16 @@
       b.title = 'Ver la guía';
       b.setAttribute('aria-label', 'Ver la guía');
       b.addEventListener('click', abrir);
-      // El título y el botón van en un mismo renglón (.brand es una columna).
-      const fila = document.createElement('div');
-      fila.className = 'guiaTitulo';
-      titulo.replaceWith(fila);
-      fila.append(titulo, b);
+      // El título y el botón van en un mismo renglón (.brand es una columna); host.js puede haberlo armado ya
+      // para su flecha de volver.
+      let fila = titulo.parentElement;
+      if (!fila.classList.contains('guiaTitulo')) {
+        fila = document.createElement('div');
+        fila.className = 'guiaTitulo';
+        titulo.replaceWith(fila);
+        fila.append(titulo);
+      }
+      fila.append(b);
     }
     let visto = false;
     try { visto = localStorage.getItem(KEY) === '1'; } catch { /* sin almacenamiento: se muestra */ }

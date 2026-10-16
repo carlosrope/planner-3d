@@ -2007,6 +2007,13 @@ sub(
     '      <button class="btn chip" id="tgPanel" data-en="Properties ◨">属性 ◨</button>\n'
     '      <button class="btn ico danger" id="clearAll" title="清空所有家具家电（可撤销）" data-en-title="Remove all furniture and appliances (undoable)" aria-label="Vaciar muebles"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>\n',
 )
+# Seleccionar y Medir como iconos SVG (flecha de cursor y regla), del mismo tamaño que Deshacer y Rehacer.
+sub(
+    '      <button class="btn on" data-tool="select" title="选择 / 移动 (V)" data-en-title="Select / Move (V)" data-en="Select">选择</button>\n'
+    '      <button class="btn" data-tool="measure" title="测量 (M)" data-en-title="Measure (M)" data-en="Measure">测量</button>\n',
+    '      <button class="btn ico on" data-tool="select" title="选择 / 移动 (V)" data-en-title="Select / Move (V)" aria-label="Seleccionar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/><path d="m13 12 6 6"/></svg></button>\n'
+    '      <button class="btn ico" data-tool="measure" title="测量 (M)" data-en-title="Measure (M)" aria-label="Medir"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v10M21 7v10M3 12h18"/><path d="M8 12v-2.5M12 12v-3.5M16 12v-2.5"/></svg></button>\n',
+)
 # Sin selector de idioma en la barra: el idioma lo elige el negocio en Mi negocio (window.__LANG__).
 sub(
     '    <div class="grp" id="langSel" role="group" aria-label="Language / 语言">\n'
