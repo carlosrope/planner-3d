@@ -1,19 +1,29 @@
-// Guía en pantalla del diseñador: ventana al centro con 4 pasos (Siguiente / Saltar) que se abre
-// una sola vez por dispositivo y tipo (salón o casa; aparte la demo y la edición de proyectos: localStorage) y se vuelve a
-// abrir con el botón "?" junto al título. Datos: window.__GUIA__ = { kind: "salon" | "casa",
-// mode: "demo" | "lugar" | "edit", eventId?, eventKind?: "boda" | "xv" | "graduacion" | "corporativo" | "otro" }.
+// Guía en pantalla del diseñador: ventana al centro con 4 pasos (Siguiente / Saltar) que se vuelve a abrir con el
+// botón "?" junto al título. Sale sola UNA vez y queda vista en cuanto se abre (no al cerrarla: antes, si se recargaba o
+// se salía sin cerrarla, volvía a salir). En proyectos se guarda en la cuenta (/api/guia, llega como `seen`), así no
+// vuelve en otro equipo, navegador o dominio; en la demo y el 3D público, sin cuenta, en el navegador (localStorage).
+// Datos: window.__GUIA__ = { kind: "salon" | "casa", mode: "demo" | "lugar" | "edit", eventId?, eventKind?, seen? }.
 // La carga src/lib/designer/page.ts → designerResponse (no en el enlace de solo vista del cliente).
 // Cada paso resalta el botón del que habla (Propiedades, Catálogo, Vista 3D, Compartir).
 (function () {
   const G = window.__GUIA__;
   if (!G) return;
-  // Una vez vista, no vuelve a salir en ningún otro proyecto (antes era por proyecto y salía en cada uno nuevo).
+  // En proyectos, una sola vez por cuenta para salones y casas; en la demo y el 3D público, por tipo.
   const tipo = G.kind === 'salon' ? 'salon' : 'casa';
-  const KEY = G.mode === 'edit' ? `plantea-guia-proyectos-${tipo}-v1` : `plantea-guia-${tipo}-v1`;
-  try {
-    // Quien ya cerró la guía en algún proyecto (clave vieja por evento) no la vuelve a ver.
-    if (G.mode === 'edit' && !localStorage.getItem(KEY) && Object.keys(localStorage).some(k => k.startsWith('plantea-guia-evento-'))) localStorage.setItem(KEY, '1');
-  } catch { /* sin almacenamiento */ }
+  const EDIT = G.mode === 'edit';
+  const KEY = EDIT ? 'plantea-guia-proyectos-v2' : `plantea-guia-${tipo}-v1`;
+  const vistaAqui = () => {
+    try {
+      if (localStorage.getItem(KEY)) return true;
+      // Claves de versiones anteriores (por evento y por tipo de proyecto).
+      return EDIT && Object.keys(localStorage).some(k => k.startsWith('plantea-guia-evento-') || k.startsWith('plantea-guia-proyectos-'));
+    } catch { return false; }
+  };
+  const avisarCuenta = () => { try { fetch('/api/guia', { method: 'POST', keepalive: true, credentials: 'same-origin' }).catch(() => {}); } catch { /* sin red */ } };
+  function marcarVista() {
+    try { localStorage.setItem(KEY, '1'); } catch { /* sin almacenamiento: queda la cuenta */ }
+    if (EDIT && !G.seen) { G.seen = true; avisarCuenta(); }
+  }
   // Un solo ejemplo, el que le toca al proyecto: una mesa con nombre según el tipo de evento.
   const MESA = { boda: 'Familia de la novia', xv: 'Amigas de la quinceañera', cumpleanos: 'Amigos del festejado', bautizo: 'Padrinos', graduacion: 'Generación 2026', infantil: 'Primos', corporativo: 'Recursos Humanos', posada: 'Ventas', otro: 'Familia' };
   const mesa = MESA[G.eventKind] || MESA.boda;
@@ -116,7 +126,6 @@
   }
 
   function cerrar() {
-    try { localStorage.setItem(KEY, '1'); } catch { /* sin almacenamiento */ }
     foco = null;
     if (el) el.remove();
     el = null;
@@ -177,10 +186,14 @@
       }
       fila.append(b);
     }
-    let visto = false;
-    try { visto = localStorage.getItem(KEY) === '1'; } catch { /* sin almacenamiento: se muestra */ }
-    // Un respiro para que el diseñador pinte el plano y los botones antes de resaltarlos.
-    if (!visto) setTimeout(abrir, 600);
+    // Ya vista en esta cuenta o en este navegador: no se abre sola. Si solo este navegador la recuerda (versiones
+    // anteriores), se avisa a la cuenta para que tampoco salga en otro equipo.
+    const aqui = vistaAqui();
+    if (G.seen || aqui) { if (aqui && EDIT && !G.seen) marcarVista(); return; }
+    // Queda vista en este momento, aunque se recargue o se salga sin cerrarla. Un respiro para que el diseñador
+    // pinte el plano y los botones antes de resaltarlos.
+    marcarVista();
+    setTimeout(abrir, 600);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar); else montar();
 })();

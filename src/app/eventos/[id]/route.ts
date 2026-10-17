@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, getEditableEvent, getEffectiveBrand, listComments } from "@/lib/dal";
+import { getCurrentUser, getEditableEvent, getEffectiveBrand, hasSeenGuide, listComments } from "@/lib/dal";
 import { brandOf, designerResponse, hostFor } from "@/lib/designer/page";
 import { isLitePlan, sectionOf } from "@/lib/domain";
 import { withStarter } from "@/lib/designer/starter";
@@ -19,8 +19,8 @@ export async function GET(request: Request, ctx: RouteContext<"/eventos/[id]">) 
   const plan = withStarter(venue.plan, { guests: event.guestCount ?? 0, kind: event.kind });
   const back =
     sectionOf(venue.kind) === "casas" ? { href: "/eventos?seccion=casas", label: "Casas" } : { href: "/eventos", label: "Eventos" };
-  const [brand, comments] = await Promise.all([getEffectiveBrand(event.orgId), listComments(event.id)]);
+  const [brand, comments, guideSeen] = await Promise.all([getEffectiveBrand(event.orgId), listComments(event.id), hasSeenGuide(user.id)]);
   const host = hostFor("edit", event, layouts, wanted, brandOf(brand), comments, back);
   // Personal y Con código: sin hojas ni marcadores de proveedores.
-  return designerResponse({ ...plan, title: event.title }, { ...host, lite: isLitePlan(data.org.plan) }, undefined, { eventKind: event.kind, lang: brand?.language });
+  return designerResponse({ ...plan, title: event.title }, { ...host, lite: isLitePlan(data.org.plan) }, undefined, { eventKind: event.kind, lang: brand?.language, guideSeen });
 }

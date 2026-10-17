@@ -1263,6 +1263,17 @@ export async function adminListActivity() {
   }));
 }
 
+/** Si a la persona ya se le abrió la guía del diseñador en algún proyecto (se guarda en su cuenta, no en el navegador). */
+export async function hasSeenGuide(userId: string) {
+  const [row] = await db.select({ at: user.guideSeenAt }).from(user).where(eq(user.id, userId)).limit(1);
+  return !!row?.at;
+}
+
+/** Marca la guía como vista para la persona; la primera fecha se conserva. */
+export async function markGuideSeen(userId: string) {
+  await db.update(user).set({ guideSeenAt: new Date() }).where(and(eq(user.id, userId), isNull(user.guideSeenAt)));
+}
+
 /** Mensaje propio del negocio para mandar los códigos (null = el sugerido). */
 export async function getReferralTemplate(orgId: string) {
   const [row] = await db.select({ t: organization.referralMessage }).from(organization).where(eq(organization.id, orgId)).limit(1);

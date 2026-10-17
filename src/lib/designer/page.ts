@@ -132,7 +132,7 @@ export async function designerResponse(
   plan: DesignerPlan,
   host?: HostData,
   meta?: { image?: string; description?: string; url?: string; siteName?: string },
-  options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string; captura?: boolean; lang?: string | null },
+  options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string; captura?: boolean; lang?: string | null; guideSeen?: boolean },
 ) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
@@ -168,7 +168,8 @@ export async function designerResponse(
   // vista del cliente, cuando el dueño revisa la conversión de su plano ni al capturar la portada.
   if (host?.mode !== "view" && !options?.venue?.reviewHref && !options?.captura) {
     const mode = host ? "edit" : options?.venue ? "lugar" : "demo";
-    const guide = { kind: plan.kind ?? "casa", mode, eventId: host?.eventId ?? null, eventKind: options?.eventKind ?? "boda" };
+    // seen: en proyectos, la cuenta ya la vio (en cualquier equipo o dominio); entonces no se abre sola.
+    const guide = { kind: plan.kind ?? "casa", mode, eventId: host?.eventId ?? null, eventKind: options?.eventKind ?? "boda", seen: !!options?.guideSeen };
     head += inline(`window.__GUIA__ = ${json(guide)};\n${await file("guia.js")}`);
   }
   // Título y vista previa del enlace (WhatsApp, iMessage).

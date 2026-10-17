@@ -52,6 +52,8 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // Primera vez que se le abrió la guía del diseñador en un proyecto: ya no vuelve a salir sola en ningún equipo.
+  guideSeenAt: timestamp("guide_seen_at", { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
