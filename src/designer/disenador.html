@@ -311,7 +311,7 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
   header .grp:has(#vIso){order:7} header .grp:has(#undo){order:8} header #layers{order:9} header .grp:has([data-cut]){order:10} header #toggles3d{order:11} header .grp:has(#sun){order:12}
   header .spacer{order:13} #fullscreen{order:14} header details.menu{order:15}
 }
-#zoomMore{display:none}
+#zoomGrp:not(.open)>.zx{display:none}
 @media (min-width:1101px){
   .paneHead.wide-only{display:flex;position:sticky;top:0;z-index:3;align-items:center;justify-content:space-between;gap:8px;
     padding:8px 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
@@ -320,12 +320,12 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
     cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
   .paneClose:hover{background:#b3372a}
   .paneClose:focus-visible{outline:3px solid #f3c9ad;outline-offset:2px}
-  #zoomMore{display:inline-block}
-  #zoomGrp:not(.open)>.zx{display:none}
 }
 .hscroll{display:contents}
 #paneBtns{order:-1}
 .lv-short{display:none}
+@media (pointer:coarse),(max-width:600px){#fullscreen{display:none!important}}
+@media (max-width:600px){.hscroll:has(details.menu[open]){-webkit-mask-image:none!important;mask-image:none!important}}
 @media (max-width:600px){
   header{gap:6px 8px;padding:6px 10px}
   .brand{width:100%;margin:0}
@@ -395,6 +395,10 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
       <button class="btn" data-view="2d" data-en="2D Plan">2D 平面</button>
       <button class="btn" data-view="3d" data-en="3D Scene">3D 场景</button>
     </div>
+    <div class="grp" id="undoGrp">
+      <button class="btn ico" id="undo" title="撤销 (Ctrl+Z)" data-en-title="Undo (Ctrl+Z)" aria-label="Deshacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button class="btn ico" id="redo" title="重做 (Ctrl+Shift+Z)" data-en-title="Redo (Ctrl+Shift+Z)" aria-label="Rehacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    </div>
     <div class="hscroll">
     <div class="grp" id="paneBtns">
       <button class="btn chip" id="tgLib" data-en="◧ Library">◧ 家具库</button>
@@ -421,10 +425,6 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
     <div class="grp only3d">
       <button class="btn" id="vIso" data-en="Iso">斜视</button>
       <button class="btn" id="vTop" data-en="Top">俯视</button>
-    </div>
-    <div class="grp">
-      <button class="btn ico" id="undo" title="撤销 (Ctrl+Z)" data-en-title="Undo (Ctrl+Z)" aria-label="Deshacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
-      <button class="btn ico" id="redo" title="重做 (Ctrl+Shift+Z)" data-en-title="Redo (Ctrl+Shift+Z)" aria-label="Rehacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
     </div>
     <div class="grp only2d" id="layers">
       <button class="btn chip on" data-layer="dims" data-en="Dims">尺寸</button>
@@ -1664,7 +1664,9 @@ fitView(); renderAll();
     setTimeout(() => document.documentElement.classList.remove('arriving', 'arrived'), 20000);   // por si el 3D no carga
   }
   const seg = $('#levelSeg');
-  if (CASA.levels.length < 2) { seg.remove(); return; }
+  // Una sola planta (todos los salones): sin selector, pero sin salir de la función; antes el return de aquí dejaba sin
+  // colocar el menú Archivo en el celular (se abría fuera de la pantalla) y sin el desvanecido correcto de la tira.
+  if (CASA.levels.length < 2) seg.remove(); else {
   const short = n => { const t = n.replace(/^planta\s+/i, ''); return t.charAt(0).toUpperCase() + t.slice(1); };
   seg.innerHTML = CASA.levels.map(l => `<button class="btn ${l.id === PLANTA.id ? 'on' : ''}" data-level="${l.id}">`
     + `<span class="lv-long">${esc(l.name)}</span><span class="lv-short">${esc(short(l.name))}</span></button>`).join('');
@@ -1675,6 +1677,7 @@ fitView(); renderAll();
     if (viewMode === '3d') u.searchParams.set('vista', '3d'); else u.searchParams.delete('vista');
     if (HOST?.navigate) HOST.navigate(u.toString()); else location.href = u.toString();
   });
+  }
   // En el celular el menú Archivo sale de la tira deslizable: se coloca debajo de la barra
   $('details.menu').addEventListener('toggle', e => {
     const pop = e.target.querySelector('.menu-pop');

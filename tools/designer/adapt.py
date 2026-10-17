@@ -321,7 +321,9 @@ sub(
     setTimeout(() => document.documentElement.classList.remove('arriving', 'arrived'), 20000);   // por si el 3D no carga
   }
   const seg = $('#levelSeg');
-  if (CASA.levels.length < 2) { seg.remove(); return; }
+  // Una sola planta (todos los salones): sin selector, pero sin salir de la función; antes el return de aquí dejaba sin
+  // colocar el menú Archivo en el celular (se abría fuera de la pantalla) y sin el desvanecido correcto de la tira.
+  if (CASA.levels.length < 2) seg.remove(); else {
   const short = n => { const t = n.replace(/^planta\\s+/i, ''); return t.charAt(0).toUpperCase() + t.slice(1); };
   seg.innerHTML = CASA.levels.map(l => `<button class="btn ${l.id === PLANTA.id ? 'on' : ''}" data-level="${l.id}">`
     + `<span class="lv-long">${esc(l.name)}</span><span class="lv-short">${esc(short(l.name))}</span></button>`).join('');
@@ -332,6 +334,7 @@ sub(
     if (viewMode === '3d') u.searchParams.set('vista', '3d'); else u.searchParams.delete('vista');
     location.href = u.toString();
   });
+  }
   // En el celular el menú Archivo sale de la tira deslizable: se coloca debajo de la barra
   $('details.menu').addEventListener('toggle', e => {
     const pop = e.target.querySelector('.menu-pop');
@@ -1973,7 +1976,8 @@ sub('<button class="btn" id="s60"', '<button class="btn zx" id="s60"')
 sub('<button class="btn" id="s100"', '<button class="btn zx" id="s100"')
 sub(
     ".hscroll{display:contents}",
-    ".wide-only{display:none}\n#zoomMore{display:none}\n"
+    ".wide-only{display:none}\n"
+    "#zoomGrp:not(.open)>.zx{display:none}\n"
     "@media (min-width:1101px){\n"
     "  .paneHead.wide-only{display:flex;position:sticky;top:0;z-index:3;align-items:center;justify-content:space-between;gap:8px;\n"
     "    padding:8px 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}\n"
@@ -1981,7 +1985,6 @@ sub(
     "  .paneClose{width:20px;height:20px;flex:none;border-radius:50%;border:0;background:#d23c32;color:#fff;font-size:14px;line-height:1;\n"
     "    cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}\n"
     "  .paneClose:hover{background:#b3372a}\n  .paneClose:focus-visible{outline:3px solid #f3c9ad;outline-offset:2px}\n"
-    "  #zoomMore{display:inline-block}\n  #zoomGrp:not(.open)>.zx{display:none}\n"
     "}\n.hscroll{display:contents}",
 )
 sub(
@@ -2035,6 +2038,21 @@ sub(
     "  header .grp:has(#vIso){order:7} header .grp:has(#undo){order:8} header #layers{order:9} header .grp:has([data-cut]){order:10} header #toggles3d{order:11} header .grp:has(#sun){order:12}\n"
     "  header .spacer{order:13} #fullscreen{order:14} header details.menu{order:15}\n"
     "}",
+)
+
+# Celular: Deshacer y Rehacer salen de la tira deslizable y quedan a un lado de «Plano 2D · Vista 3D» (en computadora el
+# orden de arriba los deja donde estaban); sin «Pantalla completa», que en el celular no sirve; y el menú Archivo se ve:
+# el desvanecido de la tira (mask-image) ocultaba todo lo que salía de ella, también el menú abierto.
+_i = s.index('    <div class="grp">\n      <button class="btn ico" id="undo"')
+_j = s.index('    </div>\n', _i) + len('    </div>\n')
+_undo = s[_i:_j].replace('<div class="grp">', '<div class="grp" id="undoGrp">', 1)
+s = s[:_i] + s[_j:]
+sub('    </div>\n    <div class="hscroll">\n', '    </div>\n' + _undo + '    <div class="hscroll">\n')
+sub(
+    ".lv-short{display:none}\n",
+    ".lv-short{display:none}\n"
+    "@media (pointer:coarse),(max-width:600px){#fullscreen{display:none!important}}\n"
+    "@media (max-width:600px){.hscroll:has(details.menu[open]){-webkit-mask-image:none!important;mask-image:none!important}}\n",
 )
 
 
