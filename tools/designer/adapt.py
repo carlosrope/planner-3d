@@ -2055,6 +2055,68 @@ sub(
     "@media (max-width:600px){.hscroll:has(details.menu[open]){-webkit-mask-image:none!important;mask-image:none!important}}\n",
 )
 
+# Celular, segunda ronda (17 de octubre): Seleccionar y Medir también salen de la tira, junto a Deshacer y Rehacer; en la
+# tira, Zoom queda justo antes de Archivo; sin la barra de indicaciones de abajo (la guía ya lo explica) y Archivo abre
+# una hoja abajo, fuera de la tira (en el iPhone el menú dentro de la tira deslizable no se veía al tocarlo).
+_i = s.index('    <div class="grp only2d" id="tools">\n')
+_j = s.index('    </div>\n', _i) + len('    </div>\n')
+_tools = s[_i:_j]
+s = s[:_i] + s[_j:]
+sub('    <div class="hscroll">\n', _tools + '    <div class="hscroll">\n')
+sub(
+    ".lv-short{display:none}\n",
+    ".lv-short{display:none}\n"
+    "@media (max-width:600px){\n"
+    "  .app{grid-template-rows:auto minmax(0,1fr) 0} footer{display:none}\n"
+    "  .hscroll>#zoomGrp{order:2} .hscroll>details.menu{order:3}\n"
+    "}\n"
+    "@media (max-width:400px){.seg .btn,.seg .pill{width:80px} body.m3d .seg .pill{transform:translateX(82px)}}\n"
+    "#fileSheet{position:fixed;inset:0;z-index:2000;background:rgba(30,25,20,.35);display:flex;align-items:flex-end;animation:fadeIn .15s ease}\n"
+    "#fileSheet .sheet{width:100%;background:#fff;border-radius:16px 16px 0 0;padding:8px 10px calc(10px + env(safe-area-inset-bottom));\n"
+    "  display:flex;flex-direction:column;gap:2px;box-shadow:0 -10px 30px rgba(40,30,20,.18)}\n"
+    "#fileSheet .btn{min-height:52px;text-align:left;font-size:16px;padding:0 14px;border-radius:10px}\n"
+    "#fileSheet .btn.cancel{text-align:center;margin-top:6px;background:#f3eee8}\n",
+)
+sub(
+    "  // En el celular el menú Archivo sale de la tira deslizable: se coloca debajo de la barra\n",
+    "  // Celular: Archivo abre una hoja abajo con las mismas opciones (cada una toca el botón original del menú).\n"
+    "  const fileMenu = $('details.menu');\n"
+    "  fileMenu.querySelector('summary').addEventListener('click', e => {\n"
+    "    if (!matchMedia('(max-width:600px)').matches) return;\n"
+    "    e.preventDefault();\n"
+    "    fileMenu.open = false;\n"
+    "    const back = document.createElement('div');\n"
+    "    back.id = 'fileSheet';\n"
+    "    back.innerHTML = '<div class=\"sheet\" role=\"menu\"></div>';\n"
+    "    const sheet = back.firstChild;\n"
+    "    sheet.setAttribute('aria-label', fileMenu.querySelector('summary').textContent.replace('▾', '').trim());\n"
+    "    fileMenu.querySelectorAll('.menu-pop .btn').forEach(orig => {\n"
+    "      if (orig.hidden) return;\n"
+    "      const b = document.createElement('button');\n"
+    "      b.type = 'button'; b.className = 'btn' + (orig.classList.contains('danger') ? ' danger' : ''); b.textContent = orig.textContent;\n"
+    "      b.onclick = () => { back.remove(); orig.click(); };\n"
+    "      sheet.appendChild(b);\n"
+    "    });\n"
+    "    const cancel = document.createElement('button');\n"
+    "    cancel.type = 'button'; cancel.className = 'btn cancel'; cancel.textContent = LANG === 'en' ? 'Cancel' : 'Cancelar';\n"
+    "    cancel.onclick = () => back.remove();\n"
+    "    sheet.appendChild(cancel);\n"
+    "    back.addEventListener('click', ev => { if (ev.target === back) back.remove(); });\n"
+    "    document.body.appendChild(back);\n"
+    "  });\n"
+    "  // En el celular el menú Archivo sale de la tira deslizable: se coloca debajo de la barra\n",
+)
+
+# Nombre de los archivos que se descargan (imagen, diseño y foto del 3D): el nombre del evento o la casa, no «diseno-casa»
+# (salía igual en los salones).
+s = s.replace("tr('户型装修方案', 'floor-plan-design')", "plFileBase()")
+sub(
+    "const LANG_KEY = 'planner3d-lang';\n",
+    "const LANG_KEY = 'planner3d-lang';\n"
+    "function plFileBase(){ const t = (window.__CASA__?.title || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n"
+    "  .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase().slice(0, 60); return t || 'plantea'; }\n",
+)
+
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")

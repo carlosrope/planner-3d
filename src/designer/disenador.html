@@ -324,6 +324,16 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
 .hscroll{display:contents}
 #paneBtns{order:-1}
 .lv-short{display:none}
+@media (max-width:600px){
+  .app{grid-template-rows:auto minmax(0,1fr) 0} footer{display:none}
+  .hscroll>#zoomGrp{order:2} .hscroll>details.menu{order:3}
+}
+@media (max-width:400px){.seg .btn,.seg .pill{width:80px} body.m3d .seg .pill{transform:translateX(82px)}}
+#fileSheet{position:fixed;inset:0;z-index:2000;background:rgba(30,25,20,.35);display:flex;align-items:flex-end;animation:fadeIn .15s ease}
+#fileSheet .sheet{width:100%;background:#fff;border-radius:16px 16px 0 0;padding:8px 10px calc(10px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:2px;box-shadow:0 -10px 30px rgba(40,30,20,.18)}
+#fileSheet .btn{min-height:52px;text-align:left;font-size:16px;padding:0 14px;border-radius:10px}
+#fileSheet .btn.cancel{text-align:center;margin-top:6px;background:#f3eee8}
 @media (pointer:coarse),(max-width:600px){#fullscreen{display:none!important}}
 @media (max-width:600px){.hscroll:has(details.menu[open]){-webkit-mask-image:none!important;mask-image:none!important}}
 @media (max-width:600px){
@@ -399,16 +409,16 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
       <button class="btn ico" id="undo" title="撤销 (Ctrl+Z)" data-en-title="Undo (Ctrl+Z)" aria-label="Deshacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
       <button class="btn ico" id="redo" title="重做 (Ctrl+Shift+Z)" data-en-title="Redo (Ctrl+Shift+Z)" aria-label="Rehacer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
     </div>
+    <div class="grp only2d" id="tools">
+      <button class="btn ico on" data-tool="select" title="选择 / 移动 (V)" data-en-title="Select / Move (V)" aria-label="Seleccionar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/><path d="m13 12 6 6"/></svg></button>
+      <button class="btn ico" data-tool="measure" title="测量 (M)" data-en-title="Measure (M)" aria-label="Medir"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v10M21 7v10M3 12h18"/><path d="M8 12v-2.5M12 12v-3.5M16 12v-2.5"/></svg></button>
+      <button class="btn" data-tool="demolish" title="拆改非承重墙 (X)" data-en-title="Demolish non-bearing walls (X)" data-en="Demolish">拆改墙体</button>
+    </div>
     <div class="hscroll">
     <div class="grp" id="paneBtns">
       <button class="btn chip" id="tgLib" data-en="◧ Library">◧ 家具库</button>
       <button class="btn chip" id="tgPanel" data-en="Properties ◨">属性 ◨</button>
       <button class="btn ico danger" id="clearAll" title="清空所有家具家电（可撤销）" data-en-title="Remove all furniture and appliances (undoable)" aria-label="Vaciar muebles"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
-    </div>
-    <div class="grp only2d" id="tools">
-      <button class="btn ico on" data-tool="select" title="选择 / 移动 (V)" data-en-title="Select / Move (V)" aria-label="Seleccionar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/><path d="m13 12 6 6"/></svg></button>
-      <button class="btn ico" data-tool="measure" title="测量 (M)" data-en-title="Measure (M)" aria-label="Medir"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v10M21 7v10M3 12h18"/><path d="M8 12v-2.5M12 12v-3.5M16 12v-2.5"/></svg></button>
-      <button class="btn" data-tool="demolish" title="拆改非承重墙 (X)" data-en-title="Demolish non-bearing walls (X)" data-en="Demolish">拆改墙体</button>
     </div>
     <div class="grp only2d" id="zoomGrp">
       <button class="btn" id="zoomMore" title="Opciones de zoom" aria-expanded="false">Zoom ▸</button>
@@ -513,6 +523,8 @@ body.salon [data-tool="demolish"],body.salon [data-layer="bearing"],#hostBar[hid
 <script>
 /* ======================= 多语言（中文 / English，默认中文） ======================= */
 const LANG_KEY = 'planner3d-lang';
+function plFileBase(){ const t = (window.__CASA__?.title || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase().slice(0, 60); return t || 'plantea'; }
 const LANGS = ['es', 'en', 'zh', 'zht'];             // 简体 / 繁體（台湾用字）/ English
 let LANG = (() => { if (LANGS.includes(window.__LANG__)) return window.__LANG__; try { const l = localStorage.getItem(LANG_KEY); return LANGS.includes(l) ? l : 'es'; } catch(e) { return 'es'; } })();
 // 简 → 繁：先按词替换一字多义的字，再逐字查表（表由 OpenCC s2tw 按本页用到的字生成）
@@ -1532,7 +1544,7 @@ function exportPNG(){
   img.onload = () => {
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     cv.getContext('2d').drawImage(img, 0, 0, W, H);
-    cv.toBlob(b => download(tr('户型装修方案', 'floor-plan-design') + '.png', b));
+    cv.toBlob(b => download(plFileBase() + '.png', b));
   };
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
 }
@@ -1606,7 +1618,7 @@ document.addEventListener('pointerdown', e => { const m = $('details.menu'); if 
 matchMedia('(max-width:1100px)').addEventListener('change', () => drawer(null));
 drawer(null);                                  // 恢复上次的面板收起状态
 $('#exportPng').onclick = exportPNG;
-$('#exportJson').onclick = () => download(tr('户型装修方案', 'floor-plan-design') + '.json', new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}));
+$('#exportJson').onclick = () => download(plFileBase() + '.json', new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}));
 $('#importJson').onclick = () => $('#fileIn').click();
 $('#fileIn').onchange = e => {
   const file = e.target.files[0]; if (!file) return;
@@ -1678,6 +1690,31 @@ fitView(); renderAll();
     if (HOST?.navigate) HOST.navigate(u.toString()); else location.href = u.toString();
   });
   }
+  // Celular: Archivo abre una hoja abajo con las mismas opciones (cada una toca el botón original del menú).
+  const fileMenu = $('details.menu');
+  fileMenu.querySelector('summary').addEventListener('click', e => {
+    if (!matchMedia('(max-width:600px)').matches) return;
+    e.preventDefault();
+    fileMenu.open = false;
+    const back = document.createElement('div');
+    back.id = 'fileSheet';
+    back.innerHTML = '<div class="sheet" role="menu"></div>';
+    const sheet = back.firstChild;
+    sheet.setAttribute('aria-label', fileMenu.querySelector('summary').textContent.replace('▾', '').trim());
+    fileMenu.querySelectorAll('.menu-pop .btn').forEach(orig => {
+      if (orig.hidden) return;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn' + (orig.classList.contains('danger') ? ' danger' : ''); b.textContent = orig.textContent;
+      b.onclick = () => { back.remove(); orig.click(); };
+      sheet.appendChild(b);
+    });
+    const cancel = document.createElement('button');
+    cancel.type = 'button'; cancel.className = 'btn cancel'; cancel.textContent = LANG === 'en' ? 'Cancel' : 'Cancelar';
+    cancel.onclick = () => back.remove();
+    sheet.appendChild(cancel);
+    back.addEventListener('click', ev => { if (ev.target === back) back.remove(); });
+    document.body.appendChild(back);
+  });
   // En el celular el menú Archivo sale de la tira deslizable: se coloca debajo de la barra
   $('details.menu').addEventListener('toggle', e => {
     const pop = e.target.querySelector('.menu-pop');
@@ -3780,7 +3817,7 @@ function loop(){
   labelRenderer.render(scene, camera);
 }
 
-function shot(){ const a = document.createElement('a'); a.download = tr('户型装修方案', 'floor-plan-design') + '-3D.png'; a.href = renderer.domElement.toDataURL('image/png'); a.click(); }
+function shot(){ const a = document.createElement('a'); a.download = plFileBase() + '-3D.png'; a.href = renderer.domElement.toDataURL('image/png'); a.click(); }
 
 function relang(){ syncWalkTexts(); if (inited) buildLabels(); }
 

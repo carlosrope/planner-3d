@@ -656,7 +656,9 @@
       try { await navigator.clipboard.writeText(link()); api.toast(t('Link copied', 'Enlace copiado')); }
       catch { input.focus(); input.select(); }
     };
-    dlg.querySelector('[data-a="native"]')?.addEventListener('click', () => navigator.share({ title: D.title, text: text(), url: link() }).catch(() => {}));
+    // Hoja de compartir del teléfono: el enlace va solo en url; si también va en el texto, WhatsApp e iMessage lo mandan dos veces.
+    const shortText = () => opens === 'tour' ? t(`Take the guided 3D tour of ${D.title}`, `Mira la visita guiada en 3D de ${D.title}`) : t(`Take a look at the design of ${D.title}`, `Mira el diseño de ${D.title}`);
+    dlg.querySelector('[data-a="native"]')?.addEventListener('click', () => navigator.share({ title: D.title, text: shortText(), url: link() }).catch(() => {}));
     dlg.querySelector('[data-a="close"]').onclick = () => dlg.close();
   }
 
