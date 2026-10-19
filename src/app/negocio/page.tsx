@@ -22,7 +22,7 @@ export default function NegocioPage({ searchParams }: PageProps<"/negocio">) {
 async function NegocioContent({ searchParams }: { searchParams: PageProps<"/negocio">["searchParams"] }) {
   const user = await requireUser("/negocio");
   // ?plan=: el plan que eligió en la ventana de planes; el formulario de pago lo trae seleccionado.
-  const { plan } = await searchParams;
+  const { plan, pago } = await searchParams;
   const wanted: Plan | undefined = isPlan(plan) ? plan : undefined;
   const org = await requireOrg(user);
   const brand = await getOrgBrand(org.id);
@@ -35,7 +35,7 @@ async function NegocioContent({ searchParams }: { searchParams: PageProps<"/nego
     <>
       {/* Primero los códigos: es lo que el dueño usa cada vez que le rentan el salón. */}
       {!lite && <ReferralSection org={org} venues={venues} />}
-      <PlanSection org={org} wanted={wanted} />
+      <PlanSection org={org} wanted={wanted} result={typeof pago === "string" ? pago : undefined} email={user.email} />
       {!lite && (
         <section className="mt-8">
           <h2 className="mb-3 text-xl font-semibold">Tu marca</h2>

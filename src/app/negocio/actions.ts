@@ -2,8 +2,23 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createPayment, createReferralCode, requireOrg, requireUser, setReferralTemplate } from "@/lib/dal";
+import { cardPrice } from "@/lib/card";
+import { syncOrgCardPayments } from "@/lib/card-sync";
+import {
+  countOwnedPublishedVenues,
+  createCardCheckout,
+  createPayment,
+  createReferralCode,
+  getCardCheckout,
+  requireOrg,
+  requireUser,
+  setCardCheckout,
+  setReferralTemplate,
+} from "@/lib/dal";
+import { cancelPreapproval, createPreapproval, createPreference, mpEnabled } from "@/lib/mercadopago";
+import { reportError } from "@/lib/sentry";
 import { MAX_BODY_LENGTH, MESSAGE_STYLES, serializeSetting } from "@/lib/referral-message";
 import { db } from "@/lib/db";
 import { organization } from "@/lib/db/schema";
@@ -133,3 +148,80 @@ export async function saveReferralMessage(_prev: MessageState, formData: FormDat
   revalidatePath("/lugares", "layout");
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// Pago con tarjeta (Mercado Pago)
+
+export type CardState = { error?: string } | null;
+
+const cardBody = z.object({
+  plan: z.enum(["eventos", "casas", "personal"]),
+  tier: z.enum(["pro", "ilimitado"]),
+  period: z.enum(["mes", "anio"]),
+});
+
+/** Arranca el pago con tarjeta: mensual = suscripción que se cobra sola; anual = un pago. Manda a Mercado Pago. */
+export async function startCardPayment(_prev: CardState, formData: FormData): Promise<CardState> {
+  const user = await requireUser("/negocio");
+  const org = await requireOrg(user);
+  if (!mpEnabled()) return { error: "El pago con tarjeta todavía no está disponible. Paga por transferencia." };
+  const [plan, tier, period] = String(formData.get("option") ?? "").split("|");
+  const parsed = cardBody.safeParse({ plan, tier, period });
+  if (!parsed.success) return { error: "Elige el plan que quieres pagar." };
+  const d = parsed.data;
+  const mpEmail = z.string().trim().toLowerCase().email().max(120).safeParse(formData.get("mpEmail"));
+  if (!mpEmail.success) return { error: "Escribe el correo de tu cuenta de Mercado Pago." };
+  // El monto sale de la tabla de precios (nunca del navegador); un salón paga también sus salones adicionales.
+  const extraVenues = org.kind === "venue" ? Math.max(0, (await countOwnedPublishedVenues(org.id)) - 1) : 0;
+  const price = cardPrice({ ...d, tier: d.plan === "personal" ? "pro" : d.tier, orgKind: org.kind, extraVenues });
+  if (!price) return { error: "Ese plan se paga por transferencia. Escríbenos por WhatsApp si necesitas ayuda." };
+  const checkout = await createCardCheckout(org.id, {
+    kind: d.period === "mes" ? "suscripcion" : "pago",
+    plan: d.plan,
+    tier: d.plan === "personal" ? "pro" : d.tier,
+    period: d.period,
+    amount: price.amount,
+    title: price.title,
+  });
+  let goTo: string;
+  try {
+    const input = { checkoutId: checkout.id, title: price.title, amount: price.amount, email: mpEmail.data };
+    const created = checkout.kind === "pago" ? await createPreference(input) : await createPreapproval(input);
+    if (!created.init_point) throw new Error("Mercado Pago no regresó la página de pago");
+    await setCardCheckout(checkout.id, { mpId: created.id });
+    goTo = created.init_point;
+  } catch (e) {
+    await setCardCheckout(checkout.id, { status: "fallida" });
+    void reportError({ message: `No se pudo abrir el pago con tarjeta: ${e instanceof Error ? e.message : e}`, source: "server" });
+    return { error: "No pudimos abrir Mercado Pago. Intenta de nuevo en unos minutos o paga por transferencia." };
+  }
+  redirect(goTo);
+}
+
+/** "Revisar mi pago": pregunta a Mercado Pago por los pagos recientes de la cuenta. */
+export async function syncCardPaymentsAction(): Promise<void> {
+  const user = await requireUser("/negocio");
+  const org = await requireOrg(user);
+  if (mpEnabled()) await syncOrgCardPayments(org.id);
+  revalidatePath("/negocio");
+  revalidatePath("/eventos");
+  redirect("/negocio?pago=revisado#pagar");
+}
+
+/** Cancela el cobro automático de una suscripción del negocio (el plan sigue hasta su fecha de fin). */
+export async function cancelSubscriptionAction(formData: FormData): Promise<void> {
+  const user = await requireUser("/negocio");
+  const org = await requireOrg(user);
+  const id = z.string().uuid().safeParse(formData.get("checkoutId"));
+  if (!id.success) return;
+  const checkout = await getCardCheckout(id.data);
+  if (!checkout || checkout.orgId !== org.id || checkout.kind !== "suscripcion" || !checkout.mpId) return;
+  try {
+    await cancelPreapproval(checkout.mpId);
+    await setCardCheckout(checkout.id, { status: "cancelada" });
+  } catch (e) {
+    void reportError({ message: `No se pudo cancelar la suscripción ${checkout.id}: ${e instanceof Error ? e.message : e}`, source: "server" });
+  }
+  revalidatePath("/negocio");
+}
+

@@ -43,10 +43,16 @@ async function Pagos() {
                 </p>
               </div>
               <p className="mt-1 text-sm">
+                {p.method === "tarjeta" ? (
+                  <span className="text-stone-600">Pagado con tarjeta (Mercado Pago){p.note ? ` · ${p.note}` : ""}</span>
+                ) : (
+                <>
                 <a href={`/admin/comprobantes/${p.id}`} target="_blank" rel="noopener" className="underline">
                   Ver comprobante ({p.receiptName})
                 </a>
                 {p.note ? ` · ${p.note}` : ""}
+                </>
+                )}
               </p>
               {p.status === "pendiente" && (
                 <form action={resolvePayment} className="mt-3 flex flex-wrap items-center gap-2">

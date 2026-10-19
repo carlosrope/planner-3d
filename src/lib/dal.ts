@@ -7,6 +7,7 @@ import { auth } from "./auth";
 import { db } from "./db";
 import {
   auditLog,
+  cardCheckout,
   catalogSuggestion,
   comment,
   event,
@@ -834,11 +835,103 @@ export async function getOwnedVenueFile(orgId: string, fileId: string) {
 // ---------------------------------------------------------------------------
 // Plan y pagos de la cuenta
 
+// ---------------------------------------------------------------------------
+// Pago con tarjeta (Mercado Pago). Cada intento se guarda en card_checkout; el pago aprobado (que se lee siempre de
+// la API de Mercado Pago, nunca del aviso) se registra una sola vez y alarga el plan como un pago confirmado.
+
+export type CardCheckout = typeof cardCheckout.$inferSelect;
+
+export async function createCardCheckout(
+  orgId: string,
+  data: { kind: "pago" | "suscripcion"; plan: Plan; tier: Tier; period: PaymentPeriod; amount: number; title: string },
+) {
+  const [row] = await db.insert(cardCheckout).values({ orgId, ...data }).returning();
+  return row;
+}
+
+export async function setCardCheckout(id: string, patch: { mpId?: string; status?: string }) {
+  await db.update(cardCheckout).set(patch).where(eq(cardCheckout.id, id));
+}
+
+export async function getCardCheckout(id: string) {
+  const [row] = await db.select().from(cardCheckout).where(eq(cardCheckout.id, id)).limit(1);
+  return row ?? null;
+}
+
+export async function getCardCheckoutByMpId(mpId: string) {
+  const [row] = await db.select().from(cardCheckout).where(eq(cardCheckout.mpId, mpId)).limit(1);
+  return row ?? null;
+}
+
+/** Intentos con tarjeta del negocio, los más recientes primero (para "Revisar mi pago" y las suscripciones activas). */
+export async function listCardCheckouts(orgId: string) {
+  return db.select().from(cardCheckout).where(eq(cardCheckout.orgId, orgId)).orderBy(desc(cardCheckout.createdAt)).limit(30);
+}
+
+/**
+ * Registra un pago aprobado de Mercado Pago (una sola vez por id de pago) y alarga el plan del negocio con el plan, el
+ * nivel y el periodo del intento. Devuelve true si es nuevo.
+ */
+export async function applyCardPayment(checkout: CardCheckout, mpPaymentId: string) {
+  return db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(payment)
+      .values({
+        orgId: checkout.orgId,
+        plan: checkout.plan,
+        tier: checkout.tier,
+        period: checkout.period,
+        amount: checkout.amount,
+        method: "tarjeta",
+        mpPaymentId,
+        checkoutId: checkout.id,
+        status: "confirmado",
+        note: `Mercado Pago ${mpPaymentId}`,
+        resolvedAt: new Date(),
+      })
+      .onConflictDoNothing({ target: payment.mpPaymentId })
+      .returning({ id: payment.id });
+    if (!created) return false;
+    const [org] = await tx.select({ name: organization.name, planEndsAt: organization.planEndsAt }).from(organization).where(eq(organization.id, checkout.orgId)).limit(1);
+    const planEndsAt = planEndAfterPayment(org?.planEndsAt ?? null, checkout.period);
+    await tx
+      .update(organization)
+      .set({
+        plan: checkout.plan,
+        modules: checkout.plan === "prueba" || checkout.plan === "invitado" || checkout.plan === "libre" ? undefined : [...PLAN_MODULES[checkout.plan]],
+        tier: checkout.tier,
+        planEndsAt,
+      })
+      .where(eq(organization.id, checkout.orgId));
+    await tx
+      .update(cardCheckout)
+      .set({ status: checkout.kind === "pago" ? "pagado" : "activa" })
+      .where(eq(cardCheckout.id, checkout.id));
+    await audit(tx, { label: "Mercado Pago (tarjeta)" }, "pago_confirmado", { type: "payment", id: created.id, label: org?.name ?? checkout.orgId }, {
+      monto: checkout.amount,
+      plan: checkout.plan,
+      nivel: checkout.tier,
+      periodo: checkout.period,
+      negocio: org?.name,
+      mercadoPago: mpPaymentId,
+      finDespues: planEndsAt.toISOString(),
+    });
+    return true;
+  });
+}
+
+/** Lugares publicados del negocio (para cobrar los salones adicionales con tarjeta). */
+export async function countOwnedPublishedVenues(orgId: string) {
+  const [row] = await db.select({ n: count() }).from(venue).where(and(eq(venue.ownerOrgId, orgId), published));
+  return Number(row?.n ?? 0);
+}
+
 export async function listPayments(orgId: string) {
   return db
     .select({
       id: payment.id,
       plan: payment.plan,
+      method: payment.method,
       period: payment.period,
       amount: payment.amount,
       status: payment.status,
@@ -1195,6 +1288,7 @@ export async function adminListPayments() {
       orgName: organization.name,
       plan: payment.plan,
       tier: payment.tier,
+      method: payment.method,
       period: payment.period,
       amount: payment.amount,
       status: payment.status,

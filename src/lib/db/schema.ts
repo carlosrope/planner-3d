@@ -286,9 +286,15 @@ export const payment = pgTable(
     period: text("period").$type<PaymentPeriod>().notNull(),
     /** Pesos, como lo escribió el cliente. */
     amount: integer("amount").notNull(),
-    receiptName: text("receipt_name").notNull(),
-    receiptType: text("receipt_type").notNull(),
-    receipt: bytea("receipt").notNull(),
+    /** Comprobante de la transferencia (SPEI); vacío en un pago con tarjeta. */
+    receiptName: text("receipt_name"),
+    receiptType: text("receipt_type"),
+    receipt: bytea("receipt"),
+    /** spei (comprobante que confirma la administración) o tarjeta (Mercado Pago, se confirma solo). */
+    method: text("method").$type<"spei" | "tarjeta">().notNull().default("spei"),
+    /** Id del pago en Mercado Pago: un mismo pago nunca se cuenta dos veces. */
+    mpPaymentId: text("mp_payment_id").unique(),
+    checkoutId: text("checkout_id").references(() => cardCheckout.id, { onDelete: "set null" }),
     status: text("status").$type<PaymentStatus>().notNull().default("pendiente"),
     /** Nota de la administración al confirmar o rechazar. */
     note: text("note"),
@@ -296,6 +302,33 @@ export const payment = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("payment_org_idx").on(t.orgId)],
+);
+
+/**
+ * Intento de pago con tarjeta (Mercado Pago): un pago único (Checkout Pro, anual) o una suscripción (mensual, la cobra
+ * Mercado Pago cada mes). Su id viaja como referencia ("plantea:<id>") y regresa en cada pago.
+ */
+export const cardCheckout = pgTable(
+  "card_checkout",
+  {
+    id: id(),
+    orgId: text("org_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"pago" | "suscripcion">().notNull(),
+    plan: text("plan").$type<Plan>().notNull(),
+    tier: text("tier").$type<Tier>().notNull().default("pro"),
+    period: text("period").$type<PaymentPeriod>().notNull(),
+    amount: integer("amount").notNull(),
+    title: text("title").notNull(),
+    /** Id de la preferencia (pago) o de la suscripción (preapproval) en Mercado Pago. */
+    mpId: text("mp_id").unique(),
+    /** pendiente · pagado (pago único) · activa, pausada o cancelada (suscripción) · fallida. */
+    status: text("status").notNull().default("pendiente"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("card_checkout_org_idx").on(t.orgId)],
 );
 
 /**

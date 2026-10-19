@@ -1,15 +1,60 @@
 import Link from "next/link";
-import { getReferralOrigin, listPayments, type Org } from "@/lib/dal";
+import { cardPrice } from "@/lib/card";
+import { countOwnedPublishedVenues, getReferralOrigin, listCardCheckouts, listPayments, type Org } from "@/lib/dal";
+import { mpEnabled } from "@/lib/mercadopago";
 import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, TIER_LABELS, activeModules, isLitePlan, planDaysLeft, referralQuota, type Plan } from "@/lib/domain";
 import { PRICES_URL, CONTACT_WHATSAPP, spei } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
+import { cancelSubscriptionAction, syncCardPaymentsAction } from "./actions";
+import { CardPaymentForm, type CardOption } from "./CardPaymentForm";
 import { PaymentForm } from "./PaymentForm";
 import { formatDate, formatInstant } from "@/lib/dates";
 
 
-/** Tu plan: qué incluye, cuándo vence, cómo pagar por transferencia y los comprobantes enviados. */
-export async function PlanSection({ org, wanted }: { org: Org; wanted?: Plan }) {
-  const [payments, origin] = await Promise.all([listPayments(org.id), getReferralOrigin(org)]);
+const RESULT: Record<string, { text: string; tone: "ok" | "warn" | "bad" }> = {
+  ok: { text: "¡Listo! Mercado Pago aprobó tu pago y tu plan ya está activo.", tone: "ok" },
+  suscripcion: { text: "Tu cobro mensual quedó activo. En cuanto Mercado Pago apruebe el primer cobro, tu plan se activa solo.", tone: "ok" },
+  pendiente: { text: "Tu pago está en proceso en Mercado Pago (por ejemplo, un pago en OXXO). Tu plan se activa solo en cuanto se apruebe.", tone: "warn" },
+  rechazado: { text: "Mercado Pago no aprobó el pago. Intenta con otra tarjeta o paga por transferencia.", tone: "bad" },
+  error: { text: "No pudimos revisar tu pago en este momento. Usa «Revisar mi pago» en unos minutos.", tone: "warn" },
+  revisado: { text: "Revisamos tus pagos en Mercado Pago.", tone: "ok" },
+};
+const TONE = { ok: "border-emerald-200 bg-emerald-50 text-emerald-900", warn: "border-amber-200 bg-amber-50 text-amber-900", bad: "border-red-200 bg-red-50 text-red-900" };
+const CARD_STATUS: Record<string, string> = { activa: "Cobro mensual activo", pausada: "Cobro mensual en pausa", pendiente: "Por autorizar en Mercado Pago" };
+
+/** Opciones del pago con tarjeta para esta cuenta (solo las que tienen precio publicado). */
+async function cardOptions(org: Org): Promise<CardOption[]> {
+  const extraVenues = org.kind === "venue" ? Math.max(0, (await countOwnedPublishedVenues(org.id)) - 1) : 0;
+  const combos = [
+    ["eventos", "pro", "mes"],
+    ["eventos", "ilimitado", "mes"],
+    ["eventos", "pro", "anio"],
+    ["casas", "pro", "mes"],
+    ["casas", "pro", "anio"],
+    ["personal", "pro", "mes"],
+  ] as const;
+  // Un salón paga Eventos; una inmobiliaria o desarrolladora, Casas; una planner o cuenta nueva ve todas.
+  const fits = (plan: string) => (org.kind === "venue" ? plan === "eventos" : org.kind === "agency" || org.kind === "developer" ? plan === "casas" : true);
+  return combos.filter(([plan]) => fits(plan)).flatMap(([plan, tier, period]) => {
+    const price = cardPrice({ plan, tier, period, orgKind: org.kind, extraVenues });
+    if (!price) return [];
+    const how = period === "mes" ? "se cobra solo cada mes" : "un solo pago";
+    return [{ value: `${plan}|${tier}|${period}`, label: `${price.title.replace("Plantea · ", "")} · $${price.amount.toLocaleString("es-MX")} (${how})` }];
+  });
+}
+
+/** Tu plan: qué incluye, cuándo vence, cómo pagar (tarjeta o transferencia) y los pagos enviados. */
+export async function PlanSection({ org, wanted, result, email }: { org: Org; wanted?: Plan; result?: string; email?: string }) {
+  const card = mpEnabled() && org.plan !== "invitado";
+  const [payments, origin, options, checkouts] = await Promise.all([
+    listPayments(org.id),
+    getReferralOrigin(org),
+    card ? cardOptions(org) : Promise.resolve([] as CardOption[]),
+    card ? listCardCheckouts(org.id) : Promise.resolve([]),
+  ]);
+  const subscriptions = checkouts.filter((c) => c.kind === "suscripcion" && c.mpId && ["activa", "pausada", "pendiente"].includes(c.status));
+  const notice = result ? RESULT[result] : undefined;
+  const preferred = options.find((o) => o.value.startsWith(`${wanted ?? org.plan}|${org.tier}|`))?.value;
   const bank = spei();
   const quota = referralQuota(org);
   const active = activeModules(org);
@@ -61,6 +106,41 @@ export async function PlanSection({ org, wanted }: { org: Org; wanted?: Plan }) 
         </p>
       </div>
 
+      {notice && <p className={`rounded-2xl border p-3 text-sm ${TONE[notice.tone]}`}>{notice.text}</p>}
+
+      {card && options.length > 0 && (
+        <div className="rounded-2xl border border-stone-200 bg-white p-4">
+          <h3 className="font-semibold">Pagar con tarjeta</h3>
+          <p className="mt-1 text-sm text-stone-600">
+            Con Mercado Pago: tarjeta de crédito o débito (y OXXO en el pago anual). El plan mensual se cobra solo cada mes y lo cancelas cuando quieras;
+            tu plan se activa en cuanto Mercado Pago aprueba el pago.
+          </p>
+          <CardPaymentForm options={options} current={preferred} email={email} />
+          {subscriptions.length > 0 && (
+            <ul className="mt-4 space-y-2 text-sm">
+              {subscriptions.map((s) => (
+                <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 p-3">
+                  <span>
+                    {s.title.replace("Plantea · ", "")} · ${s.amount.toLocaleString("es-MX")} al mes · <b>{CARD_STATUS[s.status] ?? s.status}</b>
+                  </span>
+                  {s.status !== "pendiente" && (
+                    <form action={cancelSubscriptionAction}>
+                      <input type="hidden" name="checkoutId" value={s.id} />
+                      <button className="h-9 rounded-lg border border-stone-300 bg-white px-3 font-medium">Cancelar cobro automático</button>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {checkouts.length > 0 && (
+            <form action={syncCardPaymentsAction} className="mt-3">
+              <button className="text-sm underline">¿Ya pagaste y no se activó? Revisar mi pago</button>
+            </form>
+          )}
+        </div>
+      )}
+
       {org.plan !== "invitado" && (
       <div id="pagar" className="scroll-mt-20 rounded-2xl border border-stone-200 bg-white p-4">
         <h3 className="font-semibold">{free ? "Activar tu plan por transferencia" : "Pagar o renovar por transferencia"}</h3>
@@ -93,13 +173,13 @@ export async function PlanSection({ org, wanted }: { org: Org; wanted?: Plan }) 
 
       {payments.length > 0 && (
         <div className="rounded-2xl border border-stone-200 bg-white p-4">
-          <h3 className="font-semibold">Comprobantes enviados</h3>
+          <h3 className="font-semibold">Tus pagos</h3>
           <ul className="mt-2 divide-y divide-stone-100 text-sm">
             {payments.map((p) => (
               <li key={p.id} className="flex items-start justify-between gap-3 py-2">
                 <div>
                   <p>
-                    {PLAN_LABELS[p.plan]} · {PAYMENT_PERIOD_LABELS[p.period]} · ${p.amount.toLocaleString("es-MX")}
+                    {PLAN_LABELS[p.plan]} · {PAYMENT_PERIOD_LABELS[p.period]} · ${p.amount.toLocaleString("es-MX")} · {p.method === "tarjeta" ? "tarjeta" : "transferencia"}
                   </p>
                   <p className="text-stone-500">
                     {formatDate(p.createdAt)}
