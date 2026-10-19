@@ -406,14 +406,28 @@ export async function listComments(eventId: string) {
 }
 
 /** El comentario existe y el usuario puede editar su evento. */
+/** El comentario es de un evento del negocio del usuario, vivo y con el plan vigente (igual que editar la distribución). */
 export async function canEditComment(commentId: string, userId: string) {
   const [row] = await db
-    .select({ id: comment.id })
+    .select({ venueKind: venue.kind, modules: organization.modules, planEndsAt: organization.planEndsAt })
     .from(comment)
     .innerJoin(layout, eq(comment.layoutId, layout.id))
     .innerJoin(event, eq(layout.eventId, event.id))
+    .innerJoin(venue, eq(event.venueId, venue.id))
     .innerJoin(membership, and(eq(membership.orgId, event.orgId), eq(membership.userId, userId)))
-    .where(eq(comment.id, commentId))
+    .innerJoin(organization, eq(organization.id, event.orgId))
+    .where(and(eq(comment.id, commentId), eventAlive, venueAlive))
+    .limit(1);
+  return Boolean(row && moduleActive(row, row.venueKind));
+}
+
+/** Si el usuario es del negocio dueño del evento (para no contar como visita del cliente cuando la planner abre su enlace). */
+export async function isEventMember(eventId: string, userId: string) {
+  const [row] = await db
+    .select({ id: event.id })
+    .from(event)
+    .innerJoin(membership, memberOfEventOrg(userId))
+    .where(eq(event.id, eventId))
     .limit(1);
   return Boolean(row);
 }

@@ -1,5 +1,5 @@
 import { isPreviewBot } from "@/lib/activity";
-import { bumpShareView, getEffectiveBrand, getSharedEvent, listComments } from "@/lib/dal";
+import { bumpShareView, getCurrentUser, getEffectiveBrand, getSharedEvent, isEventMember, listComments } from "@/lib/dal";
 import { brandOf, designerResponse, hostFor, publicOrigin } from "@/lib/designer/page";
 import { withStarter } from "@/lib/designer/starter";
 
@@ -10,9 +10,14 @@ export async function GET(request: Request, ctx: RouteContext<"/v/[token]">) {
   const data = await getSharedEvent(token);
   const plan = data?.venue.plan;
   if (!data || !plan) return new Response("Este enlace ya no está disponible.", { status: 404 });
-  // Cuenta la visita de una persona (no la vista previa que arma WhatsApp al pegar el enlace).
-  if (!isPreviewBot(request.headers.get("user-agent"))) await bumpShareView(token);
   const url = new URL(request.url);
+  // Cuenta la visita de una persona: no la vista previa que arma WhatsApp al pegar el enlace, ni el cambio de planta
+  // dentro del mismo enlace (?vista, ?recorrido), ni la planner o el salón cuando abren su propio enlace.
+  const reload = url.searchParams.has("vista") || url.searchParams.has("recorrido");
+  if (!isPreviewBot(request.headers.get("user-agent")) && !reload) {
+    const viewer = await getCurrentUser().catch(() => null);
+    if (!viewer || !(await isEventMember(data.event.id, viewer.id))) await bumpShareView(token);
+  }
   // Sin ?d= abre la distribución recomendada (o la primera), como dice el diálogo de Compartir.
   const wanted = url.searchParams.get("d");
   // ?visita: el enlace abre directo la visita guiada (lo arranca host.js)
