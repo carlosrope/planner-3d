@@ -1,9 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 import { createInquiry, getPublicVenue } from "@/lib/dal";
 import { normalizeWhatsapp, waLink } from "@/lib/whatsapp";
-import { formatDay } from "@/lib/dates";
+import { formatDay, isRealDay } from "@/lib/dates";
+import { clientIp, makeLimiter } from "@/lib/suggestion";
 
 export type InquiryState = { ok?: boolean; whatsapp?: string | null; error?: string } | null;
 
@@ -17,6 +19,9 @@ const inquiry = z.object({
 });
 
 
+// 5 solicitudes por hora desde la misma conexión.
+const perHour = makeLimiter(5, 60 * 60 * 1000);
+
 /** Solicitud de informes: se guarda para el panel del lugar y, si tiene WhatsApp, se abre con el mensaje listo. */
 export async function sendInquiry(_prev: InquiryState, formData: FormData): Promise<InquiryState> {
   const parsed = inquiry.safeParse({
@@ -29,6 +34,8 @@ export async function sendInquiry(_prev: InquiryState, formData: FormData): Prom
   });
   if (!parsed.success) return { error: "Revisa tu nombre y tu WhatsApp." };
   const d = parsed.data;
+  if (d.eventDate && !isRealDay(d.eventDate)) return { error: "Revisa la fecha del evento." };
+  if (!perHour(clientIp(await headers()))) return { error: "Ya mandaste varias solicitudes. Escríbele al lugar por WhatsApp." };
   const phone = normalizeWhatsapp(d.phone);
   if (!phone) return { error: "El WhatsApp debe tener 10 dígitos (o lada de país + número)." };
   const v = await getPublicVenue(d.venueId);

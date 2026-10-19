@@ -1,3 +1,4 @@
+import { isPreviewBot } from "@/lib/activity";
 import { bumpVenueViews, getVenuePlanForView } from "@/lib/dal";
 import { designerResponse, publicOrigin } from "@/lib/designer/page";
 import { withStarter } from "@/lib/designer/starter";
@@ -14,7 +15,8 @@ export async function GET(request: Request, ctx: RouteContext<"/lugares/[slug]/3
   const found = await getVenuePlanForView(slug, review);
   if (!found) return new Response("Este lugar no está disponible.", { status: 404 });
   const key = found.slug ?? found.id;
-  if (!review) await bumpVenueViews(found.id);
+  // Las aperturas son de personas: sin robots ni la vista previa de WhatsApp.
+  if (!review && !isPreviewBot(request.headers.get("user-agent"))) await bumpVenueViews(found.id);
   // Un salón se abre con una boda de 200 ya montada para que se entienda el tamaño.
   const base = found.plan.kind === "salon" ? withStarter(found.plan, { guests: 200, kind: "boda" }) : found.plan;
   const plan = { ...base, id: `lugar-${key}`, title: found.name };

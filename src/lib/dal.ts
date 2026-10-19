@@ -459,7 +459,19 @@ export async function listCatalogCities(kind: VenueKind) {
     .where(and(eq(venue.kind, kind), published, eq(venue.isPublic, true), isNotNull(venue.plan)))
     .groupBy(venue.city)
     .orderBy(asc(venue.city));
-  return rows.map((r) => ({ city: r.city, slug: slugify(r.city), total: Number(r.total) }));
+  // "Los Mochis" y "Los mochis" son la misma ciudad: se juntan por su slug y se usa la forma más común.
+  const bySlug = new Map<string, { city: string; slug: string; total: number; top: number }>();
+  for (const r of rows) {
+    const slug = slugify(r.city);
+    const n = Number(r.total);
+    const cur = bySlug.get(slug);
+    if (!cur) bySlug.set(slug, { city: r.city, slug, total: n, top: n });
+    else {
+      cur.total += n;
+      if (n > cur.top) Object.assign(cur, { city: r.city, top: n });
+    }
+  }
+  return [...bySlug.values()].map(({ city, slug, total }) => ({ city, slug, total }));
 }
 
 const bySlugOrId = (slugOrId: string) => and(or(eq(venue.slug, slugOrId), eq(venue.id, slugOrId)), venueAlive);
@@ -575,7 +587,16 @@ export type VenueIntake = {
 export type IntakeFile = { kind: "plano" | "foto"; name: string; mimeType: string; data: Buffer };
 
 /** Alta de un lugar por su dueño: queda "en conversión" hasta que la administración arma el plano. */
+/** La ciudad como ya está escrita en otro lugar (misma ciudad sin importar mayúsculas ni acentos), o limpia. */
+async function canonicalCity(city: string) {
+  const clean = city.trim().replace(/\s+/g, " ");
+  const slug = slugify(clean);
+  const rows = await db.selectDistinct({ city: venue.city }).from(venue).where(venueAlive);
+  return rows.map((r) => r.city).find((c) => slugify(c) === slug) ?? clean;
+}
+
 export async function createVenueIntake(intake: VenueIntake, files: IntakeFile[]) {
+  intake = { ...intake, city: await canonicalCity(intake.city) };
   const root = slugify(intake.name) || "lugar";
   const taken = await db.select({ slug: venue.slug }).from(venue).where(like(venue.slug, `${root}%`));
   const slug = uniqueSlug(intake.name, taken.map((t) => t.slug).filter((s): s is string => Boolean(s)));
@@ -614,7 +635,7 @@ export async function confirmVenueReview(token: string) {
     const [row] = await tx
       .update(venue)
       .set({ status: "publicado", publishedAt: new Date(), reviewNotes: null })
-      .where(and(eq(venue.reviewToken, token), venueAlive, isNotNull(venue.plan), sql`${venue.status} in ('revision', 'conversion')`))
+      .where(and(eq(venue.reviewToken, token), venueAlive, isNotNull(venue.plan), eq(venue.status, "revision")))
       .returning({ id: venue.id, slug: venue.slug, name: venue.name, contactName: venue.contactName });
     if (!row) return null;
     await audit(tx, { label: `Dueño con su enlace de revisión${row.contactName ? ` (${row.contactName})` : ""}` }, "lugar_publicado", { type: "venue", id: row.id, label: row.name });
@@ -637,8 +658,12 @@ export async function createInquiry(
   venueId: string,
   data: { name: string; phone: string; eventDate: string | null; guests: number | null; message: string },
 ) {
-  const [{ total }] = await db.select({ total: count() }).from(venueInquiry).where(eq(venueInquiry.venueId, venueId));
-  if (total >= 2000) return null;
+  // Tope por día (no para siempre): un bot no deja al salón sin solicitudes.
+  const [{ today: sent }] = await db
+    .select({ today: count() })
+    .from(venueInquiry)
+    .where(and(eq(venueInquiry.venueId, venueId), gte(venueInquiry.createdAt, new Date(Date.now() - 86_400_000))));
+  if (sent >= 100) return null;
   const [created] = await db.insert(venueInquiry).values({ venueId, ...data }).returning({ id: venueInquiry.id });
   return created;
 }
@@ -1023,9 +1048,16 @@ export type AdminVenuePatch = Partial<{
 
 /** Cambios de la administración a un lugar; al publicar se marca la fecha y al pasar a revisión se asegura el enlace del dueño. */
 export async function adminUpdateVenue(id: string, patch: AdminVenuePatch, actor: Actor) {
+  if (patch.city) patch = { ...patch, city: await canonicalCity(patch.city) };
   return db.transaction(async (tx) => {
-    const [before] = await tx.select({ name: venue.name, status: venue.status, isPublic: venue.isPublic, ownerOrgId: venue.ownerOrgId }).from(venue).where(eq(venue.id, id)).limit(1);
+    const [before] = await tx
+      .select({ name: venue.name, status: venue.status, isPublic: venue.isPublic, ownerOrgId: venue.ownerOrgId, hasPlan: isNotNull(venue.plan) })
+      .from(venue)
+      .where(eq(venue.id, id))
+      .limit(1);
     if (!before) return null;
+    // Sin plano no se publica: la ficha saldría y el 3D daría 404.
+    if (patch.status === "publicado" && !before.hasPlan) patch = { ...patch, status: before.status };
     const extra: Partial<typeof venue.$inferInsert> = {};
     if (patch.status === "publicado" && before.status !== "publicado") extra.publishedAt = new Date();
     if (patch.status === "revision" || patch.status === "publicado") extra.reviewToken = sql`coalesce(${venue.reviewToken}, ${newToken(24)})` as unknown as string;
@@ -1049,8 +1081,10 @@ export async function adminSetVenuePlan(id: string, plan: DesignerPlan) {
     .update(venue)
     .set({
       plan,
-      kind: plan.kind === "casa" ? "casa" : "salon",
-      status: sql`case when ${venue.status} = 'publicado' then 'publicado' else 'revision' end` as unknown as VenueStatus,
+      // Sin tipo en el JSON se queda el que tenía (una casa no pasa a salón).
+      kind: plan.kind === "casa" ? "casa" : plan.kind === "salon" ? "salon" : sql`${venue.kind}`,
+      // Publicado y retirado se quedan como están; lo demás pasa a "por confirmar".
+      status: sql`case when ${venue.status} in ('publicado', 'retirado') then ${venue.status} else 'revision' end` as unknown as VenueStatus,
       reviewToken: sql`coalesce(${venue.reviewToken}, ${newToken(24)})` as unknown as string,
       version: sql`${venue.version} + 1`,
     })
