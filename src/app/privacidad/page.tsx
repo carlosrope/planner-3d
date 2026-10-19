@@ -73,13 +73,15 @@ export default function PrivacidadPage() {
             <b>Códigos de referido:</b> el nombre del cliente y la fecha del evento que escribe quien genera el código, y qué cuenta lo usó.
           </li>
           <li>
-            <b>Datos técnicos:</b> dirección IP y tipo de navegador de cada sesión (para seguridad de la cuenta), cookies de sesión y, en el 3D público de
-            un lugar, el conteo de aperturas. No usamos cookies de publicidad.
+            <b>Datos técnicos:</b> dirección IP y tipo de navegador de cada sesión (para seguridad de la cuenta y para limitar intentos repetidos),
+            cookies de sesión, el conteo de aperturas del 3D público de un lugar y de los enlaces de solo vista, y un conteo de visitas al sitio sin
+            cookies ni datos que te identifiquen. No usamos cookies de publicidad. Si el diseñador falla, se guarda en tu propio dispositivo una copia
+            de tus últimos cambios para que no los pierdas; no sale de tu dispositivo hasta que se guarda en tu cuenta.
           </li>
         </ul>
         <p>
           Las notas de dieta o alergia de tus invitados pueden ser datos sensibles. Las capturas tú, bajo tu responsabilidad, y solo se usan para las hojas
-          de montaje y de meseros de tu propio evento.
+          de montaje y de meseros de tu propio evento. El enlace de solo vista que compartes no las incluye.
         </p>
       </Seccion>
 
@@ -122,6 +124,22 @@ export default function PrivacidadPage() {
             <b>Hospedaje y base de datos:</b> Railway (Estados Unidos), donde viven la aplicación y sus datos cifrados en tránsito.
           </li>
           <li>
+            <b>Red, seguridad y respaldos:</b> Cloudflare (Estados Unidos, con servidores en varios países): el dominio plantea.com.mx, la conexión
+            cifrada y la protección del sitio; el reenvío del correo {RESPONSABLE.correo}; la copia diaria de la base de datos (Cloudflare R2), y el
+            conteo de visitas sin cookies (Cloudflare Web Analytics).
+          </li>
+          <li>
+            <b>Correo:</b> Resend (Estados Unidos) envía los correos de tu cuenta, como el enlace para restablecer tu contraseña. Recibe tu correo y el
+            texto del mensaje.
+          </li>
+          <li>
+            <b>Inicio de sesión con Google</b> (solo si lo eliges): Google confirma tu identidad y nos comparte tu nombre, tu correo y tu foto.
+          </li>
+          <li>
+            <b>Errores:</b> cuando está activo, Sentry (Estados Unidos) recibe reportes técnicos de las fallas (la página, el navegador y el error),
+            sin contraseñas ni el contenido de tus proyectos.
+          </li>
+          <li>
             <b>Enlaces que tú compartes:</b> cuando mandas un enlace de solo vista o el QR de tu lugar, quien lo abra verá lo que ese enlace muestra (el
             diseño, tu marca, el nombre del evento). Tú decides a quién se lo mandas.
           </li>
@@ -130,8 +148,9 @@ export default function PrivacidadPage() {
           </li>
         </ul>
         <p>
-          Fuera de eso, solo compartiríamos datos si una autoridad competente lo exige por ley. Si en el futuro agregamos un proveedor (por ejemplo,
-          correo transaccional o pagos con tarjeta), actualizaremos este aviso.
+          Estos proveedores guardan o procesan datos fuera de México solo para darte el servicio, y no los usan para nada más. Fuera de eso, solo
+          compartiríamos datos si una autoridad competente lo exige por ley. Si agregamos un proveedor (por ejemplo, pagos con tarjeta), actualizaremos
+          este aviso antes de usarlo.
         </p>
       </Seccion>
 
@@ -150,8 +169,8 @@ export default function PrivacidadPage() {
           Puedes <b>acceder</b> a tus datos, <b>rectificarlos</b>, <b>cancelarlos</b> u <b>oponerte</b> a su uso, y también revocar el consentimiento o
           pedir la portabilidad de tus proyectos. Escribe a {RESPONSABLE.correo} desde el correo de tu cuenta, indicando qué pides. Respondemos en un
           máximo de 20 días hábiles. Gran parte lo puedes hacer tú: tu nombre, logo y WhatsApp en <Link href="/negocio" className="underline">Mi negocio</Link>, y tus eventos en{" "}
-          <Link href="/eventos" className="underline">Proyectos</Link>. Si no estás conforme con nuestra respuesta, puedes acudir al Instituto Nacional de
-          Transparencia, Acceso a la Información y Protección de Datos Personales (INAI).
+          <Link href="/eventos" className="underline">Proyectos</Link>. Si no estás conforme con nuestra respuesta, puedes acudir a la autoridad de protección
+          de datos personales.
         </p>
       </Seccion>
 
