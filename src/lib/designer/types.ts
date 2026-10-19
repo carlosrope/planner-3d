@@ -110,12 +110,22 @@ export type DesignDoc = { v: 1; levels: Record<string, LevelState> };
 
 export const emptyDesign = (): DesignDoc => ({ v: 1, levels: {} });
 
-/** El enlace del cliente no lleva proveedores: sus teléfonos, horarios y notas son de la planner. */
+/**
+ * El enlace del cliente no lleva proveedores (sus teléfonos, horarios y notas son de la planner) ni la dieta o
+ * alergias de cada invitado: quien tenga el enlace ve quién se sienta en cada mesa, nada más.
+ */
 export function withoutVendors(doc: unknown): unknown {
   const d = doc as DesignDoc | null;
   if (!d || typeof d !== "object" || !d.levels) return doc;
   const levels = Object.fromEntries(
-    Object.entries(d.levels).map(([k, l]) => [k, { ...l, furniture: (l.furniture ?? []).filter((f) => f.type !== "vendor") }]),
+    Object.entries(d.levels).map(([k, l]) => [
+      k,
+      {
+        ...l,
+        furniture: (l.furniture ?? []).filter((f) => f.type !== "vendor"),
+        ...(l.guestList ? { guestList: l.guestList.map((g) => ({ id: g.id, name: g.name, group: g.group, table: g.table })) } : {}),
+      },
+    ]),
   );
   return { ...d, levels };
 }

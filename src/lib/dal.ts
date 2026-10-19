@@ -372,6 +372,8 @@ export async function getSharePreview(token: string) {
   const [row] = await db
     .select({ preview: shareLink.preview })
     .from(shareLink)
+    // Un evento en la papelera ya no muestra su vista previa.
+    .innerJoin(event, and(eq(event.id, shareLink.eventId), eventAlive))
     .where(and(eq(shareLink.token, token), or(isNull(shareLink.expiresAt), gt(shareLink.expiresAt, new Date()))))
     .limit(1);
   return row?.preview ?? null;

@@ -164,3 +164,15 @@ describe("proyectos de ejemplo", () => {
     }
   });
 });
+
+describe("enlace del cliente", () => {
+  it("no lleva la dieta ni las alergias de los invitados", () => {
+    const doc = {
+      v: 1,
+      levels: { salon: { furniture: [], guestList: [{ id: "g1", name: "Tía Rosa", group: "Novia", diet: "Sin gluten", table: "t1" }] } },
+    } as DesignDoc;
+    const out = withoutVendors(doc) as DesignDoc;
+    expect(out.levels.salon.guestList).toEqual([{ id: "g1", name: "Tía Rosa", group: "Novia", table: "t1" }]);
+    expect(doc.levels.salon.guestList?.[0].diet).toBe("Sin gluten"); // no toca el original
+  });
+});
