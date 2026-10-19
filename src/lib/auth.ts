@@ -12,6 +12,7 @@ import { referralCodeCandidates } from "./referrals";
 import { lanOrigins } from "./lan";
 import { passwordResetEmail, sendEmail } from "./email";
 import { googleEnabled } from "./google";
+import { reportError } from "./sentry";
 
 /** plantea.com.mx, www y la dirección de Railway; AUTH_TRUSTED_ORIGINS (separados por coma) agrega otros. */
 const publicOrigins = () => [
@@ -21,7 +22,16 @@ const publicOrigins = () => [
   ...(process.env.AUTH_TRUSTED_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean),
 ];
 
-const invites = parseInvites(process.env.SIGNUP_CODES, process.env.SIGNUP_CODE);
+// Un error de dedo en SIGNUP_CODES no debe tumbar la entrada de todos: se avisa en el log y se sigue sin esos códigos.
+const invites = (() => {
+  try {
+    return parseInvites(process.env.SIGNUP_CODES, process.env.SIGNUP_CODE);
+  } catch (e) {
+    console.error(`[auth] SIGNUP_CODES no se pudo leer y se ignora: ${e instanceof Error ? e.message : e}`);
+    void reportError({ message: "SIGNUP_CODES no es JSON válido; se ignoró", source: "server" });
+    return parseInvites(undefined, process.env.SIGNUP_CODE);
+  }
+})();
 
 /** Código de referido sin usar, de un lugar que sigue en el catálogo y de un negocio con el plan vigente. */
 async function referralFor(raw: string): Promise<Invite | null> {
@@ -84,7 +94,12 @@ export const auth = betterAuth({
     // "Olvidé mi contraseña": el enlace llega por correo (Resend) y dura una hora; en local se imprime en consola.
     resetPasswordTokenExpiresIn: 60 * 60,
     sendResetPassword: async ({ user, url }) => {
-      await sendEmail(passwordResetEmail(user.email, user.name, url));
+      // La pantalla dice lo mismo exista o no la cuenta (para no revelar correos); si el correo no salió, queda en el log y en Sentry.
+      const sent = await sendEmail(passwordResetEmail(user.email, user.name, url));
+      if (!sent.ok) {
+        console.error(`[auth] No se mandó el correo para restablecer la contraseña: ${sent.error}`);
+        void reportError({ message: `Correo de restablecer contraseña no enviado: ${sent.error}`, source: "server" });
+      }
     },
     // Al cambiarla se cierran las demás sesiones abiertas.
     revokeSessionsOnPasswordReset: true,

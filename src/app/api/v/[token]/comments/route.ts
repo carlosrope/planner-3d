@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSharedEvent } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { comment, layout } from "@/lib/db/schema";
+import { clientIp, makeLimiter } from "@/lib/suggestion";
 
 // El cliente deja un comentario desde su enlace (sin cuenta): general o sobre una mesa o mueble.
 const body = z.object({
@@ -13,7 +14,11 @@ const body = z.object({
   body: z.string().trim().min(1).max(600),
 });
 
+// 20 comentarios por hora desde la misma conexión: un enlace reenviado no se llena de spam.
+const perHour = makeLimiter(20, 60 * 60 * 1000);
+
 export async function POST(request: Request, ctx: RouteContext<"/api/v/[token]/comments">) {
+  if (!perHour(clientIp(request.headers))) return NextResponse.json({ error: "Ya dejaste varios comentarios. Inténtalo más tarde." }, { status: 429 });
   const { token } = await ctx.params;
   const data = await getSharedEvent(token);
   if (!data) return NextResponse.json({ error: "Este enlace ya no está disponible." }, { status: 404 });
