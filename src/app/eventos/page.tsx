@@ -9,6 +9,7 @@ import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { formatDate, formatDay, formatInstant } from "@/lib/dates";
 import { waLink } from "@/lib/whatsapp";
 import { restoreEventAction, trashEventAction } from "./actions";
+import { StatusSelect } from "./StatusSelect";
 import { NewEventForm } from "./NewEventForm";
 import { SamplesLink, Welcome } from "./Welcome";
 
@@ -152,7 +153,8 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
           </p>
         ) : (
           mine.map((e) => (
-            <div key={e.id} className="flex items-stretch gap-2">
+            <div key={e.id} className="space-y-1">
+            <div className="flex items-stretch gap-2">
             <PageLink
               href={`/eventos/${e.id}`}
               className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4 active:bg-stone-50"
@@ -185,6 +187,8 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
               </button>
             </form>
             </div>
+            {org.plan !== "invitado" && <StatusSelect key={e.status} eventId={e.id} status={e.status} title={e.title} />}
+            </div>
           ))
         )}
       </section>
@@ -194,7 +198,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         <p className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
           {org.plan === "invitado"
             ? "Tu código cubre un solo evento: ábrelo arriba para seguir trabajando en él."
-            : "El plan Personal incluye un evento activo a la vez. Marca el anterior como realizado o cancelado para crear otro."}
+            : "El plan Personal incluye un evento activo a la vez. Cambia el estado del anterior a Realizado o Cancelado (abajo de cada evento) para crear otro."}
         </p>
       )}
       {!expired && !free && !limitReached && (

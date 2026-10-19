@@ -1,4 +1,4 @@
-import { endOfDay } from "./dates";
+import { addDays, endOfDay, today } from "./dates";
 
 // Catálogos del negocio compartidos por la base de datos, el servidor y la interfaz.
 
@@ -78,10 +78,9 @@ export function referralQuota(org: { kind: OrgKind; plan: Plan; tier: Tier }): n
 /** Días que dura la cuenta de un cliente con código después de la fecha de su evento (o desde que entra, sin fecha). */
 export const REFERRAL_DAYS_AFTER_EVENT = 30;
 export const REFERRAL_DAYS_WITHOUT_DATE = 90;
-/** Fin del plan de un cliente con código: 30 días después de su evento o 90 días desde hoy si no dio fecha. */
+/** Fin del plan de un cliente con código: 30 días después de su evento o 90 días desde hoy si no dio fecha, a las 23:59 de Los Mochis. */
 export function referralPlanEnd(eventDate: string | null, now = new Date()): Date {
-  const base = eventDate ? endOfDay(eventDate) : now;
-  return new Date(base.getTime() + (eventDate ? REFERRAL_DAYS_AFTER_EVENT : REFERRAL_DAYS_WITHOUT_DATE) * 86_400_000);
+  return eventDate ? endOfDay(addDays(eventDate, REFERRAL_DAYS_AFTER_EVENT)) : endOfDay(addDays(today(now), REFERRAL_DAYS_WITHOUT_DATE));
 }
 export const isSection = (value: unknown): value is Section => typeof value === "string" && value in SECTIONS;
 export const isPlan = (value: unknown): value is Plan => typeof value === "string" && (PLANS as readonly string[]).includes(value);
@@ -134,7 +133,12 @@ export function planDaysLeft(planEndsAt: Date | null, now = new Date()): number 
 /** Fin del plan después de un pago: se suma al fin vigente si todavía no llega, o a hoy si ya venció. */
 export function planEndAfterPayment(current: Date | null, period: PaymentPeriod, now = new Date()): Date {
   const from = current && current.getTime() > now.getTime() ? new Date(current) : new Date(now);
-  from.setMonth(from.getMonth() + (period === "anio" ? 12 : 1));
+  // Sin desbordar el mes: del 31 de enero, un mes es el 28 (o 29) de febrero, no el 3 de marzo.
+  const day = from.getUTCDate();
+  from.setUTCDate(1);
+  from.setUTCMonth(from.getUTCMonth() + (period === "anio" ? 12 : 1));
+  const last = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 0)).getUTCDate();
+  from.setUTCDate(Math.min(day, last));
   return from;
 }
 

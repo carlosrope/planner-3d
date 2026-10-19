@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRASH_DAYS, trashDaysLeft, trashPurgeAt } from "./domain";
+import { TRASH_DAYS, planEndAfterPayment, trashDaysLeft, trashPurgeAt } from "./domain";
 
 describe("papelera", () => {
   const deleted = new Date("2026-10-15T12:00:00Z");
@@ -26,5 +26,14 @@ describe("rastro", () => {
     expect(venueStatusAction("publicado")).toBe("lugar_publicado");
     expect(venueStatusAction("retirado")).toBe("lugar_retirado");
     expect(venueStatusAction("revision")).toBe("lugar_estado");
+  });
+});
+
+describe("fin del plan después de un pago", () => {
+  it("suma un mes sin brincarse al siguiente", () => {
+    const now = new Date("2026-01-10T12:00:00Z");
+    expect(planEndAfterPayment(new Date("2026-01-31T06:59:59Z"), "mes", now).toISOString()).toBe("2026-02-28T06:59:59.000Z");
+    expect(planEndAfterPayment(new Date("2027-12-31T06:59:59Z"), "mes", now).toISOString()).toBe("2028-01-31T06:59:59.000Z");
+    expect(planEndAfterPayment(new Date("2026-03-15T06:59:59Z"), "anio", now).toISOString()).toBe("2027-03-15T06:59:59.000Z");
   });
 });

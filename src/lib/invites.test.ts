@@ -32,10 +32,10 @@ describe("códigos de invitación", () => {
     expect(invites.get("RARO")).toEqual({ kind: "planner", plan: "prueba", modules: ["salones", "casas"], days: 7 });
   });
 
-  it("la prueba vence a los días indicados", () => {
+  it("la prueba vence a los días indicados, a las 23:59 de Los Mochis", () => {
     const now = new Date("2026-10-12T12:00:00Z");
     const values = orgValuesFor({ kind: "planner", plan: "prueba", modules: ["salones"], days: 14 }, now);
-    expect(values.planEndsAt?.toISOString()).toBe("2026-10-26T12:00:00.000Z");
+    expect(values.planEndsAt?.toISOString()).toBe("2026-10-27T06:59:59.000Z");
   });
 
   it("JSON inválido avisa", () => {

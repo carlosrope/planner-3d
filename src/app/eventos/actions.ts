@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { attachReferralEvent, countEvents, restoreEvent, trashEvent, getReferralOrigin, getVenueForOrg, listVenues, moduleActive, requireOrg, requireUser } from "@/lib/dal";
+import { attachReferralEvent, countEvents, restoreEvent, setEventStatus, trashEvent, getReferralOrigin, getVenueForOrg, listVenues, moduleActive, requireOrg, requireUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { event, layout } from "@/lib/db/schema";
-import { SALON_EVENT_KINDS, isLitePlan, sectionOf } from "@/lib/domain";
+import { EVENT_STATUSES, SALON_EVENT_KINDS, isLitePlan, sectionOf } from "@/lib/domain";
 import { sampleGuests, seatGuests } from "@/lib/designer/samples";
 import { starterDesign, starterFurniture, type Template } from "@/lib/designer/starter";
 import type { DesignDoc, DesignerPlan } from "@/lib/designer/types";
@@ -56,9 +56,11 @@ export async function createEvent(_prev: CreateEventState, formData: FormData): 
   if (org.plan === "invitado") {
     if (!origin) return { error: "Tu cuenta no tiene un lugar asignado. Escríbenos por WhatsApp." };
     if (origin.venueId !== data.venueId) return { error: `Tu código es para ${origin.venueName}.` };
-    if ((await countEvents(org.id)) > 0) return { error: "Tu código cubre un solo evento, y ya lo tienes. Ábrelo desde la lista." };
+    if ((await countEvents(org.id, false, true)) > 0) {
+      return { error: "Tu código cubre un solo evento, y ya lo tienes. Ábrelo desde la lista (si lo mandaste a la papelera, restáuralo)." };
+    }
   } else if (org.plan === "personal" && (await countEvents(org.id, true)) > 0) {
-    return { error: "El plan Personal incluye un evento activo a la vez. Marca el anterior como realizado o cancelado para crear otro." };
+    return { error: "El plan Personal incluye un evento activo a la vez. En la lista, cambia el estado del anterior a Realizado o Cancelado para crear otro." };
   }
 
   const found = await getVenueForOrg(org.id, data.venueId);
@@ -194,6 +196,18 @@ export async function trashEventAction(formData: FormData): Promise<void> {
   const eventId = z.string().min(1).max(64).safeParse(formData.get("eventId"));
   if (!eventId.success) return;
   await trashEvent(eventId.data, user.id);
+  revalidatePath("/eventos");
+}
+
+/** Cambia el estado de un evento (en Personal, para poder crear el siguiente). */
+export async function setEventStatusAction(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const parsed = z.object({ eventId: z.string().min(1).max(64), status: z.enum(EVENT_STATUSES) }).safeParse({
+    eventId: formData.get("eventId"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) return;
+  await setEventStatus(parsed.data.eventId, user.id, parsed.data.status);
   revalidatePath("/eventos");
 }
 

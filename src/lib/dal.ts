@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, asc, count, desc, eq, exists, gt, gte, inArray, isNotNull, isNull, like, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, exists, gt, gte, inArray, isNotNull, isNull, like, ne, notInArray, or, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "./auth";
@@ -29,6 +29,7 @@ import {
   changedFields,
   venueStatusAction,
   type AuditAction,
+  type EventStatus,
   PLAN_MODULES,
   planEndAfterPayment,
   referralQuota,
@@ -199,12 +200,38 @@ export async function listVenues(orgId: string, onlyVenueId?: string | null) {
 }
 
 /** Cuántos eventos tiene el negocio (todos, o solo los que siguen vivos: borrador o confirmado). */
-export async function countEvents(orgId: string, onlyActive = false) {
+/** Eventos del negocio: los activos (borrador o confirmado) o todos; con `withTrash`, también los de la papelera. */
+export async function countEvents(orgId: string, onlyActive = false, withTrash = false) {
   const [row] = await db
     .select({ n: count() })
     .from(event)
-    .where(and(eq(event.orgId, orgId), eventAlive, onlyActive ? or(eq(event.status, "borrador"), eq(event.status, "confirmado")) : undefined));
+    .where(and(eq(event.orgId, orgId), withTrash ? undefined : eventAlive, onlyActive ? eventActive : undefined));
   return Number(row?.n ?? 0);
+}
+
+const eventActive = or(eq(event.status, "borrador"), eq(event.status, "confirmado"));
+
+/**
+ * Cambia el estado de un evento del negocio del usuario. En el plan Personal no se puede volver a activar uno si ya
+ * hay otro activo (un evento activo a la vez).
+ */
+export async function setEventStatus(eventId: string, userId: string, status: EventStatus) {
+  const [row] = await db
+    .select({ orgId: event.orgId, plan: organization.plan })
+    .from(event)
+    .innerJoin(organization, eq(organization.id, event.orgId))
+    .where(and(eq(event.id, eventId), eventAlive, sql`exists (select 1 from membership m where m.org_id = ${event.orgId} and m.user_id = ${userId})`))
+    .limit(1);
+  if (!row) return { error: "No encontrado." as const };
+  if (row.plan === "personal" && (status === "borrador" || status === "confirmado")) {
+    const [other] = await db
+      .select({ n: count() })
+      .from(event)
+      .where(and(eq(event.orgId, row.orgId), eventAlive, eventActive, ne(event.id, eventId)));
+    if (Number(other?.n ?? 0) > 0) return { error: "El plan Personal incluye un evento activo a la vez." as const };
+  }
+  await db.update(event).set({ status }).where(eq(event.id, eventId));
+  return { ok: true as const };
 }
 
 export async function getVenueForOrg(orgId: string, venueId: string) {
@@ -1198,6 +1225,15 @@ export async function trashEvent(eventId: string, userId: string) {
 
 /** Saca un evento de la papelera (solo el negocio dueño). */
 export async function restoreEvent(eventId: string, userId: string) {
+  // Los planes de un solo evento no se brincan con la papelera: Con código, si ya tiene otro; Personal, si ya tiene otro activo.
+  const [target] = await db
+    .select({ orgId: event.orgId, plan: organization.plan, status: event.status })
+    .from(event)
+    .innerJoin(organization, eq(organization.id, event.orgId))
+    .where(eq(event.id, eventId))
+    .limit(1);
+  if (target?.plan === "invitado" && (await countEvents(target.orgId)) > 0) return null;
+  if (target?.plan === "personal" && (target.status === "borrador" || target.status === "confirmado") && (await countEvents(target.orgId, true)) > 0) return null;
   const [row] = await db
     .update(event)
     .set({ deletedAt: null })

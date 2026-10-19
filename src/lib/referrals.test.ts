@@ -51,7 +51,7 @@ describe("códigos de referido", () => {
   it("la cuenta con código dura 30 días después del evento, o 90 sin fecha", () => {
     const now = new Date("2026-10-13T18:00:00Z");
     expect(referralPlanEnd("2026-12-05", now).toISOString()).toBe("2027-01-05T06:59:59.000Z");
-    expect(referralPlanEnd(null, now).toISOString()).toBe("2027-01-11T18:00:00.000Z");
+    expect(referralPlanEnd(null, now).toISOString()).toBe("2027-01-12T06:59:59.000Z");
   });
 
   it("el mes en curso empieza el día 1 a medianoche de Sinaloa", () => {

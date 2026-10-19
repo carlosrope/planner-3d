@@ -1,3 +1,4 @@
+import { addDays, endOfDay, today } from "./dates";
 import { ALL_SECTIONS, PLAN_MODULES, isOrgKind, isPlan, isSection, referralPlanEnd, sectionOf, type OrgKind, type Plan, type Section } from "./domain";
 
 /** Días de la prueba cuando el código no dice otra cosa (decisión del 15 de octubre de 2026: 7 días). */
@@ -63,7 +64,7 @@ export function orgValuesFor(invite: Invite, now = new Date()) {
     planEndsAt: invite.referral
       ? referralPlanEnd(invite.referral.eventDate, now)
       : invite.days
-        ? new Date(now.getTime() + invite.days * 86_400_000)
+        ? endOfDay(addDays(today(now), invite.days))
         : null,
     referralCodeId: invite.referral?.codeId ?? null,
   };
