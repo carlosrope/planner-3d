@@ -201,6 +201,7 @@ export async function restoreEventAdmin(formData: FormData): Promise<void> {
 
 function revalidate(venueId: string) {
   revalidatePath("/admin");
+  revalidatePath("/admin/lugares");
   revalidatePath("/admin/rastro");
   revalidatePath(`/admin/lugares/${venueId}`);
   revalidatePath("/salones", "layout");

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PlanChooser } from "@/components/PlanChooser";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
-import { getReferralOrigin, listEvents, listTrashedEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
+import { getReferralOrigin, isAdmin, listEvents, listTrashedEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
 import { EVENT_KIND_LABELS, EVENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, activeModules, isLitePlan, sectionOf, trashDaysLeft, type Section } from "@/lib/domain";
 import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { formatDate, formatDay, formatInstant } from "@/lib/dates";
@@ -62,8 +62,9 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
   const mine = events.filter((e) => sectionOf(e.venueKind) === section);
   const places = venues.filter((v) => sectionOf(v.kind) === section);
   const count = (s: Section) => events.filter((e) => sectionOf(e.venueKind) === s).length;
-  const planName = origin ? `Con código de ${origin.issuerName}` : PLAN_LABELS[org.plan];
-  const planLine = org.planEndsAt
+  const admin = isAdmin(user);
+  const planName = admin ? "Administración · acceso completo" : origin ? `Con código de ${origin.issuerName}` : PLAN_LABELS[org.plan];
+  const planLine = org.planEndsAt && !admin
     ? `${planName} · ${expired ? "terminó el" : "hasta el"} ${formatInstant(org.planEndsAt, "dayMonth")}`
     : planName;
 

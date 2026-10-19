@@ -67,7 +67,8 @@ test("pago por SPEI con comprobante y confirmación en /admin", async ({ page, b
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   await signUp(admin, { name: "Admin E2E", email: E2E.adminEmail, code: E2E.code });
-  await expect(admin).toHaveURL(/\/eventos/);
+  // La administración entra directo a su panel.
+  await expect(admin).toHaveURL(/\/admin$/);
   await admin.goto("/admin/pagos");
   const card = admin.locator("li", { hasText: planner.name });
   await expect(card).toContainText("Por revisar");
@@ -85,7 +86,7 @@ test("pago por SPEI con comprobante y confirmación en /admin", async ({ page, b
   await expect(entry).toContainText("Folio E2E-001");
 
   // Lugares: mandar a la papelera y restaurar también queda en el rastro.
-  await admin.goto("/admin");
+  await admin.goto("/admin/lugares");
   await admin.getByRole("link", { name: "Casa Chardonnay" }).click();
   await admin.getByRole("button", { name: "Mandar a la papelera" }).click();
   await expect(admin.getByText("En la papelera")).toBeVisible();

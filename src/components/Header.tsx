@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getCurrentUser, requireOrg } from "@/lib/dal";
+import { getCurrentUser, isAdmin, requireOrg } from "@/lib/dal";
 import { isOwnerKind } from "@/lib/domain";
 import { SignOutButton } from "@/app/eventos/SignOutButton";
 
 // Encabezado de toda la app: el logo (La mesa + Plantea) y el menú. Sin sesión: Salones · Casas ·
 // Registra tu lugar · Entrar. Con sesión: Proyectos · Mis lugares (salones y desarrolladoras) ·
-// Mi negocio · Salir. La sesión se lee dentro de <Suspense> (Cache Components).
+// Mi negocio · Salir; la administración: Panel · Proyectos · Salir. La sesión se lee dentro de <Suspense> (Cache Components).
 
 /** La sesión del encabezado nunca tumba la página: si la base no responde, se muestra "Entrar". */
 async function sessionUser() {
@@ -19,6 +19,7 @@ async function sessionUser() {
 
 const link = "rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-900";
 const cta = "rounded-xl bg-[#b5653a] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#a4552d]";
+const panel = "rounded-xl bg-stone-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-stone-700";
 
 export function Logo({ className = "h-7" }: { className?: string }) {
   return (
@@ -57,6 +58,19 @@ async function SessionLinks() {
       </Link>
     );
   }
+  if (isAdmin(user)) {
+    return (
+      <>
+        <Link href="/admin" className={panel}>
+          Panel
+        </Link>
+        <Link href="/eventos" className={link}>
+          Proyectos
+        </Link>
+        <SignOutButton />
+      </>
+    );
+  }
   const org = await requireOrg(user);
   return (
     <>
@@ -83,6 +97,21 @@ async function MobileSessionLinks() {
       <Link href="/entrar" className={`${cta} block text-center`}>
         Entrar
       </Link>
+    );
+  }
+  if (isAdmin(user)) {
+    return (
+      <>
+        <Link href="/admin" className={`${panel} block text-center`}>
+          Panel
+        </Link>
+        <Link href="/eventos" className={`${link} block`}>
+          Proyectos
+        </Link>
+        <div className="px-3 pt-1">
+          <SignOutButton />
+        </div>
+      </>
     );
   }
   const org = await requireOrg(user);

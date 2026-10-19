@@ -45,9 +45,9 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
 
   return (
     <>
-      <AdminNav current="/admin" />
+      <AdminNav current="/admin/lugares" />
       <p className="text-sm text-stone-500">
-        <Link href="/admin" className="underline">
+        <Link href="/admin/lugares" className="underline">
           Lugares
         </Link>
       </p>

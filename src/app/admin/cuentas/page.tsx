@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { adminListOrgs, requireAdmin } from "@/lib/dal";
+import { adminListOrgs, adminOrgIds, requireAdmin } from "@/lib/dal";
 import { ALL_SECTIONS, ORG_KINDS, ORG_KIND_LABELS, PLANS, PLAN_LABELS, SECTIONS, TIERS, TIER_LABELS, isLitePlan, planDaysLeft } from "@/lib/domain";
 import { AdminNav } from "../AdminNav";
 import { updateOrgPlan } from "../actions";
@@ -24,7 +24,7 @@ const dateInput = (d: Date | null) => (d ? dayOf(d) : "");
 
 async function Cuentas() {
   await requireAdmin();
-  const orgs = await adminListOrgs();
+  const [orgs, adminIds] = await Promise.all([adminListOrgs(), adminOrgIds()]);
   return (
     <>
       <AdminNav current="/admin/cuentas" />
@@ -35,7 +35,10 @@ async function Cuentas() {
           <li key={o.id} className="rounded-2xl border border-stone-200 bg-white p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div>
-                <p className="font-semibold">{o.name}</p>
+                <p className="font-semibold">
+                  {o.name}
+                  {adminIds.includes(o.id) && <span className="ml-2 rounded-full bg-stone-900 px-2 py-0.5 text-xs font-medium text-white">Administración</span>}
+                </p>
                 <p className="text-sm text-stone-500">
                   {o.emails || "sin usuarios"} · {o.events} eventos · {o.venues} lugares · {o.referrals} códigos dados · desde {formatDate(o.createdAt)}
                   {o.pendingPayments > 0 && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{o.pendingPayments} pago por revisar</span>}

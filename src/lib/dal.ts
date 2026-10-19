@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, asc, count, desc, eq, exists, gt, isNotNull, isNull, like, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, exists, gt, gte, inArray, isNotNull, isNull, like, notInArray, or, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "./auth";
@@ -24,6 +24,7 @@ import {
 } from "./db/schema";
 import type { DesignerPlan } from "./designer/types";
 import {
+  ALL_SECTIONS,
   activeModules,
   changedFields,
   venueStatusAction,
@@ -123,10 +124,34 @@ export async function requireOrg(user: CurrentUser): Promise<Org> {
     .where(eq(membership.userId, user.id))
     .orderBy(asc(membership.createdAt))
     .limit(1);
-  if (found) return found;
+  if (found) return isAdmin(user) ? withAdminAccess(found) : found;
   const [org] = await db.insert(organization).values({ name: user.name, kind: "planner" }).returning(orgFields);
   await db.insert(membership).values({ orgId: org.id, userId: user.id, role: "owner" });
-  return org;
+  return isAdmin(user) ? withAdminAccess(org) : org;
+}
+
+/**
+ * La cuenta de la administración no es un cliente: siempre tiene salones y casas, sin vencimiento y sin tope de
+ * códigos, para armar demos y probar. Se corrige sola si alguien le cambia el plan.
+ */
+async function withAdminAccess(org: Org): Promise<Org> {
+  const full = { plan: "ambos" as const, modules: [...ALL_SECTIONS], planEndsAt: null, tier: "ilimitado" as const };
+  const ok = org.plan === full.plan && org.planEndsAt === null && org.tier === full.tier && ALL_SECTIONS.every((s) => org.modules.includes(s));
+  if (ok) return org;
+  await db.update(organization).set(full).where(eq(organization.id, org.id));
+  return { ...org, ...full };
+}
+
+/** Negocios de la administración (los de los correos de ADMIN_EMAILS): no cuentan en las métricas ni en la actividad de clientes. */
+export async function adminOrgIds(): Promise<string[]> {
+  const emails = adminEmails();
+  if (!emails.length) return [];
+  const rows = await db
+    .selectDistinct({ id: membership.orgId })
+    .from(membership)
+    .innerJoin(user, eq(user.id, membership.userId))
+    .where(inArray(sql`lower(${user.email})`, emails));
+  return rows.map((r) => r.id);
 }
 
 /** La cuenta tiene activo el módulo de ese tipo de lugar (contratado y con el plan vigente). */
@@ -1228,6 +1253,8 @@ export async function bumpShareView(token: string) {
 }
 
 /** Por cuenta: último inicio de sesión, eventos propios (sin los de ejemplo), última edición, enlaces y vistas. */
+const notAdminOrg = (ids: string[]) => (ids.length ? notInArray(organization.id, ids) : undefined);
+
 export async function adminListActivity() {
   const rows = await db
     .select({
@@ -1248,6 +1275,7 @@ export async function adminListActivity() {
       comments: sql<number>`(select count(*) from comment c join layout l on l.id = c.layout_id join event e on e.id = l.event_id where e.org_id = organization.id and e.deleted_at is null)`,
     })
     .from(organization)
+    .where(notAdminOrg(await adminOrgIds()))
     .orderBy(desc(organization.createdAt));
   const date = (v: Date | string | null) => (v ? new Date(v) : null);
   return rows.map((r) => ({
@@ -1324,6 +1352,74 @@ export async function adminListPilot() {
     clientViews: n(r.clientViews),
     clientComments: n(r.clientComments),
   }));
+}
+
+/** Datos del resumen de /admin, sin las cuentas de la administración. Los cálculos van en admin-dashboard.ts. */
+export async function adminDashboard() {
+  const adminIds = await adminOrgIds();
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+  const month = monthStart();
+  const notAdminEvent = adminIds.length ? notInArray(event.orgId, adminIds) : undefined;
+  const n = (v: number | string | null | undefined) => Number(v ?? 0);
+  const [venues, orgs, payments, money, suggestions, recent, codesGiven, codesUsed, inquiries, linksViewed, events, pilot] = await Promise.all([
+    db
+      .select({ id: venue.id, name: venue.name, slug: venue.slug, status: venue.status, createdAt: venue.createdAt, updatedAt: venue.updatedAt, ownerOrgId: venue.ownerOrgId })
+      .from(venue)
+      .where(venueAlive),
+    db
+      .select({
+        id: organization.id,
+        name: organization.name,
+        plan: organization.plan,
+        planEndsAt: organization.planEndsAt,
+        createdAt: organization.createdAt,
+        paid: sql<boolean>`exists (select 1 from payment p where p.org_id = organization.id and p.status = 'confirmado')`,
+      })
+      .from(organization)
+      .where(notAdminOrg(adminIds)),
+    db
+      .select({ id: payment.id, orgName: organization.name, amount: payment.amount, createdAt: payment.createdAt })
+      .from(payment)
+      .innerJoin(organization, eq(organization.id, payment.orgId))
+      .where(eq(payment.status, "pendiente"))
+      .orderBy(asc(payment.createdAt)),
+    db
+      .select({
+        month: sql<number>`coalesce(sum(case when ${payment.resolvedAt} >= ${month.toISOString()} then ${payment.amount} else 0 end), 0)`,
+        total: sql<number>`coalesce(sum(${payment.amount}), 0)`,
+      })
+      .from(payment)
+      .where(and(eq(payment.status, "confirmado"), adminIds.length ? notInArray(payment.orgId, adminIds) : undefined)),
+    db.select({ n: count() }).from(catalogSuggestion).where(isNull(catalogSuggestion.doneAt)),
+    adminListAudit(8),
+    db.select({ n: count() }).from(referralCode).where(gte(referralCode.createdAt, weekAgo)),
+    db.select({ n: count() }).from(referralCode).where(gte(referralCode.usedAt, weekAgo)),
+    db.select({ n: count() }).from(venueInquiry).where(gte(venueInquiry.createdAt, weekAgo)),
+    db.select({ n: count() }).from(shareLink).where(gte(shareLink.lastViewedAt, weekAgo)),
+    db
+      .select({ n: count() })
+      .from(event)
+      .where(and(gte(event.createdAt, weekAgo), eventAlive, notAdminEvent, sql`${event.title} not like '%(ejemplo)%' and ${event.title} not like '%(muestra)%'`)),
+    adminListPilot(),
+  ]);
+  return {
+    venues,
+    orgs: orgs.map((o) => ({ ...o, paid: Boolean(o.paid) })),
+    payments,
+    collectedMonth: n(money[0]?.month),
+    collectedTotal: n(money[0]?.total),
+    suggestionsOpen: n(suggestions[0]?.n),
+    recent,
+    week: {
+      codesGiven: n(codesGiven[0]?.n),
+      codesUsed: n(codesUsed[0]?.n),
+      inquiries: n(inquiries[0]?.n),
+      linksViewed: n(linksViewed[0]?.n),
+      events: n(events[0]?.n),
+      newAccounts: orgs.filter((o) => o.createdAt >= weekAgo).length,
+    },
+    pilot,
+  };
 }
 
 /** Si a la persona ya se le abrió la guía del diseñador en algún proyecto (se guarda en su cuenta, no en el navegador). */

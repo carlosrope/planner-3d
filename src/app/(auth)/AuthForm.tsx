@@ -39,7 +39,7 @@ export function AuthForm({
     const { error } = await authClient.signIn.social(
       {
         provider: "google",
-        callbackURL: next ?? "/eventos",
+        callbackURL: next ?? "/inicio",
         errorCallbackURL: registering ? "/registro" : "/entrar",
         requestSignUp: registering,
       },
@@ -81,7 +81,7 @@ export function AuthForm({
       );
       return;
     }
-    router.push(next ?? "/eventos");
+    router.push(next ?? "/inicio");
     router.refresh();
   };
 
