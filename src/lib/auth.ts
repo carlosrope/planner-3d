@@ -69,6 +69,10 @@ export const auth = betterAuth({
           clientId: process.env.GOOGLE_CLIENT_ID!.trim(),
           clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
           prompt: "select_account",
+          // Cuentas nuevas solo desde Crear cuenta (requestSignUp); Entrar con Google solo abre las que ya existen.
+          disableImplicitSignUp: true,
+          // Sin la entrada directa con un token de Google: todas pasan por la redirección, donde viaja el código.
+          disableIdTokenSignIn: true,
         },
       }
     : {},
@@ -141,22 +145,25 @@ export const auth = betterAuth({
           const invite = (await inviteFor(raw)) ?? FREE_ACCOUNT;
           pendingInvites.set(created.email.trim().toLowerCase(), invite);
         },
-        // Cada cuenta nueva arranca con su propio negocio, con los módulos y el plan de su invitación.
+        // Cada cuenta nueva arranca con su propio negocio, con los módulos y el plan de su invitación. Si por algún
+        // camino no hay invitación, nace sin plan (nunca con acceso completo).
         after: async (created) => {
           const email = created.email.trim().toLowerCase();
-          const invite = pendingInvites.get(email) ?? FULL_ACCESS;
+          const invite = pendingInvites.get(email) ?? FREE_ACCOUNT;
           pendingInvites.delete(email);
-          const [org] = await db
-            .insert(organization)
-            .values({ name: created.name, ...orgValuesFor(invite) })
-            .returning({ id: organization.id });
-          await db.insert(membership).values({ orgId: org.id, userId: created.id, role: "owner" });
-          if (invite.referral) {
-            await db
-              .update(referralCode)
-              .set({ usedByOrgId: org.id, usedAt: new Date() })
-              .where(and(eq(referralCode.id, invite.referral.codeId), isNull(referralCode.usedAt)));
-          }
+          await db.transaction(async (tx) => {
+            const [org] = await tx
+              .insert(organization)
+              .values({ name: created.name, ...orgValuesFor(invite) })
+              .returning({ id: organization.id });
+            await tx.insert(membership).values({ orgId: org.id, userId: created.id, role: "owner" });
+            if (invite.referral) {
+              await tx
+                .update(referralCode)
+                .set({ usedByOrgId: org.id, usedAt: new Date() })
+                .where(and(eq(referralCode.id, invite.referral.codeId), isNull(referralCode.usedAt)));
+            }
+          });
         },
       },
     },

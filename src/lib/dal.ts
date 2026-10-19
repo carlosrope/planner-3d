@@ -43,6 +43,7 @@ import {
   type VenueStatus,
 } from "./domain";
 import { monthStart, newReferralCode, referralLeft } from "./referrals";
+import { FREE_ACCOUNT, orgValuesFor } from "./invites";
 import { slugify, uniqueSlug } from "./slug";
 
 import { TOKEN_CHARS } from "./tokens";
@@ -125,7 +126,8 @@ export async function requireOrg(user: CurrentUser): Promise<Org> {
     .orderBy(asc(membership.createdAt))
     .limit(1);
   if (found) return isAdmin(user) ? withAdminAccess(found) : found;
-  const [org] = await db.insert(organization).values({ name: user.name, kind: "planner" }).returning(orgFields);
+  // Sin negocio (no debería pasar): se crea sin plan, nunca con el acceso completo que trae el esquema por omisión.
+  const [org] = await db.insert(organization).values({ name: user.name, ...orgValuesFor(FREE_ACCOUNT) }).returning(orgFields);
   await db.insert(membership).values({ orgId: org.id, userId: user.id, role: "owner" });
   return isAdmin(user) ? withAdminAccess(org) : org;
 }
