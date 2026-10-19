@@ -13,7 +13,8 @@ export async function GET(request: Request, ctx: RouteContext<"/v/[token]">) {
   // Cuenta la visita de una persona (no la vista previa que arma WhatsApp al pegar el enlace).
   if (!isPreviewBot(request.headers.get("user-agent"))) await bumpShareView(token);
   const url = new URL(request.url);
-  const wanted = url.searchParams.get("d") ?? data.firstLayoutId;
+  // Sin ?d= abre la distribución recomendada (o la primera), como dice el diálogo de Compartir.
+  const wanted = url.searchParams.get("d");
   // ?visita: el enlace abre directo la visita guiada (lo arranca host.js)
   const tour = url.searchParams.has("visita");
   const full = withStarter(plan, { guests: data.event.guestCount ?? 0, kind: data.event.kind });

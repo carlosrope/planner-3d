@@ -1,9 +1,9 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canEditLayout, getCurrentUser } from "@/lib/dal";
 import { db } from "@/lib/db";
-import { layout } from "@/lib/db/schema";
+import { layout, shareLink } from "@/lib/db/schema";
 import { designDocSchema } from "@/lib/designer/schema";
 import type { DesignDoc } from "@/lib/designer/types";
 
@@ -89,13 +89,19 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/layouts/
   if (!(await canEditLayout(id, user.id))) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
 
   const [target] = await db.select({ eventId: layout.eventId }).from(layout).where(eq(layout.id, id));
-  const [{ total }] = await db
-    .select({ total: sql<number>`count(*)` })
+  if (!target) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+  // Otra distribución del evento (la recomendada, si hay) para los enlaces que ya se mandaron con esta.
+  const [heir] = await db
+    .select({ id: layout.id })
     .from(layout)
-    .where(eq(layout.eventId, target.eventId));
-  if (Number(total) <= 1) {
-    return NextResponse.json({ error: "Debe quedar al menos una distribución." }, { status: 409 });
-  }
-  await db.delete(layout).where(eq(layout.id, id));
+    .where(and(eq(layout.eventId, target.eventId), ne(layout.id, id)))
+    .orderBy(desc(layout.recommended), asc(layout.position))
+    .limit(1);
+  if (!heir) return NextResponse.json({ error: "Debe quedar al menos una distribución." }, { status: 409 });
+  // Los enlaces que ya se compartieron siguen funcionando: pasan a otra distribución en lugar de borrarse con esta.
+  await db.transaction(async (tx) => {
+    await tx.update(shareLink).set({ layoutId: heir.id }).where(eq(shareLink.layoutId, id));
+    await tx.delete(layout).where(eq(layout.id, id));
+  });
   return NextResponse.json({ ok: true });
 }
