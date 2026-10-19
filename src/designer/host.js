@@ -90,6 +90,44 @@
     tip.style.left = `${Math.max(8, Math.min(innerWidth - tip.offsetWidth - 8, r.left + r.width / 2 - tip.offsetWidth / 2))}px`;
   }
 
+  // ---------------------------------------------------------------- copia en este dispositivo
+  // Si un cambio no llega al servidor (la sesión venció, otra persona guardó, se fue la señal y se cerró la pestaña),
+  // queda una copia en el teléfono o la computadora, y al volver a abrir el evento se ofrece recuperarla.
+  const BACKUP_KEY = id => 'plantea-respaldo-' + id;
+  let backupTimer = 0;
+  function backup(dist) {
+    clearTimeout(backupTimer);
+    backupTimer = setTimeout(() => {
+      try { localStorage.setItem(BACKUP_KEY(dist.id), JSON.stringify({ revision: dist.revision, at: Date.now(), doc: dist.doc })); } catch { /* sin espacio o sin almacenamiento */ }
+    }, 800);
+  }
+  function dropBackup(dist) {
+    clearTimeout(backupTimer);
+    try { localStorage.removeItem(BACKUP_KEY(dist.id)); } catch { /* sin almacenamiento */ }
+  }
+  function readBackup(dist) {
+    try { const b = JSON.parse(localStorage.getItem(BACKUP_KEY(dist.id)) || 'null'); return b && b.doc && b.doc.levels ? b : null; } catch { return null; }
+  }
+  async function offerBackup() {
+    const b = readBackup(active);
+    if (!b) return;
+    if (JSON.stringify(b.doc) === JSON.stringify(docOf(active))) { dropBackup(active); return; }
+    const mins = Math.max(1, Math.round((Date.now() - b.at) / 60000));
+    const ago = mins < 60 ? t(`${mins} min ago`, `hace ${mins} min`) : mins < 1440 ? t(`${Math.round(mins / 60)} h ago`, `hace ${Math.round(mins / 60)} h`) : t(`${Math.round(mins / 1440)} days ago`, `hace ${Math.round(mins / 1440)} días`);
+    const newer = b.revision !== active.revision;
+    const ok = await window.plConfirm(
+      t(`This device has changes to layout ${active.name} that were not saved (${ago}). Recover them?${newer ? ' Someone saved after that: recovering replaces their version.' : ''}`,
+        `En este dispositivo hay cambios de la distribución ${active.name} que no se guardaron (${ago}). ¿Los recuperas?${newer ? ' Ojo: alguien guardó después; si los recuperas, reemplazan esa versión.' : ''}`),
+      { ok: t('Recover', 'Recuperar'), cancel: t('Discard', 'Descartar') },
+    );
+    if (!ok) { dropBackup(active); return; }
+    active.doc = b.doc;
+    pending = true;
+    setStatus('saving');
+    await flush();
+    if (!pending && !conflict) location.reload();
+  }
+
   function save(lv, state) {
     levelId = lv;
     docOf(active).levels[lv] = clone(state);
@@ -97,7 +135,10 @@
       if (!warned) { warned = true; api?.toast(t('This is a view link: changes are not saved', 'Es una vista para compartir: los cambios no se guardan')); }
       return;
     }
+    backup(active);
     pending = true;
+    // Después de un error que pide recargar, ya no se guarda: el aviso de error se queda (no vuelve a "Guardando…").
+    if (conflict) { paintStatus(); return; }
     setStatus('saving');
     clearTimeout(timer);
     timer = setTimeout(flush, 700);
@@ -111,7 +152,11 @@
     const dist = active;
     let failed = false;
     saving = request('PUT', `/api/layouts/${dist.id}`, { doc: dist.doc, revision: dist.revision })
-      .then(r => { dist.revision = r.revision; setStatus(pending ? 'saving' : 'saved'); })
+      .then(r => {
+        dist.revision = r.revision;
+        if (!pending) dropBackup(dist);
+        setStatus(pending ? 'saving' : 'saved');
+      })
       .catch(e => {
         if (e.status === 400) {
           conflict = true;
@@ -148,11 +193,17 @@
     return false;
   }
 
-  // Al cerrar o cambiar de página se manda lo pendiente aunque la página ya no espere la respuesta.
+  // Al pasar a otra app (WhatsApp, la cámara) se guarda ya: en el celular la pestaña puede no volver.
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && EDIT && pending && !conflict) flush(); });
+  // Al cerrar o cambiar de página se manda lo pendiente aunque la página ya no espere la respuesta (keepalive acepta
+  // hasta 64 KB; si es más grande, queda la copia del dispositivo).
   addEventListener('pagehide', () => {
-    if (pending && !conflict && EDIT) request('PUT', `/api/layouts/${active.id}`, { doc: active.doc, revision: active.revision }, true).catch(() => {});
+    if (!pending || conflict || !EDIT) return;
+    const body = { doc: active.doc, revision: active.revision };
+    if (JSON.stringify(body).length < 60_000) request('PUT', `/api/layouts/${active.id}`, body, true).catch(() => {});
   });
-  addEventListener('beforeunload', e => { if (EDIT && (pending || saving) && !conflict) e.preventDefault(); });
+  // Avisa antes de salir si hay cambios sin guardar, también después de un error.
+  addEventListener('beforeunload', e => { if (EDIT && (pending || saving)) e.preventDefault(); });
 
   // ---------------------------------------------------------------- distribuciones
   function syncUrl() {
@@ -705,6 +756,7 @@
       syncUrl();
       renderBar();
       if (TOUR_LINK) tourIntro(); else if (!EDIT && !ARRIVED && !coverSeen()) clientWelcome();
+      if (EDIT) setTimeout(offerBackup, 600);
     },
   };
 })();

@@ -2118,6 +2118,15 @@ sub(
 )
 
 
+# Topes iguales a los del servidor (src/lib/designer/schema.ts: nombres de 80 caracteres, medidas hasta 100 m): un nombre
+# pegado muy largo hacía que el guardado se rechazara.
+sub('<input id="rName" value="${esc(nm(st.name))}">', '<input id="rName" maxlength="80" value="${esc(nm(st.name))}">')
+sub('<input id="fName" value="${esc(nm(f.name))}">', '<input id="fName" maxlength="80" value="${esc(nm(f.name))}">')
+sub("state.rooms[id].name = e.target.value.trim() || state.rooms[id].name", "state.rooms[id].name = e.target.value.trim().slice(0, 80) || state.rooms[id].name")
+sub("g.name = e.target.value.trim() || g.name", "g.name = e.target.value.trim().slice(0, 80) || g.name")
+sub("num('#fW', (g,v) => g.w = Math.max(50, Math.round(v)));", "num('#fW', (g,v) => g.w = Math.min(100000, Math.max(50, Math.round(v))));")
+sub("num('#fD', (g,v) => g.d = Math.max(50, Math.round(v)));", "num('#fD', (g,v) => g.d = Math.min(100000, Math.max(50, Math.round(v))));")
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")
