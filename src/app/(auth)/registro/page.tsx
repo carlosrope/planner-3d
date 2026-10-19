@@ -22,7 +22,12 @@ export default function RegistroPage({ searchParams }: PageProps<"/registro">) {
 async function Registro({ searchParams }: { searchParams: PageProps<"/registro">["searchParams"] }) {
   const { codigo, error } = await searchParams;
   const google = googleEnabled();
-  const googleError = typeof error === "string" ? "No se pudo crear tu cuenta con Google. Revisa tu código o crea la cuenta con tu correo." : undefined;
+  const googleError =
+    error === "account_not_linked"
+      ? "Ese correo ya tiene cuenta en Plantea. Entra con tu correo y tu contraseña."
+      : typeof error === "string"
+        ? "No se pudo crear tu cuenta con Google. Revisa tu código o crea la cuenta con tu correo."
+        : undefined;
   const code = typeof codigo === "string" ? normalizeReferralCode(codigo) : null;
   const ref = code ? await getReferralInvite(code) : null;
   if (!ref) {
@@ -31,7 +36,7 @@ async function Registro({ searchParams }: { searchParams: PageProps<"/registro">
         mode="registro"
        
         google={google}
-        notice={code ? "Ese código ya se usó o ya no es válido. Pídele otro a quien te lo dio." : googleError}
+        notice={googleError ?? (code ? "Ese código ya se usó o ya no es válido. Pídele otro a quien te lo dio." : undefined)}
       />
     );
   }
@@ -41,7 +46,7 @@ async function Registro({ searchParams }: { searchParams: PageProps<"/registro">
       mode="registro"
       inviteValue={ref.code}
       google={google}
-      notice={`Código de ${ref.issuer.name} para ${ref.guestName}: tu evento en ${ref.venue.name}${ref.eventDate ? ` el ${formatDay(ref.eventDate, "dayMonth")}` : ""} en 3D, sin costo. Crea tu cuenta y arma tu plano.`}
+      notice={`${googleError ? `${googleError} ` : ""}Código de ${ref.issuer.name} para ${ref.guestName}: tu evento en ${ref.venue.name}${ref.eventDate ? ` el ${formatDay(ref.eventDate, "dayMonth")}` : ""} en 3D, sin costo. Crea tu cuenta y arma tu plano.`}
       next={`/eventos?lugar=${encodeURIComponent(slug)}`}
     />
   );

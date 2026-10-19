@@ -40,7 +40,8 @@ export function AuthForm({
       {
         provider: "google",
         callbackURL: next ?? "/inicio",
-        errorCallbackURL: registering ? "/registro" : "/entrar",
+        // Si Google falla al crear la cuenta, se regresa con el código para no perderlo.
+        errorCallbackURL: registering ? (invite ? `/registro?codigo=${encodeURIComponent(invite)}` : "/registro") : "/entrar",
         requestSignUp: registering,
       },
       { headers: invite ? { "x-invite-code": invite } : {} },
