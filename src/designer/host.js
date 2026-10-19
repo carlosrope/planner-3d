@@ -163,11 +163,27 @@
           setStatus('error', t('invalid data, reload the page', 'datos inválidos, recarga la página'));
           window.plAlert(t('This change could not be saved (invalid data). Reload the page; if it happens again, let us know.',
             'Este cambio no se pudo guardar (datos inválidos). Recarga la página; si vuelve a pasar, avísanos.'));
-        } else if (e.status === 401 || e.status === 404) {
+        } else if (e.status === 403) {
+          // El plan terminó mientras editaba: lo hecho queda en este dispositivo y se recupera al renovar.
+          conflict = true;
+          setStatus('error', t('your plan ended', 'tu plan terminó'));
+          window.plAlert(t('Your Plantea plan ended, so this change was not saved. Your changes stay on this device: renew your plan in My business and open the event again to recover them.',
+            'Tu plan de Plantea terminó, por eso este cambio no se guardó. Tus cambios quedan guardados en este dispositivo: renueva tu plan en Mi negocio y vuelve a abrir el evento para recuperarlos.'));
+        } else if (e.status === 413) {
+          conflict = true;
+          setStatus('error', t('the design is too large', 'el diseño es demasiado grande'));
+          window.plAlert(t('This design is too large to save. Remove some furniture or guests, or let us know.',
+            'Este diseño es demasiado grande para guardarlo. Quita algunos muebles o invitados, o avísanos.'));
+        } else if (e.status === 401) {
           conflict = true;
           setStatus('error', t('your session ended', 'tu sesión terminó'));
-          window.plAlert(t('Your session ended. Sign in again in another tab and reload this page; your last change was not saved.',
-            'Tu sesión terminó. Vuelve a entrar en otra pestaña y recarga esta página; el último cambio no se guardó.'));
+          window.plAlert(t('Your session ended. Sign in again in another tab and reload this page; your changes stay on this device.',
+            'Tu sesión terminó. Vuelve a entrar en otra pestaña y recarga esta página; tus cambios quedan guardados en este dispositivo.'));
+        } else if (e.status === 404) {
+          conflict = true;
+          setStatus('error', t('this event is no longer available', 'este evento ya no está disponible'));
+          window.plAlert(t('This event is no longer available (it was deleted or you no longer have access). Your last change was not saved.',
+            'Este evento ya no está disponible (lo mandaron a la papelera o ya no tienes acceso). El último cambio no se guardó.'));
         } else if (e.status === 409) {
           conflict = true;
           setStatus('error', t('someone else saved this layout', 'otra persona guardó esta distribución'));

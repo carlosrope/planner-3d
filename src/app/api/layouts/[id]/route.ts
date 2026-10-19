@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { canEditLayout, getCurrentUser } from "@/lib/dal";
+import { getCurrentUser, layoutAccess } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { layout, shareLink } from "@/lib/db/schema";
 import { designDocSchema } from "@/lib/designer/schema";
@@ -9,19 +9,32 @@ import type { DesignDoc } from "@/lib/designer/types";
 
 const saveBody = z.object({ doc: designDocSchema, revision: z.number().int().min(1) });
 
+/** Tope de un guardado: un salón con 3,000 muebles e invitados pesa menos de 2 MB. */
+const MAX_SAVE_BYTES = 5_000_000;
+
+/** Respuesta cuando no se puede editar: el plan terminó (403, con su propio aviso) o no existe para esta cuenta (404). */
+async function denied(id: string, userId: string) {
+  const access = await layoutAccess(id, userId);
+  if (access === "ok") return null;
+  return access === "plan"
+    ? NextResponse.json({ error: "Tu plan terminó.", code: "plan_ended" }, { status: 403 })
+    : NextResponse.json({ error: "No encontrado." }, { status: 404 });
+}
+
 /** Guarda el montaje solo si nadie lo cambió desde la revisión que tiene el cliente. */
 export async function PUT(request: Request, ctx: RouteContext<"/api/layouts/[id]">) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
 
   const { id } = await ctx.params;
-  if (!(await canEditLayout(id, user.id))) {
-    return NextResponse.json({ error: "No encontrado." }, { status: 404 });
-  }
+  const no = await denied(id, user.id);
+  if (no) return no;
 
+  const text = await request.text();
+  if (text.length > MAX_SAVE_BYTES) return NextResponse.json({ error: "El diseño es demasiado grande para guardarlo." }, { status: 413 });
   let json: unknown;
   try {
-    json = await request.json();
+    json = JSON.parse(text);
   } catch {
     return NextResponse.json({ error: "Cuerpo inválido." }, { status: 400 });
   }
@@ -60,7 +73,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/layouts/[i
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
   const { id } = await ctx.params;
-  if (!(await canEditLayout(id, user.id))) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+  const no = await denied(id, user.id);
+  if (no) return no;
 
   const parsed = metaBody.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
@@ -86,7 +100,8 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/layouts/
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
   const { id } = await ctx.params;
-  if (!(await canEditLayout(id, user.id))) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+  const no = await denied(id, user.id);
+  if (no) return no;
 
   const [target] = await db.select({ eventId: layout.eventId }).from(layout).where(eq(layout.id, id));
   if (!target) return NextResponse.json({ error: "No encontrado." }, { status: 404 });

@@ -294,7 +294,11 @@ export async function canEditEvent(eventId: string, userId: string) {
 }
 
 /** El montaje existe y el usuario puede editarlo (miembro del negocio y módulo activo). */
-export async function canEditLayout(layoutId: string, userId: string) {
+/**
+ * Si el usuario puede editar la distribución: "ok"; "plan" si es de su negocio pero el plan terminó (o no incluye ese
+ * módulo); "none" si no existe, está en la papelera o no es de su negocio.
+ */
+export async function layoutAccess(layoutId: string, userId: string): Promise<"ok" | "plan" | "none"> {
   const [row] = await db
     .select({ venueKind: venue.kind, modules: organization.modules, planEndsAt: organization.planEndsAt })
     .from(layout)
@@ -304,8 +308,11 @@ export async function canEditLayout(layoutId: string, userId: string) {
     .innerJoin(organization, eq(organization.id, event.orgId))
     .where(and(eq(layout.id, layoutId), eventAlive, venueAlive))
     .limit(1);
-  return Boolean(row && moduleActive(row, row.venueKind));
+  if (!row) return "none";
+  return moduleActive(row, row.venueKind) ? "ok" : "plan";
 }
+
+export const canEditLayout = async (layoutId: string, userId: string) => (await layoutAccess(layoutId, userId)) === "ok";
 
 /** Evento abierto con un enlace para compartir (solo lectura; no pide sesión). */
 export async function getSharedEvent(token: string) {
