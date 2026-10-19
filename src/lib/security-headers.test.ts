@@ -27,4 +27,10 @@ describe("cabeceras de seguridad", () => {
     expect(re.test("/v/abc123")).toBe(false);
     expect(re.test("/lugares/palmas/3d")).toBe(false);
   });
+
+  it("la CSP deja cargar Cloudflare Web Analytics y mandar sus visitas", () => {
+    const prod = contentSecurityPolicy({ dev: false, embeddable: false });
+    expect(prod).toMatch(/script-src [^;]*https:\/\/static\.cloudflareinsights\.com/);
+    expect(prod).toMatch(/connect-src [^;]*https:\/\/cloudflareinsights\.com/);
+  });
 });

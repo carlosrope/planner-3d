@@ -1,7 +1,8 @@
 /**
  * Cabeceras de seguridad (next.config.ts). Puro, sin Next: cubierto por security-headers.test.ts.
  *
- * - CSP básica: todo de la propia app, más three.js desde cdn.jsdelivr.net (importmap del diseñador).
+ * - CSP básica: todo de la propia app, más three.js desde cdn.jsdelivr.net (importmap del diseñador) y Cloudflare Web
+ *   Analytics (visitas sin cookies: el script de static.cloudflareinsights.com y su envío a cloudflareinsights.com).
  *   'unsafe-inline' en scripts porque el diseñador lleva sus datos en <script> en línea; 'unsafe-eval' solo en
  *   desarrollo (lo pide Next para recargar en caliente).
  * - X-Frame-Options SAMEORIGIN en toda la app (la portada automática abre el 3D en un iframe propio), salvo el
@@ -12,11 +13,11 @@ type Header = { key: string; value: string };
 export function contentSecurityPolicy({ dev, embeddable }: { dev: boolean; embeddable: boolean }): string {
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
-    "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", ...(dev ? ["'unsafe-eval'"] : [])],
+    "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://static.cloudflareinsights.com", ...(dev ? ["'unsafe-eval'"] : [])],
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:"],
     "font-src": ["'self'", "data:"],
-    "connect-src": ["'self'", "https://cdn.jsdelivr.net", ...(dev ? ["ws:", "wss:"] : [])],
+    "connect-src": ["'self'", "https://cdn.jsdelivr.net", "https://cloudflareinsights.com", ...(dev ? ["ws:", "wss:"] : [])],
     "media-src": ["'self'", "blob:"],
     "worker-src": ["'self'", "blob:"],
     "frame-src": ["'self'"],
