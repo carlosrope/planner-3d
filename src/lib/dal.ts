@@ -42,7 +42,7 @@ import {
   type VenueKind,
   type VenueStatus,
 } from "./domain";
-import { monthStart, newReferralCode, referralLeft } from "./referrals";
+import { monthStart, newReferralCode, referralCodeCandidates, referralLeft } from "./referrals";
 import { FREE_ACCOUNT, orgValuesFor } from "./invites";
 import { slugify, uniqueSlug } from "./slug";
 
@@ -842,9 +842,21 @@ export async function referralAllowance(org: Pick<Org, "id" | "kind" | "plan" | 
 
 /** Genera un código para un cliente en un lugar que el negocio puede usar; respeta el tope del mes. */
 export async function createReferralCode(org: Org, venueId: string, guestName: string, eventDate: string | null) {
-  const { left } = await referralAllowance(org);
-  if (left === 0) return { error: "Ya diste todos los códigos de este mes." as const };
-  const [place] = await db
+  // Un código a la vez por negocio: dos clics al mismo tiempo no rebasan el tope del mes.
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"referral:" + org.id}))`);
+    return createReferralCodeLocked(tx, org, venueId, guestName, eventDate);
+  });
+}
+
+async function createReferralCodeLocked(tx: Tx, org: Org, venueId: string, guestName: string, eventDate: string | null) {
+  const quota = activeModules(org).length ? referralQuota(org) : 0;
+  const [given] = await tx
+    .select({ n: count() })
+    .from(referralCode)
+    .where(and(eq(referralCode.orgId, org.id), gt(referralCode.createdAt, monthStart())));
+  if (referralLeft(quota, Number(given?.n ?? 0)) === 0) return { error: "Ya diste todos los códigos de este mes." as const };
+  const [place] = await tx
     .select({ id: venue.id, name: venue.name })
     .from(venue)
     .where(and(eq(venue.id, venueId), venueVisibleTo(org.id), isNotNull(venue.plan)))
@@ -853,7 +865,7 @@ export async function createReferralCode(org: Org, venueId: string, guestName: s
   // Si el código generado ya existe (muy raro), se intenta otra vez.
   for (let i = 0; i < 5; i++) {
     const code = newReferralCode(place.name, (n) => new Uint8Array(randomBytes(n)));
-    const [created] = await db
+    const [created] = await tx
       .insert(referralCode)
       .values({ code, orgId: org.id, venueId: place.id, guestName, eventDate })
       .onConflictDoNothing({ target: referralCode.code })
@@ -864,7 +876,9 @@ export async function createReferralCode(org: Org, venueId: string, guestName: s
 }
 
 /** Un código sin usar, con su lugar y quién lo dio; null si no existe, ya se usó o el plan de quien lo dio terminó. */
-export async function getReferralInvite(code: string) {
+export async function getReferralInvite(raw: string) {
+  const codes = referralCodeCandidates(raw);
+  if (!codes.length) return null;
   const [row] = await db
     .select({
       id: referralCode.id,
@@ -878,7 +892,7 @@ export async function getReferralInvite(code: string) {
     .from(referralCode)
     .innerJoin(venue, eq(venue.id, referralCode.venueId))
     .innerJoin(organization, eq(organization.id, referralCode.orgId))
-    .where(eq(referralCode.code, code))
+    .where(inArray(referralCode.code, codes))
     .limit(1);
   if (!row || row.usedAt || row.venue.status === "retirado") return null;
   if (!activeModules(row.issuer).includes(sectionOf(row.venue.kind))) return null;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dayOf, endOfDay, formatDay, formatInstant, monthOf, startOfDay, today } from "./dates";
+import { addDays, dayOf, endOfDay, formatDay, formatInstant, isRealDay, monthOf, startOfDay, today } from "./dates";
 
 describe("fechas en America/Mazatlan", () => {
   it("un día de calendario no cambia de día", () => {
@@ -36,5 +36,13 @@ describe("calendario", () => {
     expect(g[0]).toBe("2026-09-28");
     expect(g[3]).toBe("2026-10-01");
     expect(g[41]).toBe("2026-11-08");
+  });
+
+  it("reconoce los días que sí existen", () => {
+    expect(isRealDay("2026-02-28")).toBe(true);
+    expect(isRealDay("2028-02-29")).toBe(true);
+    expect(isRealDay("2026-02-31")).toBe(false);
+    expect(isRealDay("2026-13-01")).toBe(false);
+    expect(isRealDay("26-01-01")).toBe(false);
   });
 });

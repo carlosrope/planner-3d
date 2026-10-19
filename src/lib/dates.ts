@@ -57,6 +57,11 @@ export const dayOf = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: A
 
 /** Hoy en Los Mochis, "AAAA-MM-DD". */
 export const today = (now = new Date()) => dayOf(now);
+/** AAAA-MM-DD que existe en el calendario (no 2026-02-31). */
+export const isRealDay = (day: string) => {
+  const d = new Date(`${day}T12:00:00Z`);
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === day;
+};
 
 /** Suma días a un día de calendario. */
 export function addDays(day: string, n: number) {

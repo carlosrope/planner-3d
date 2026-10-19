@@ -4,11 +4,11 @@ import { APIError, addOAuthServerContext, createAuthMiddleware, getOAuthState } 
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { account, membership, organization, referralCode, session, user, venue, verification } from "./db/schema";
 import { activeModules, sectionOf } from "./domain";
 import { FREE_ACCOUNT, FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, type Invite } from "./invites";
-import { normalizeReferralCode } from "./referrals";
+import { referralCodeCandidates } from "./referrals";
 import { lanOrigins } from "./lan";
 import { passwordResetEmail, sendEmail } from "./email";
 import { googleEnabled } from "./google";
@@ -25,8 +25,8 @@ const invites = parseInvites(process.env.SIGNUP_CODES, process.env.SIGNUP_CODE);
 
 /** Código de referido sin usar, de un lugar que sigue en el catálogo y de un negocio con el plan vigente. */
 async function referralFor(raw: string): Promise<Invite | null> {
-  const code = normalizeReferralCode(raw);
-  if (!code) return null;
+  const codes = referralCodeCandidates(raw);
+  if (!codes.length) return null;
   const [row] = await db
     .select({
       id: referralCode.id,
@@ -40,7 +40,7 @@ async function referralFor(raw: string): Promise<Invite | null> {
     .from(referralCode)
     .innerJoin(venue, eq(venue.id, referralCode.venueId))
     .innerJoin(organization, eq(organization.id, referralCode.orgId))
-    .where(eq(referralCode.code, code))
+    .where(inArray(referralCode.code, codes))
     .limit(1);
   if (!row || row.usedAt || row.venueStatus === "retirado") return null;
   if (!activeModules(row).includes(sectionOf(row.venueKind))) return null;
@@ -152,17 +152,22 @@ export const auth = betterAuth({
           const invite = pendingInvites.get(email) ?? FREE_ACCOUNT;
           pendingInvites.delete(email);
           await db.transaction(async (tx) => {
+            // El código de referido se aparta primero: si dos personas se registran a la vez con el mismo, solo
+            // una se lo queda; la otra entra sin plan (y puede pedir otro código).
+            const claimed = invite.referral
+              ? await tx
+                  .update(referralCode)
+                  .set({ usedAt: new Date() })
+                  .where(and(eq(referralCode.id, invite.referral.codeId), isNull(referralCode.usedAt)))
+                  .returning({ id: referralCode.id })
+              : [];
+            const final = invite.referral && !claimed.length ? FREE_ACCOUNT : invite;
             const [org] = await tx
               .insert(organization)
-              .values({ name: created.name, ...orgValuesFor(invite) })
+              .values({ name: created.name, ...orgValuesFor(final) })
               .returning({ id: organization.id });
             await tx.insert(membership).values({ orgId: org.id, userId: created.id, role: "owner" });
-            if (invite.referral) {
-              await tx
-                .update(referralCode)
-                .set({ usedByOrgId: org.id, usedAt: new Date() })
-                .where(and(eq(referralCode.id, invite.referral.codeId), isNull(referralCode.usedAt)));
-            }
+            if (claimed.length) await tx.update(referralCode).set({ usedByOrgId: org.id }).where(eq(referralCode.id, claimed[0].id));
           });
         },
       },

@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Suspense } from "react";
 import { getReferralInvite } from "@/lib/dal";
 import { normalizeReferralCode } from "@/lib/referrals";
 import { AuthForm } from "../AuthForm";
 import { formatDay } from "@/lib/dates";
 import { googleEnabled } from "@/lib/google";
+import { clientIp, makeLimiter } from "@/lib/suggestion";
 
 export const metadata: Metadata = { title: "Crear cuenta" };
+
+// Para que nadie pruebe códigos al azar: 30 consultas por hora desde la misma conexión.
+const lookups = makeLimiter(30, 60 * 60 * 1000);
 
 
 export default function RegistroPage({ searchParams }: PageProps<"/registro">) {
@@ -29,7 +34,11 @@ async function Registro({ searchParams }: { searchParams: PageProps<"/registro">
         ? "No se pudo crear tu cuenta con Google. Revisa tu código o crea la cuenta con tu correo."
         : undefined;
   const code = typeof codigo === "string" ? normalizeReferralCode(codigo) : null;
-  const ref = code ? await getReferralInvite(code) : null;
+  const limited = code ? !lookups(clientIp(await headers())) : false;
+  const ref = code && !limited ? await getReferralInvite(String(codigo)) : null;
+  if (limited) {
+    return <AuthForm mode="registro" google={google} notice="Probaste muchos códigos seguidos. Espera una hora o pídele el enlace a tu salón." />;
+  }
   if (!ref) {
     return (
       <AuthForm

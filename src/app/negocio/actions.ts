@@ -7,6 +7,7 @@ import { createPayment, createReferralCode, requireOrg, requireUser, setReferral
 import { MAX_BODY_LENGTH, MESSAGE_STYLES, serializeSetting } from "@/lib/referral-message";
 import { db } from "@/lib/db";
 import { organization } from "@/lib/db/schema";
+import { isRealDay, today } from "@/lib/dates";
 import { isReceipt, storedType } from "@/lib/uploads";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 
@@ -105,6 +106,10 @@ export async function createReferral(_prev: ReferralState, formData: FormData): 
   const parsed = referralBody.safeParse({ venueId: formData.get("venueId"), guestName: formData.get("guestName"), eventDate: formData.get("eventDate") ?? "" });
   if (!parsed.success) return { error: "Escribe el nombre del cliente y elige el lugar." };
   const d = parsed.data;
+  // Una fecha pasada (por ejemplo, el año equivocado) crearía una cuenta que ya nació vencida.
+  if (d.eventDate && (!isRealDay(d.eventDate) || d.eventDate < today())) {
+    return { error: "La fecha del evento ya pasó. Revisa el día, el mes y el año." };
+  }
   const result = await createReferralCode(org, d.venueId, d.guestName, d.eventDate || null);
   if ("error" in result) return { error: result.error };
   revalidatePath("/negocio");

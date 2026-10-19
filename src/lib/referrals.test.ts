@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { referralPlanEnd, referralQuota } from "./domain";
-import { monthStart, newReferralCode, normalizeReferralCode, referralLeft, referralPrefix } from "./referrals";
+import { monthStart, newReferralCode, normalizeReferralCode, referralCodeCandidates, referralLeft, referralPrefix } from "./referrals";
 
 describe("códigos de referido", () => {
   it("el prefijo recuerda al lugar, sin acentos ni artículos", () => {
@@ -10,9 +10,17 @@ describe("códigos de referido", () => {
     expect(referralPrefix("   ")).toBe("PLANTE");
   });
 
-  it("el código lleva cuatro caracteres legibles después del guion", () => {
+  it("el código lleva seis caracteres legibles después del guion", () => {
     const code = newReferralCode("Salón Las Palmas", (n) => new Uint8Array(n).map((_, i) => i * 7));
-    expect(code).toMatch(/^LASPAL-[2-9A-HJKMNP-Z]{4}$/);
+    expect(code).toMatch(/^LASPAL-[2-9A-HJKMNP-Z]{6}$/);
+  });
+
+  it("encuentra el código nuevo aunque lo escriban sin guion, y los viejos de cuatro siguen", () => {
+    expect(referralCodeCandidates("laspal7k3mq2")).toEqual(["LASPAL7K3MQ2", "LASPAL-7K3MQ2"]);
+    expect(referralCodeCandidates("LASPAL-7K3MQ2")).toEqual(["LASPAL-7K3MQ2"]);
+    // Sin guion puede ser un código viejo (prefijo de 6 + 4) o uno nuevo con prefijo corto (4 + 6): se buscan los dos.
+    expect(referralCodeCandidates("laspal7k3m")).toEqual(["LASPAL-7K3M", "LASP-AL7K3M"]);
+    expect(referralCodeCandidates("")).toEqual([]);
   });
 
   it("acepta el código como lo escriba el cliente", () => {
