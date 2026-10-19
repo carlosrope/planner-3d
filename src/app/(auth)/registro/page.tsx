@@ -8,12 +8,10 @@ import { googleEnabled } from "@/lib/google";
 
 export const metadata: Metadata = { title: "Crear cuenta" };
 
-// En el dominio de prueba (SIGNUP_CODE definido) solo se registra quien tenga el código.
-const inviteRequired = Boolean(process.env.SIGNUP_CODE || process.env.SIGNUP_CODES);
 
 export default function RegistroPage({ searchParams }: PageProps<"/registro">) {
   return (
-    <Suspense fallback={<AuthForm mode="registro" inviteRequired={inviteRequired} />}>
+    <Suspense fallback={<AuthForm mode="registro" />}>
       <Registro searchParams={searchParams} />
     </Suspense>
   );
@@ -31,7 +29,7 @@ async function Registro({ searchParams }: { searchParams: PageProps<"/registro">
     return (
       <AuthForm
         mode="registro"
-        inviteRequired={inviteRequired}
+       
         google={google}
         notice={code ? "Ese código ya se usó o ya no es válido. Pídele otro a quien te lo dio." : googleError}
       />
@@ -41,7 +39,6 @@ async function Registro({ searchParams }: { searchParams: PageProps<"/registro">
   return (
     <AuthForm
       mode="registro"
-      inviteRequired
       inviteValue={ref.code}
       google={google}
       notice={`Código de ${ref.issuer.name} para ${ref.guestName}: tu evento en ${ref.venue.name}${ref.eventDate ? ` el ${formatDay(ref.eventDate, "dayMonth")}` : ""} en 3D, sin costo. Crea tu cuenta y arma tu plano.`}

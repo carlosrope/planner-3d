@@ -7,7 +7,7 @@ import { db } from "./db";
 import { and, eq, isNull } from "drizzle-orm";
 import { account, membership, organization, referralCode, session, user, venue, verification } from "./db/schema";
 import { activeModules, sectionOf } from "./domain";
-import { FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, type Invite } from "./invites";
+import { FREE_ACCOUNT, FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, type Invite } from "./invites";
 import { normalizeReferralCode } from "./referrals";
 import { lanOrigins } from "./lan";
 import { passwordResetEmail, sendEmail } from "./email";
@@ -47,8 +47,12 @@ async function referralFor(raw: string): Promise<Invite | null> {
   return referralInvite(row);
 }
 const inviteRequired = invites.size > 0;
-/** La invitación que corresponde a un código (de SIGNUP_CODES o de referido); sin código, acceso completo si no se pide. */
-const inviteFor = async (raw: string) => invites.get(raw) ?? (raw ? await referralFor(raw) : null) ?? (inviteRequired ? null : FULL_ACCESS);
+/**
+ * La invitación de un registro: con código, la de ese código (de SIGNUP_CODES o de referido; null si no sirve, para avisarle);
+ * sin código, una cuenta sin plan (en producción) o acceso completo (en desarrollo sin códigos definidos).
+ */
+const inviteFor = async (raw: string): Promise<Invite | null> =>
+  raw ? (invites.get(raw) ?? (await referralFor(raw))) : inviteRequired || process.env.NODE_ENV === "production" ? FREE_ACCOUNT : FULL_ACCESS;
 /** Invitación de cada registro en curso, por correo, para crearle su negocio al terminar. */
 const pendingInvites = new Map<string, Invite>();
 
@@ -57,14 +61,13 @@ export const auth = betterAuth({
     provider: "pg",
     schema: { user, session, account, verification },
   }),
-  // Continuar con Google (GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en Railway). Entrar con Google no crea cuentas
-  // (disableImplicitSignUp): para crearla hace falta pedirlo desde Crear cuenta, con su código validado antes.
+  // Continuar con Google (GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en Railway). Quien entra con Google por primera vez
+  // queda con cuenta sin plan; si viene de Crear cuenta con un código, se valida antes de ir a Google.
   socialProviders: googleEnabled()
     ? {
         google: {
           clientId: process.env.GOOGLE_CLIENT_ID!.trim(),
           clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
-          disableImplicitSignUp: true,
           prompt: "select_account",
         },
       }
@@ -104,8 +107,8 @@ export const auth = betterAuth({
     // navegador); al volver de Google, databaseHooks.user.create lo vuelve a validar.
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path === "/sign-in/social") {
-        if (!(ctx.body as { requestSignUp?: unknown } | undefined)?.requestSignUp) return;
         const raw = ctx.headers?.get("x-invite-code")?.trim() ?? "";
+        if (!raw) return;
         if (!(await inviteFor(raw))) {
           throw new APIError("FORBIDDEN", { message: "Código de invitación inválido.", code: "INVALID_INVITE_CODE" });
         }
@@ -129,13 +132,13 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // Cuenta nueva desde Google: solo con el código que se validó al pedirla (si ya no sirve, no se crea).
+        // Cuenta nueva desde Google: con el código que se validó al pedirla, o sin plan si llegó sin código.
         before: async (created) => {
           const state = await getOAuthState();
           if (!state) return;
           const raw = typeof state.serverContext?.inviteCode === "string" ? state.serverContext.inviteCode : "";
-          const invite = await inviteFor(raw);
-          if (!invite) return false;
+          // Si el código dejó de servir mientras estaba en Google, la cuenta nace sin plan en lugar de perderse.
+          const invite = (await inviteFor(raw)) ?? FREE_ACCOUNT;
           pendingInvites.set(created.email.trim().toLowerCase(), invite);
         },
         // Cada cuenta nueva arranca con su propio negocio, con los módulos y el plan de su invitación.

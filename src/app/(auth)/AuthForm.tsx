@@ -10,14 +10,12 @@ const input =
 
 export function AuthForm({
   mode,
-  inviteRequired = false,
   inviteValue,
   notice,
   next,
   google = false,
 }: {
   mode: "entrar" | "registro";
-  inviteRequired?: boolean;
   /** Código ya validado (de referido): se manda sin pedirlo. */
   inviteValue?: string;
   /** Aviso arriba del formulario (de quién es el código, o que ya no sirve). */
@@ -36,10 +34,6 @@ export function AuthForm({
   // Con Google: Entrar solo abre cuentas que ya existen; Crear cuenta pide el código antes de ir a Google.
   const withGoogle = async () => {
     const invite = registering ? String(new FormData(formRef.current ?? undefined).get("invite") ?? "").trim() : "";
-    if (registering && inviteRequired && !invite) {
-      setError("Escribe primero tu código de invitación o del salón.");
-      return;
-    }
     setBusy(true);
     setError(null);
     const { error } = await authClient.signIn.social(
@@ -49,7 +43,7 @@ export function AuthForm({
         errorCallbackURL: registering ? "/registro" : "/entrar",
         requestSignUp: registering,
       },
-      { headers: registering ? { "x-invite-code": invite } : {} },
+      { headers: invite ? { "x-invite-code": invite } : {} },
     );
     if (error) {
       setBusy(false);
@@ -139,12 +133,11 @@ export function AuthForm({
           placeholder="Contraseña (mínimo 8 caracteres)"
           className={input}
         />
+        {/* El código es opcional: sin código la cuenta nace sin plan (ve catálogo y demos) y elige su plan para crear. */}
         {registering && inviteValue ? (
           <input type="hidden" name="invite" value={inviteValue} />
-        ) : registering && inviteRequired ? (
-          <input name="invite" required autoComplete="off" placeholder="Código de invitación o del salón" className={input} />
         ) : registering ? (
-          <input name="invite" autoComplete="off" placeholder="Código del salón (si te dieron uno)" className={input} />
+          <input name="invite" autoComplete="off" placeholder="Código del salón o de invitación (opcional)" className={input} />
         ) : null}
         {error && <p className="text-sm text-red-600">{error}</p>}
         {!registering && (

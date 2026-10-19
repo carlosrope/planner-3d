@@ -11,7 +11,8 @@ export const TRIAL_DAYS = 7;
  *   `days` solo aplica a `prueba`; sin `modules`, la prueba abre los dos módulos.
  * - `SIGNUP_CODE`: un solo código con acceso completo y sin vencimiento (compatibilidad con la prueba inicial).
  *
- * Sin ninguno de los dos, cualquiera puede registrarse con acceso completo (solo en desarrollo).
+ * Sin código (o sin ninguno de los dos definidos en producción), la cuenta nace sin plan (`FREE_ACCOUNT`). En desarrollo, sin
+ * códigos definidos, se registra con acceso completo.
  */
 export type Invite = {
   kind: OrgKind;
@@ -23,6 +24,8 @@ export type Invite = {
 };
 
 export const FULL_ACCESS: Invite = { kind: "planner", plan: "ambos", modules: [...ALL_SECTIONS], days: null };
+/** Quien llega sin código (publicidad, contenido): cuenta sin plan; ve catálogo y demos y elige su plan para crear. */
+export const FREE_ACCOUNT: Invite = { kind: "planner", plan: "libre", modules: [], days: null };
 
 export function parseInvites(codesJson: string | undefined, legacyCode: string | undefined): Map<string, Invite> {
   const invites = new Map<string, Invite>();
@@ -37,7 +40,7 @@ export function parseInvites(codesJson: string | undefined, legacyCode: string |
   if (!parsed || typeof parsed !== "object") throw new Error("SIGNUP_CODES debe ser un objeto {codigo: {...}}.");
   for (const [code, raw] of Object.entries(parsed as Record<string, unknown>)) {
     const o = (raw ?? {}) as Record<string, unknown>;
-    const plan: Plan = isPlan(o.plan) && o.plan !== "invitado" ? o.plan : "prueba";
+    const plan: Plan = isPlan(o.plan) && o.plan !== "invitado" && o.plan !== "libre" ? o.plan : "prueba";
     // En una prueba se respetan los módulos pedidos; si no hay ninguno válido, se abren los dos.
     const asked = plan === "prueba" && Array.isArray(o.modules) ? o.modules.filter(isSection) : [];
     const modules: Section[] = plan === "prueba" ? (asked.length ? asked : [...ALL_SECTIONS]) : [...PLAN_MODULES[plan]];

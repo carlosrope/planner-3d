@@ -30,7 +30,8 @@ export const ALL_SECTIONS = Object.keys(SECTIONS) as Section[];
 export const sectionOf = (venueKind: string): Section => (venueKind === "casa" ? "casas" : "salones");
 
 /** Plan comercial de la cuenta. `prueba` vence en `planEndsAt`; los demás no vencen solos. */
-export const PLANS = ["prueba", "eventos", "casas", "ambos", "personal", "invitado"] as const;
+/** `libre`: cuenta sin plan (llegó sin código): ve el catálogo y las demos; para crear proyectos elige un plan. */
+export const PLANS = ["prueba", "eventos", "casas", "ambos", "personal", "invitado", "libre"] as const;
 export type Plan = (typeof PLANS)[number];
 export const PLAN_LABELS: Record<Plan, string> = {
   prueba: "Prueba",
@@ -39,9 +40,10 @@ export const PLAN_LABELS: Record<Plan, string> = {
   ambos: "Eventos y casas",
   personal: "Personal",
   invitado: "Con código",
+  libre: "Sin plan",
 };
 /** Módulos que incluye cada plan (la prueba y el código pueden ser de uno o de los dos: se guardan en `modules`). */
-export const PLAN_MODULES: Record<Exclude<Plan, "prueba" | "invitado">, readonly Section[]> = {
+export const PLAN_MODULES: Record<Exclude<Plan, "prueba" | "invitado" | "libre">, readonly Section[]> = {
   eventos: ["salones"],
   casas: ["casas"],
   ambos: ["salones", "casas"],
@@ -66,7 +68,7 @@ export const isLitePlan = (plan: Plan) => plan === "personal" || plan === "invit
  * tope (Ilimitado); la planner o inmobiliaria 5 (Pro) o sin tope. `null` = sin tope; 0 = no reparte códigos.
  */
 export function referralQuota(org: { kind: OrgKind; plan: Plan; tier: Tier }): number | null {
-  if (org.plan === "prueba" || isLitePlan(org.plan)) return 0;
+  if (org.plan === "prueba" || org.plan === "libre" || isLitePlan(org.plan)) return 0;
   if (org.tier === "ilimitado") return null;
   return org.kind === "venue" ? 10 : org.kind === "developer" ? 50 : 5;
 }

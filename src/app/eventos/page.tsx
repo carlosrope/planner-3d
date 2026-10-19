@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PlanChooser } from "@/components/PlanChooser";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getReferralOrigin, listEvents, listTrashedEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
@@ -44,7 +45,9 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
   const { seccion, lugar } = await searchParams;
   // Solo las secciones de los módulos contratados; si el plan venció, se ven los proyectos pero no se crean ni se abren.
   const active = activeModules(org);
-  const expired = active.length === 0;
+  // Sin plan (llegó sin código): ve el catálogo y las demos; para crear, la ventana de planes.
+  const free = org.plan === "libre";
+  const expired = !free && active.length === 0;
   const visible: Section[] = expired ? org.modules : active;
   // Con código: solo el lugar del código y un solo evento. Personal: un evento activo a la vez.
   const origin = await getReferralOrigin(org);
@@ -75,6 +78,24 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         </div>
       </header>
 
+      {free && (
+        <section className="mb-6 rounded-2xl border border-stone-200 bg-white p-5">
+          <h2 className="text-lg font-semibold">Tu cuenta está lista</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            Ya puedes ver el catálogo de salones y casas y probar las demos. Para crear tus propios proyectos, elige el plan de tu perfil.
+          </p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <PlanChooser openAtStart={typeof lugar === "string"} />
+            <Link
+              href="/disenador/salon-demo"
+              className="flex h-12 items-center justify-center rounded-xl border border-stone-300 font-medium active:bg-stone-100"
+            >
+              Probar la demo
+            </Link>
+          </div>
+        </section>
+      )}
+
       {expired && (
         <section className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900">
           <h2 className="text-lg font-semibold">Tu plan terminó</h2>
@@ -92,7 +113,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
         </section>
       )}
 
-      {events.length === 0 && !expired && !lite && <Welcome modules={active} />}
+      {events.length === 0 && !expired && !free && !lite && <Welcome modules={active} />}
       {events.length === 0 && !expired && origin && (
         <section className="mb-6 rounded-2xl bg-stone-900 p-5 text-white">
           <h2 className="text-xl font-semibold">Tu evento en {origin.venueName}</h2>
@@ -122,6 +143,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
       </nav>
       )}
 
+      {!(free && events.length === 0) && (
       <section className="mb-8 space-y-2">
         {mine.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-stone-500">
@@ -165,22 +187,23 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
           ))
         )}
       </section>
+      )}
 
-      {!expired && limitReached && (
+      {!expired && !free && limitReached && (
         <p className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
           {org.plan === "invitado"
             ? "Tu código cubre un solo evento: ábrelo arriba para seguir trabajando en él."
             : "El plan Personal incluye un evento activo a la vez. Marca el anterior como realizado o cancelado para crear otro."}
         </p>
       )}
-      {!expired && !limitReached && (
+      {!expired && !free && !limitReached && (
         <section className="rounded-2xl border border-stone-200 bg-white p-4">
           <h2 className="mb-1 text-lg font-semibold">{COPY[section].title}</h2>
           <p className="mb-4 text-sm text-stone-500">{COPY[section].hint}</p>
           <NewEventForm key={`${section}-${wanted?.id ?? ""}`} section={section} venues={places} defaultVenueId={wanted?.id} />
         </section>
       )}
-      {events.length > 0 && !expired && !lite && <SamplesLink />}
+      {events.length > 0 && !expired && !free && !lite && <SamplesLink />}
       {trashed.length > 0 && (
         <details className="mt-8 rounded-2xl border border-stone-200 bg-white p-4">
           <summary className="cursor-pointer font-medium">Papelera ({trashed.length})</summary>

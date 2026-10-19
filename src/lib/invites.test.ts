@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activeModules } from "./domain";
-import { FULL_ACCESS, orgValuesFor, parseInvites } from "./invites";
+import { activeModules, referralQuota } from "./domain";
+import { FREE_ACCOUNT, FULL_ACCESS, orgValuesFor, parseInvites } from "./invites";
 
 describe("códigos de invitación", () => {
   it("sin variables no hay códigos", () => {
@@ -53,5 +53,19 @@ describe("módulos activos", () => {
     const now = new Date("2026-10-27T00:00:00Z");
     expect(activeModules(org(["salones"], new Date("2026-10-26T00:00:00Z")), now)).toEqual([]);
     expect(activeModules(org(["salones"], new Date("2026-10-28T00:00:00Z")), now)).toEqual(["salones"]);
+  });
+});
+
+describe("cuenta sin código", () => {
+  it("nace sin plan, sin módulos y sin vencimiento: ve catálogo y demos, pero no crea proyectos", () => {
+    const v = orgValuesFor(FREE_ACCOUNT);
+    expect(v.plan).toBe("libre");
+    expect(v.modules).toEqual([]);
+    expect(v.planEndsAt).toBeNull();
+    expect(activeModules({ modules: v.modules, planEndsAt: v.planEndsAt })).toEqual([]);
+    expect(referralQuota({ kind: "planner", plan: "libre", tier: "ilimitado" })).toBe(0);
+  });
+  it("un código de SIGNUP_CODES no puede dar el plan libre", () => {
+    expect(parseInvites(JSON.stringify({ X: { plan: "libre" } }), undefined).get("X")?.plan).toBe("prueba");
   });
 });

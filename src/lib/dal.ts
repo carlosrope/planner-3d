@@ -1113,7 +1113,7 @@ export async function adminResolvePayment(paymentId: string, status: "confirmado
         .update(organization)
         .set({
           plan: p.plan,
-          modules: p.plan === "prueba" || p.plan === "invitado" ? undefined : [...PLAN_MODULES[p.plan]],
+          modules: p.plan === "prueba" || p.plan === "invitado" || p.plan === "libre" ? undefined : [...PLAN_MODULES[p.plan]],
           planEndsAt,
         })
         .where(eq(organization.id, p.orgId));

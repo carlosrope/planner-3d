@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getReferralOrigin, listPayments, type Org } from "@/lib/dal";
-import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, TIER_LABELS, activeModules, isLitePlan, planDaysLeft, referralQuota } from "@/lib/domain";
+import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, SECTIONS, TIER_LABELS, activeModules, isLitePlan, planDaysLeft, referralQuota, type Plan } from "@/lib/domain";
 import { PRICES_URL, CONTACT_WHATSAPP, spei } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 import { PaymentForm } from "./PaymentForm";
@@ -8,12 +8,13 @@ import { formatDate, formatInstant } from "@/lib/dates";
 
 
 /** Tu plan: qué incluye, cuándo vence, cómo pagar por transferencia y los comprobantes enviados. */
-export async function PlanSection({ org }: { org: Org }) {
+export async function PlanSection({ org, wanted }: { org: Org; wanted?: Plan }) {
   const [payments, origin] = await Promise.all([listPayments(org.id), getReferralOrigin(org)]);
   const bank = spei();
   const quota = referralQuota(org);
   const active = activeModules(org);
-  const expired = active.length === 0;
+  const free = org.plan === "libre";
+  const expired = !free && active.length === 0;
   const daysLeft = planDaysLeft(org.planEndsAt);
   const soon = daysLeft !== null && daysLeft > 0 && daysLeft <= 7;
   const modules = org.modules.map((m) => SECTIONS[m].label).join(" y ");
@@ -24,9 +25,17 @@ export async function PlanSection({ org }: { org: Org }) {
       <div className={`rounded-2xl border p-4 ${expired ? "border-red-200 bg-red-50" : soon ? "border-amber-200 bg-amber-50" : "border-stone-200 bg-white"}`}>
         <p className="text-lg font-semibold">
           {PLAN_LABELS[org.plan]}
-          {!isLitePlan(org.plan) && org.plan !== "prueba" ? ` ${TIER_LABELS[org.tier]}` : ""}
+          {!isLitePlan(org.plan) && org.plan !== "prueba" && !free ? ` ${TIER_LABELS[org.tier]}` : ""}
         </p>
-        {origin ? (
+        {free ? (
+          <p className="text-sm text-stone-600">
+            Con tu cuenta ves el catálogo y las demos. Para crear tus proyectos, elige tu plan en{" "}
+            <Link href={PRICES_URL} className="underline">
+              plantea.com.mx/planes
+            </Link>{" "}
+            y págalo aquí abajo.
+          </p>
+        ) : origin ? (
           <p className="text-sm text-stone-600">
             Tu evento en {origin.venueName} lo cubre el plan de {origin.issuerName}: un evento, con el diseñador completo y enlace para compartir.
           </p>
@@ -37,13 +46,13 @@ export async function PlanSection({ org }: { org: Org }) {
             Incluye: {modules || "ningún módulo"}.{quota === null ? " Códigos para tus clientes sin tope." : quota > 0 ? ` ${quota} códigos para tus clientes al mes.` : ""}
           </p>
         )}
-        <p className="mt-1 text-sm">
+        {!free && <p className="mt-1 text-sm">
           {org.planEndsAt
             ? expired
               ? `Terminó el ${formatInstant(org.planEndsAt, "long")}. Tus proyectos siguen guardados; al confirmar tu pago se reactivan el mismo día.`
               : `Vigente hasta el ${formatInstant(org.planEndsAt, "long")}${soon ? ` (quedan ${daysLeft} días)` : ""}.`
             : "Sin fecha de vencimiento."}
-        </p>
+        </p>}
         <p className="mt-2 text-sm">
           Planes y precios:{" "}
           <Link href={PRICES_URL} className="underline">
@@ -53,8 +62,8 @@ export async function PlanSection({ org }: { org: Org }) {
       </div>
 
       {org.plan !== "invitado" && (
-      <div className="rounded-2xl border border-stone-200 bg-white p-4">
-        <h3 className="font-semibold">Pagar o renovar por transferencia</h3>
+      <div id="pagar" className="scroll-mt-20 rounded-2xl border border-stone-200 bg-white p-4">
+        <h3 className="font-semibold">{free ? "Activar tu plan por transferencia" : "Pagar o renovar por transferencia"}</h3>
         {bank ? (
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             <dt className="text-stone-500">Banco</dt>
@@ -78,7 +87,7 @@ export async function PlanSection({ org }: { org: Org }) {
         <p className="mt-3 text-sm text-stone-600">
           Después de transferir, sube tu comprobante. Lo confirmamos el mismo día hábil y tu plan queda activo; la factura CFDI llega por correo.
         </p>
-        <PaymentForm currentPlan={org.plan} />
+        <PaymentForm currentPlan={wanted ?? org.plan} />
       </div>
       )}
 
