@@ -33,6 +33,10 @@ export function suggestionEmail(s: Suggestion) {
   return { subject: `Sugerencia para el catálogo: ${s.termino}`, text: lines.join("\n") };
 }
 
+/** IP de quien hace la petición: la que pone Cloudflare o la primera de X-Forwarded-For. */
+export const clientIp = (headers: { get(name: string): string | null }) =>
+  headers.get("cf-connecting-ip")?.trim() || (headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+
 /** Límite sencillo por IP para que nadie llene el correo (en memoria; basta con un solo servidor). */
 export function makeLimiter(max: number, windowMs: number) {
   const hits = new Map<string, number[]>();

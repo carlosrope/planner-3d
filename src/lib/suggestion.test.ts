@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeLimiter, suggestionEmail, suggestionSchema } from "./suggestion";
+import { clientIp, makeLimiter, suggestionEmail, suggestionSchema } from "./suggestion";
 
 describe("sugerencias del catálogo", () => {
   it("valida y limpia lo que llega", () => {
@@ -17,5 +17,12 @@ describe("sugerencias del catálogo", () => {
   it("limita las sugerencias por IP", () => {
     const ok = makeLimiter(2, 1000);
     expect([ok("a", 0), ok("a", 1), ok("a", 2), ok("b", 2), ok("a", 1500)]).toEqual([true, true, false, true, true]);
+  });
+
+  it("toma la IP que pone Cloudflare o la primera de X-Forwarded-For", () => {
+    const h = (o: Record<string, string>) => ({ get: (k: string) => o[k] ?? null });
+    expect(clientIp(h({ "cf-connecting-ip": "1.2.3.4", "x-forwarded-for": "9.9.9.9" }))).toBe("1.2.3.4");
+    expect(clientIp(h({ "x-forwarded-for": "5.6.7.8, 10.0.0.1" }))).toBe("5.6.7.8");
+    expect(clientIp(h({}))).toBe("local");
   });
 });

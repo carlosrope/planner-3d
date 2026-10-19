@@ -1,9 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createVenueIntake, getCurrentUser, requireOrg, type IntakeFile } from "@/lib/dal";
 import { isOwnerKind } from "@/lib/domain";
+import { clientIp, makeLimiter } from "@/lib/suggestion";
 import { isPhoto, isPlanFile, storedType } from "@/lib/uploads";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 
@@ -11,6 +13,12 @@ export type AltaState = { error?: string } | null;
 
 const MAX_PLAN_BYTES = 12 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+/** Lo que cabe en un envío (el servidor acepta 40 MB): planos y fotos juntos. */
+const MAX_TOTAL_BYTES = 36 * 1024 * 1024;
+// Para que nadie llene la base con altas: 4 por hora y 10 al día desde la misma conexión, y 60 al día en total.
+const perHour = makeLimiter(4, 60 * 60 * 1000);
+const perDay = makeLimiter(10, 24 * 60 * 60 * 1000);
+const allDay = makeLimiter(60, 24 * 60 * 60 * 1000);
 
 const intake = z.object({
   kind: z.enum(["salon", "casa"]),
@@ -54,6 +62,9 @@ export async function submitVenue(_prev: AltaState, formData: FormData): Promise
   const photos = files(formData, "fotos").slice(0, 8);
   if (!plans.length) return { error: "Falta el plano: CAD, PDF o una foto del croquis con medidas." };
   if (plans.some((f) => f.size > MAX_PLAN_BYTES)) return { error: "Cada archivo del plano puede pesar hasta 12 MB." };
+  if ([...plans, ...photos].reduce((n, f) => n + f.size, 0) > MAX_TOTAL_BYTES) {
+    return { error: "Los archivos juntos pesan más de 36 MB. Manda menos fotos o el plano por WhatsApp después de registrar el lugar." };
+  }
   if (photos.some((f) => f.size > MAX_PHOTO_BYTES)) {
     return { error: "Las fotos deben ser imágenes de menos de 2 MB (se reducen solas en el navegador)." };
   }
@@ -66,6 +77,11 @@ export async function submitVenue(_prev: AltaState, formData: FormData): Promise
   const photoFiles = await Promise.all(photos.map((f) => read(f, "foto")));
   if (planFiles.some((f) => !isPlanFile(f.name, f.data))) return { error: "El plano debe ser DWG, DXF, PDF o una foto (JPG, PNG o HEIC)." };
   if (photoFiles.some((f) => !isPhoto(f.data))) return { error: "Las fotos deben ser JPG, PNG, WebP o HEIC." };
+
+  const ip = clientIp(await headers());
+  if (!perHour(ip) || !perDay(ip) || !allDay("todos")) {
+    return { error: "Ya recibimos varias altas desde aquí. Escríbenos por WhatsApp y lo registramos contigo." };
+  }
 
   const user = await getCurrentUser();
   const org = user ? await requireOrg(user) : null;

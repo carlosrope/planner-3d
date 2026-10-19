@@ -10,6 +10,8 @@ const area = "w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-
 export const MAX_PHOTOS = 8;
 export const MAX_PLAN_FILES = 3;
 const MAX_PLAN_BYTES = 12 * 1024 * 1024;
+/** Igual que el servidor: planos y fotos juntos en un solo envío. */
+const MAX_TOTAL_BYTES = 36 * 1024 * 1024;
 
 /** Reduce una foto a 1600 px (JPEG) para que pese unos 300 KB. */
 async function shrinkPhoto(file: File): Promise<File> {
@@ -48,9 +50,17 @@ export function AltaForm({ owner }: { owner: { name: string; contact: string } |
     e.target.value = "";
     if (!files.length) return;
     setBusy(true);
+    setLocalError(null);
     try {
-      const shrunk = await Promise.all(files.map(shrinkPhoto));
-      setPhotos((p) => [...p, ...shrunk].slice(0, MAX_PHOTOS));
+      // Cada foto por separado: si una no se puede abrir (por ejemplo HEIC en Android o Windows), las demás sí entran.
+      // La que no abre no se manda: tampoco se vería en el catálogo.
+      const results = await Promise.all(files.map((f) => shrinkPhoto(f).catch(() => null)));
+      const ok = results.filter((f): f is File => f !== null);
+      const failed = files.filter((_, i) => results[i] === null).map((f) => f.name);
+      if (failed.length) {
+        setLocalError(`No pudimos abrir ${failed.join(", ")}. Mándala en JPG o PNG (una captura de pantalla sirve) o por WhatsApp después.`);
+      }
+      setPhotos((p) => [...p, ...ok].slice(0, MAX_PHOTOS));
     } finally {
       setBusy(false);
     }
@@ -67,6 +77,10 @@ export function AltaForm({ owner }: { owner: { name: string; contact: string } |
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!plans.length) return setLocalError("Falta el plano: CAD, PDF o una foto del croquis con medidas.");
+    const total = [...plans, ...photos].reduce((n, f) => n + f.size, 0);
+    if (total > MAX_TOTAL_BYTES) {
+      return setLocalError("Los archivos juntos pesan más de 36 MB. Quita algunas fotos o manda el plano por WhatsApp después de registrar el lugar.");
+    }
     setLocalError(null);
     const fd = new FormData(e.currentTarget);
     fd.delete("planos");
