@@ -14,7 +14,7 @@ export default function PrivacidadPage() {
     <Legal
       tag="Plantea · Legal"
       title="Aviso de privacidad"
-      updated="15 de octubre de 2026"
+      updated="19 de octubre de 2026"
       intro={
         <p>
           <b>En corto:</b> Plantea guarda lo mínimo para que funcione tu cuenta, tu lugar y tus eventos. <b>El plano de tu salón o de tu casa
@@ -45,6 +45,10 @@ export default function PrivacidadPage() {
           <li>
             <b>Tu cuenta:</b> nombre, correo electrónico y contraseña. La contraseña se guarda cifrada con un algoritmo de una sola vía: nadie, ni nosotros,
             puede leerla.
+          </li>
+          <li>
+            <b>Si entras con Google:</b> Google nos comparte tu nombre, tu correo y tu foto de perfil, solo para crear o abrir tu cuenta. No recibimos tu
+            contraseña de Google ni accedemos a tu correo, tus contactos o tus archivos.
           </li>
           <li>
             <b>Tu negocio:</b> nombre, logotipo, color y número de WhatsApp que eliges mostrar en los enlaces que compartes con tus clientes.

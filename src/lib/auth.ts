@@ -1,6 +1,6 @@
 import "server-only";
 import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, addOAuthServerContext, createAuthMiddleware, getOAuthState } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
@@ -11,6 +11,7 @@ import { FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, type Invite } 
 import { normalizeReferralCode } from "./referrals";
 import { lanOrigins } from "./lan";
 import { passwordResetEmail, sendEmail } from "./email";
+import { googleEnabled } from "./google";
 
 /** plantea.com.mx, www y la dirección de Railway; AUTH_TRUSTED_ORIGINS (separados por coma) agrega otros. */
 const publicOrigins = () => [
@@ -46,6 +47,8 @@ async function referralFor(raw: string): Promise<Invite | null> {
   return referralInvite(row);
 }
 const inviteRequired = invites.size > 0;
+/** La invitación que corresponde a un código (de SIGNUP_CODES o de referido); sin código, acceso completo si no se pide. */
+const inviteFor = async (raw: string) => invites.get(raw) ?? (raw ? await referralFor(raw) : null) ?? (inviteRequired ? null : FULL_ACCESS);
 /** Invitación de cada registro en curso, por correo, para crearle su negocio al terminar. */
 const pendingInvites = new Map<string, Invite>();
 
@@ -54,6 +57,20 @@ export const auth = betterAuth({
     provider: "pg",
     schema: { user, session, account, verification },
   }),
+  // Continuar con Google (GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en Railway). Entrar con Google no crea cuentas
+  // (disableImplicitSignUp): para crearla hace falta pedirlo desde Crear cuenta, con su código validado antes.
+  socialProviders: googleEnabled()
+    ? {
+        google: {
+          clientId: process.env.GOOGLE_CLIENT_ID!.trim(),
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
+          disableImplicitSignUp: true,
+          prompt: "select_account",
+        },
+      }
+    : {},
+  // Quien ya tiene cuenta con correo y entra con Google del mismo correo queda en la misma cuenta.
+  account: { accountLinking: { enabled: true, trustedProviders: ["google"] } },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
@@ -83,10 +100,21 @@ export const auth = betterAuth({
     // Con SIGNUP_CODES o SIGNUP_CODE definidos, crear cuenta pide un código de invitación; el código decide
     // el tipo de negocio, el plan, los módulos y, en una prueba, cuándo vence.
     // Un código de referido (de un salón o una planner) también abre cuenta, con o sin SIGNUP_CODES.
+    // Con Google, el código se valida al pedir crear la cuenta y viaja en el estado de OAuth (no lo puede cambiar el
+    // navegador); al volver de Google, databaseHooks.user.create lo vuelve a validar.
     before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/sign-in/social") {
+        if (!(ctx.body as { requestSignUp?: unknown } | undefined)?.requestSignUp) return;
+        const raw = ctx.headers?.get("x-invite-code")?.trim() ?? "";
+        if (!(await inviteFor(raw))) {
+          throw new APIError("FORBIDDEN", { message: "Código de invitación inválido.", code: "INVALID_INVITE_CODE" });
+        }
+        await addOAuthServerContext({ inviteCode: raw });
+        return;
+      }
       if (ctx.path !== "/sign-up/email") return;
       const raw = ctx.headers?.get("x-invite-code")?.trim() ?? "";
-      const invite = invites.get(raw) ?? (raw ? await referralFor(raw) : null) ?? (inviteRequired ? null : FULL_ACCESS);
+      const invite = await inviteFor(raw);
       if (!invite) {
         throw new APIError("FORBIDDEN", { message: "Código de invitación inválido.", code: "INVALID_INVITE_CODE" });
       }
@@ -101,6 +129,15 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        // Cuenta nueva desde Google: solo con el código que se validó al pedirla (si ya no sirve, no se crea).
+        before: async (created) => {
+          const state = await getOAuthState();
+          if (!state) return;
+          const raw = typeof state.serverContext?.inviteCode === "string" ? state.serverContext.inviteCode : "";
+          const invite = await inviteFor(raw);
+          if (!invite) return false;
+          pendingInvites.set(created.email.trim().toLowerCase(), invite);
+        },
         // Cada cuenta nueva arranca con su propio negocio, con los módulos y el plan de su invitación.
         after: async (created) => {
           const email = created.email.trim().toLowerCase();
