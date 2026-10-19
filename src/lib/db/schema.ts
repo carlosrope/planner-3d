@@ -281,6 +281,8 @@ export const payment = pgTable(
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
     plan: text("plan").$type<Plan>().notNull(),
+    /** Pro o Ilimitado: el nivel que se activa al confirmar el pago. */
+    tier: text("tier").$type<Tier>().notNull().default("pro"),
     period: text("period").$type<PaymentPeriod>().notNull(),
     /** Pesos, como lo escribió el cliente. */
     amount: integer("amount").notNull(),

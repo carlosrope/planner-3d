@@ -55,6 +55,7 @@ test("pago por SPEI con comprobante y confirmación en /admin", async ({ page, b
   await page.waitForLoadState("networkidle");
   await expect(page.getByText("000000000000000000")).toBeVisible();
   await page.locator('select[name="plan"]').selectOption("eventos");
+  await page.locator('select[name="tier"]').selectOption("ilimitado");
   await page.locator('select[name="period"]').selectOption("mes");
   await page.locator('input[name="amount"]').fill("790");
   // Comprobante de prueba: un PNG de 1×1.
@@ -73,9 +74,14 @@ test("pago por SPEI con comprobante y confirmación en /admin", async ({ page, b
   const card = admin.locator("li", { hasText: planner.name });
   await expect(card).toContainText("Por revisar");
   await expect(card).toContainText("$790");
+  await expect(card).toContainText("Eventos Ilimitado");
   await card.getByPlaceholder(/Nota/).fill("Folio E2E-001");
   await card.getByRole("button", { name: "Confirmar y activar" }).click();
   await expect(card).toContainText("Confirmado");
+
+  // Al confirmarlo, la cuenta queda con el nivel que pagó.
+  await admin.goto("/admin/cuentas");
+  await expect(admin.locator("li", { hasText: planner.name }).first()).toContainText("Eventos Ilimitado");
 
   // El rastro guarda quién lo confirmó, el monto y la nota.
   await admin.goto("/admin/rastro");

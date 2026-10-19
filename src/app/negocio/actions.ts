@@ -58,6 +58,7 @@ export type PaymentState = { ok?: boolean; error?: string } | null;
 
 const paymentBody = z.object({
   plan: z.enum(["eventos", "casas", "ambos", "personal"]),
+  tier: z.enum(["pro", "ilimitado"]).default("pro"),
   period: z.enum(["mes", "anio"]),
   amount: z.coerce.number().int().min(1).max(1_000_000),
 });
@@ -66,7 +67,12 @@ const paymentBody = z.object({
 export async function submitPayment(_prev: PaymentState, formData: FormData): Promise<PaymentState> {
   const user = await requireUser("/negocio");
   const org = await requireOrg(user);
-  const parsed = paymentBody.safeParse({ plan: formData.get("plan"), period: formData.get("period"), amount: formData.get("amount") });
+  const parsed = paymentBody.safeParse({
+    plan: formData.get("plan"),
+    tier: formData.get("tier") ?? undefined,
+    period: formData.get("period"),
+    amount: formData.get("amount"),
+  });
   const receipt = formData.get("receipt");
   if (!parsed.success || !(receipt instanceof File) || receipt.size === 0) return { error: "Elige el plan, el periodo, el monto y el comprobante." };
   if (receipt.size > 5 * 1024 * 1024) return { error: "El comprobante puede pesar hasta 5 MB." };
@@ -75,6 +81,8 @@ export async function submitPayment(_prev: PaymentState, formData: FormData): Pr
   if (!isReceipt(data)) return { error: "El comprobante debe ser una foto (JPG, PNG o HEIC) o un PDF." };
   const created = await createPayment(org.id, {
     ...parsed.data,
+    // Personal no tiene nivel.
+    tier: parsed.data.plan === "personal" ? "pro" : parsed.data.tier,
     receipt: { name: receipt.name.slice(0, 120), mimeType: storedType(data), data },
   });
   if (!created) return { error: "Ya tienes comprobantes por revisar. Espera a que los confirmemos." };

@@ -1,0 +1,1 @@
+ALTER TABLE "payment" ADD COLUMN "tier" text DEFAULT 'pro' NOT NULL;

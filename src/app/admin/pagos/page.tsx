@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { adminListPayments, requireAdmin } from "@/lib/dal";
-import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS } from "@/lib/domain";
+import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, TIER_LABELS } from "@/lib/domain";
 import { AdminNav } from "../AdminNav";
 import { resolvePayment } from "../actions";
 import { formatDate } from "@/lib/dates";
@@ -35,7 +35,7 @@ async function Pagos() {
             <li key={p.id} className={`rounded-2xl border p-4 ${p.status === "pendiente" ? "border-amber-300 bg-amber-50" : "border-stone-200 bg-white"}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-semibold">
-                  {p.orgName} · {PLAN_LABELS[p.plan]} · {PAYMENT_PERIOD_LABELS[p.period]} · ${p.amount.toLocaleString("es-MX")}
+                  {p.orgName} · {PLAN_LABELS[p.plan]}{p.plan === "personal" ? "" : ` ${TIER_LABELS[p.tier]}`} · {PAYMENT_PERIOD_LABELS[p.period]} · ${p.amount.toLocaleString("es-MX")}
                 </p>
                 <p className="text-sm text-stone-500">
                   {formatDate(p.createdAt)} · {PAYMENT_STATUS_LABELS[p.status]}

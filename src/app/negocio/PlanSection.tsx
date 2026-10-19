@@ -87,7 +87,7 @@ export async function PlanSection({ org, wanted }: { org: Org; wanted?: Plan }) 
         <p className="mt-3 text-sm text-stone-600">
           Después de transferir, sube tu comprobante. Lo confirmamos el mismo día hábil y tu plan queda activo; la factura CFDI llega por correo.
         </p>
-        <PaymentForm currentPlan={wanted ?? org.plan} />
+        <PaymentForm currentPlan={wanted ?? org.plan} currentTier={org.tier} />
       </div>
       )}
 

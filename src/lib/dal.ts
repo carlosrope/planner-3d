@@ -779,7 +779,7 @@ export async function listPayments(orgId: string) {
 
 export async function createPayment(
   orgId: string,
-  data: { plan: Plan; period: PaymentPeriod; amount: number; receipt: { name: string; mimeType: string; data: Buffer } },
+  data: { plan: Plan; tier: Tier; period: PaymentPeriod; amount: number; receipt: { name: string; mimeType: string; data: Buffer } },
 ) {
   const [{ pending }] = await db
     .select({ pending: count() })
@@ -791,6 +791,7 @@ export async function createPayment(
     .values({
       orgId,
       plan: data.plan,
+      tier: data.tier,
       period: data.period,
       amount: data.amount,
       receiptName: data.receipt.name,
@@ -1095,6 +1096,7 @@ export async function adminListPayments() {
       orgId: payment.orgId,
       orgName: organization.name,
       plan: payment.plan,
+      tier: payment.tier,
       period: payment.period,
       amount: payment.amount,
       status: payment.status,
@@ -1126,14 +1128,14 @@ export async function adminResolvePayment(paymentId: string, status: "confirmado
       .update(payment)
       .set({ status, note, resolvedAt: new Date() })
       .where(and(eq(payment.id, paymentId), eq(payment.status, "pendiente")))
-      .returning({ orgId: payment.orgId, plan: payment.plan, period: payment.period, amount: payment.amount });
+      .returning({ orgId: payment.orgId, plan: payment.plan, tier: payment.tier, period: payment.period, amount: payment.amount });
     if (!p) return null;
     const [org] = await tx
       .select({ name: organization.name, plan: organization.plan, planEndsAt: organization.planEndsAt })
       .from(organization)
       .where(eq(organization.id, p.orgId))
       .limit(1);
-    const details: Record<string, unknown> = { monto: p.amount, plan: p.plan, periodo: p.period, nota: note, negocio: org?.name };
+    const details: Record<string, unknown> = { monto: p.amount, plan: p.plan, nivel: p.tier, periodo: p.period, nota: note, negocio: org?.name };
     if (status === "confirmado") {
       const planEndsAt = planEndAfterPayment(org?.planEndsAt ?? null, p.period);
       await tx
@@ -1141,6 +1143,8 @@ export async function adminResolvePayment(paymentId: string, status: "confirmado
         .set({
           plan: p.plan,
           modules: p.plan === "prueba" || p.plan === "invitado" || p.plan === "libre" ? undefined : [...PLAN_MODULES[p.plan]],
+          // El nivel que pagó (Pro o Ilimitado): con Ilimitado, los códigos no tienen tope.
+          tier: p.tier,
           planEndsAt,
         })
         .where(eq(organization.id, p.orgId));
