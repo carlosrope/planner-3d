@@ -15,7 +15,7 @@ export default function TerminosPage() {
     <Legal
       tag="Plantea · Legal"
       title="Términos de servicio"
-      updated="15 de octubre de 2026"
+      updated="19 de octubre de 2026"
       intro={
         <p>
           <b>En corto:</b> Plantea es una herramienta para planear eventos y mostrar casas en 2D y 3D. Tu contenido (planos, fotos, eventos) sigue siendo
@@ -65,10 +65,7 @@ export default function TerminosPage() {
           </li>
           <li>El plan se paga por adelantado, por mes o por año, por transferencia (SPEI). Queda activo cuando confirmamos el pago, normalmente el mismo día hábil. Emitimos factura CFDI.</li>
           <li>Precio fijo durante 12 meses desde tu primer pago. Si cambia después, te avisaremos con 30 días de anticipación.</li>
-          <li>
-            <b>Garantía:</b> si en los primeros 15 días de tu primera mensualidad Plantea no te sirve, te devolvemos ese pago. Después no hay reembolsos por
-            periodos no usados.
-          </li>
+          <li>Plantea es un servicio que se paga por periodo completo: no hay reembolsos por periodos pagados, usados o no.</li>
           <li>No hay plazo forzoso: puedes dejar de pagar cuando quieras. Al vencer el plan, tus proyectos siguen guardados y visibles, pero no se pueden crear ni editar hasta reactivar.</li>
           <li>Plan de prueba: dura los días que indique tu código de invitación, sin costo y sin tarjeta.</li>
         </ul>

@@ -42,7 +42,7 @@ const PROFILES: Profile[] = [
       },
       { name: "Ilimitado", price: "$999", points: ["Todo lo de Pro", "Códigos sin tope para quienes rentan contigo"] },
     ],
-    details: ["Pro al año: $7,900 (pagas 10 meses).", "Cada salón adicional: $250 al mes.", "Convertimos tu salón desde tu plano o croquis; está incluido en el plan."],
+    details: ["Pro al año: $7,900 (pagas 10 meses).", "Cada salón adicional: $250 al mes.", "Convertimos tu salón desde tu plano; está incluido en el plan. En Los Mochis, si no tienes plano, lo medimos sin costo extra."],
   },
   {
     id: "casas",

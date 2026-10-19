@@ -22,7 +22,7 @@ const RECIBES = [
 const PLANO = [
   { t: "Plano CAD o PDF", p: "El arquitectónico o el de Protección Civil sirve." },
   { t: "Croquis con medidas", p: "Hecho a mano, con fotos de cada lado del salón." },
-  { t: "Sin plano", p: "Escríbenos por WhatsApp y vemos juntos cómo levantarlo." },
+  { t: "Sin plano", p: "En Los Mochis, un arquitecto va a medir tu salón sin costo extra. En otras ciudades necesitamos el plano; el de Protección Civil sirve." },
 ];
 
 const PASOS = [
