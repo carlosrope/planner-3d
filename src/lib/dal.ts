@@ -1263,6 +1263,69 @@ export async function adminListActivity() {
   }));
 }
 
+/**
+ * Piloto de salones fundadores (/admin/piloto): cada salón cuyo dueño está en plan de prueba, con lo que pasó en su
+ * mes: solicitudes, códigos dados y usados, eventos que armaron sus clientes con esos códigos y las visitas de sus
+ * familias. Las subconsultas llevan los nombres de tabla escritos a mano (venue.id, organization.id).
+ */
+export async function adminListPilot() {
+  // Eventos que armaron en este salón las cuentas que entraron con uno de sus códigos.
+  const fromClient = sql.raw(
+    "event e where e.venue_id = venue.id and e.deleted_at is null and e.org_id in (select rc.used_by_org_id from referral_code rc where rc.venue_id = venue.id and rc.used_by_org_id is not null)",
+  );
+  const rows = await db
+    .select({
+      venueId: venue.id,
+      name: venue.name,
+      city: venue.city,
+      slug: venue.slug,
+      status: venue.status,
+      publishedAt: venue.publishedAt,
+      opens: venue.viewCount,
+      orgId: organization.id,
+      orgName: organization.name,
+      planEndsAt: organization.planEndsAt,
+      emails: sql<string>`(select coalesce(string_agg(u.email, ', ' order by m.created_at), '') from membership m join "user" u on u.id = m.user_id where m.org_id = organization.id)`,
+      lastLogin: sql<Date | null>`(select max(s.created_at) from session s join membership m on m.user_id = s.user_id where m.org_id = organization.id)`,
+      inquiries: sql<number>`(select count(*) from venue_inquiry vi where vi.venue_id = venue.id)`,
+      inquiriesUnseen: sql<number>`(select count(*) from venue_inquiry vi where vi.venue_id = venue.id and vi.seen_at is null)`,
+      lastInquiry: sql<Date | null>`(select max(vi.created_at) from venue_inquiry vi where vi.venue_id = venue.id)`,
+      codesGiven: sql<number>`(select count(*) from referral_code rc where rc.venue_id = venue.id)`,
+      codesThisMonth: sql<number>`(select count(*) from referral_code rc where rc.venue_id = venue.id and rc.created_at > ${monthStart().toISOString()})`,
+      codesUsed: sql<number>`(select count(*) from referral_code rc where rc.venue_id = venue.id and rc.used_by_org_id is not null)`,
+      ownerEvents: sql<number>`(select count(*) from event e where e.venue_id = venue.id and e.org_id = organization.id and e.deleted_at is null and e.title not like '%(ejemplo)%' and e.title not like '%(muestra)%')`,
+      clientEvents: sql<number>`(select count(*) from ${fromClient})`,
+      clientEdit: sql<Date | null>`(select max(l.updated_at) from layout l, ${fromClient} and e.id = l.event_id)`,
+      clientShares: sql<number>`(select count(*) from share_link sl, ${fromClient} and e.id = sl.event_id)`,
+      clientViews: sql<number>`(select coalesce(sum(sl.view_count), 0) from share_link sl, ${fromClient} and e.id = sl.event_id)`,
+      clientLastView: sql<Date | null>`(select max(sl.last_viewed_at) from share_link sl, ${fromClient} and e.id = sl.event_id)`,
+      clientComments: sql<number>`(select count(*) from comment c join layout l on l.id = c.layout_id, ${fromClient} and e.id = l.event_id)`,
+    })
+    .from(venue)
+    .innerJoin(organization, eq(organization.id, venue.ownerOrgId))
+    .where(and(eq(organization.plan, "prueba"), venueAlive))
+    .orderBy(asc(venue.city), asc(venue.name));
+  const date = (v: Date | string | null) => (v ? new Date(v) : null);
+  const n = (v: number | string) => Number(v);
+  return rows.map((r) => ({
+    ...r,
+    lastLogin: date(r.lastLogin),
+    lastInquiry: date(r.lastInquiry),
+    clientEdit: date(r.clientEdit),
+    clientLastView: date(r.clientLastView),
+    inquiries: n(r.inquiries),
+    inquiriesUnseen: n(r.inquiriesUnseen),
+    codesGiven: n(r.codesGiven),
+    codesThisMonth: n(r.codesThisMonth),
+    codesUsed: n(r.codesUsed),
+    ownerEvents: n(r.ownerEvents),
+    clientEvents: n(r.clientEvents),
+    clientShares: n(r.clientShares),
+    clientViews: n(r.clientViews),
+    clientComments: n(r.clientComments),
+  }));
+}
+
 /** Si a la persona ya se le abrió la guía del diseñador en algún proyecto (se guarda en su cuenta, no en el navegador). */
 export async function hasSeenGuide(userId: string) {
   const [row] = await db.select({ at: user.guideSeenAt }).from(user).where(eq(user.id, userId)).limit(1);
