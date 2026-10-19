@@ -4,13 +4,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createVenueIntake, getCurrentUser, requireOrg, type IntakeFile } from "@/lib/dal";
 import { isOwnerKind } from "@/lib/domain";
+import { isPhoto, isPlanFile, storedType } from "@/lib/uploads";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 
 export type AltaState = { error?: string } | null;
 
 const MAX_PLAN_BYTES = 12 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
-const PLAN_TYPES = /^(application\/(pdf|acad|x-acad|dxf|x-dxf|dwg|x-dwg|octet-stream)|image\/)/;
 
 const intake = z.object({
   kind: z.enum(["salon", "casa"]),
@@ -54,24 +54,24 @@ export async function submitVenue(_prev: AltaState, formData: FormData): Promise
   const photos = files(formData, "fotos").slice(0, 8);
   if (!plans.length) return { error: "Falta el plano: CAD, PDF o una foto del croquis con medidas." };
   if (plans.some((f) => f.size > MAX_PLAN_BYTES)) return { error: "Cada archivo del plano puede pesar hasta 12 MB." };
-  if (plans.some((f) => f.type && !PLAN_TYPES.test(f.type) && !/\.(dwg|dxf|pdf)$/i.test(f.name))) {
-    return { error: "El plano debe ser DWG, DXF, PDF o una imagen." };
-  }
-  if (photos.some((f) => f.size > MAX_PHOTO_BYTES || !f.type.startsWith("image/"))) {
+  if (photos.some((f) => f.size > MAX_PHOTO_BYTES)) {
     return { error: "Las fotos deben ser imágenes de menos de 2 MB (se reducen solas en el navegador)." };
   }
+  // El tipo se revisa por el contenido: un SVG o un HTML con otro nombre no entra.
+  const read = async (f: File, kind: IntakeFile["kind"]): Promise<IntakeFile> => {
+    const data = Buffer.from(await f.arrayBuffer());
+    return { kind, name: f.name.slice(0, 120), mimeType: storedType(data), data };
+  };
+  const planFiles = await Promise.all(plans.map((f) => read(f, "plano")));
+  const photoFiles = await Promise.all(photos.map((f) => read(f, "foto")));
+  if (planFiles.some((f) => !isPlanFile(f.name, f.data))) return { error: "El plano debe ser DWG, DXF, PDF o una foto (JPG, PNG o HEIC)." };
+  if (photoFiles.some((f) => !isPhoto(f.data))) return { error: "Las fotos deben ser JPG, PNG, WebP o HEIC." };
 
   const user = await getCurrentUser();
   const org = user ? await requireOrg(user) : null;
   const ownerOrgId = org && isOwnerKind(org.kind) ? org.id : null;
 
-  const read = async (f: File, kind: IntakeFile["kind"]): Promise<IntakeFile> => ({
-    kind,
-    name: f.name.slice(0, 120),
-    mimeType: f.type || "application/octet-stream",
-    data: Buffer.from(await f.arrayBuffer()),
-  });
-  const uploads = [...(await Promise.all(plans.map((f) => read(f, "plano")))), ...(await Promise.all(photos.map((f) => read(f, "foto"))))];
+  const uploads = [...planFiles, ...photoFiles];
 
   const created = await createVenueIntake(
     {

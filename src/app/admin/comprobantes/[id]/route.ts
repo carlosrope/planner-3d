@@ -1,4 +1,5 @@
 import { adminGetReceipt, getCurrentUser, isAdmin } from "@/lib/dal";
+import { fileHeaders } from "@/lib/uploads";
 
 // Comprobante de pago que subió una cuenta, para la administración.
 
@@ -8,11 +9,6 @@ export async function GET(_request: Request, ctx: RouteContext<"/admin/comproban
   const { id } = await ctx.params;
   const file = await adminGetReceipt(id);
   if (!file) return new Response("No encontrado.", { status: 404 });
-  return new Response(new Uint8Array(file.data), {
-    headers: {
-      "content-type": file.mimeType,
-      "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`,
-      "cache-control": "private, max-age=0",
-    },
-  });
+  const data = new Uint8Array(file.data);
+  return new Response(data, { headers: { ...fileHeaders(data, file.name), "cache-control": "private, max-age=0" } });
 }

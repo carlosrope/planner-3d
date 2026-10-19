@@ -7,6 +7,7 @@ import { createPayment, createReferralCode, requireOrg, requireUser, setReferral
 import { MAX_BODY_LENGTH, MESSAGE_STYLES, serializeSetting } from "@/lib/referral-message";
 import { db } from "@/lib/db";
 import { organization } from "@/lib/db/schema";
+import { isReceipt, storedType } from "@/lib/uploads";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 
 export type BrandState = { ok?: boolean; error?: string } | null;
@@ -69,10 +70,12 @@ export async function submitPayment(_prev: PaymentState, formData: FormData): Pr
   const receipt = formData.get("receipt");
   if (!parsed.success || !(receipt instanceof File) || receipt.size === 0) return { error: "Elige el plan, el periodo, el monto y el comprobante." };
   if (receipt.size > 5 * 1024 * 1024) return { error: "El comprobante puede pesar hasta 5 MB." };
-  if (!/^(image\/|application\/pdf$)/.test(receipt.type)) return { error: "El comprobante debe ser una imagen o un PDF." };
+  const data = Buffer.from(await receipt.arrayBuffer());
+  // El tipo se revisa por el contenido: solo fotos (JPG, PNG, WebP, HEIC) o PDF.
+  if (!isReceipt(data)) return { error: "El comprobante debe ser una foto (JPG, PNG o HEIC) o un PDF." };
   const created = await createPayment(org.id, {
     ...parsed.data,
-    receipt: { name: receipt.name.slice(0, 120), mimeType: receipt.type, data: Buffer.from(await receipt.arrayBuffer()) },
+    receipt: { name: receipt.name.slice(0, 120), mimeType: storedType(data), data },
   });
   if (!created) return { error: "Ya tienes comprobantes por revisar. Espera a que los confirmemos." };
   revalidatePath("/negocio");

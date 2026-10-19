@@ -17,6 +17,7 @@ import {
 } from "@/lib/dal";
 import type { DesignerPlan } from "@/lib/designer/types";
 import { ORG_KINDS, PLANS, TIERS, VENUE_STATUSES, isSection } from "@/lib/domain";
+import { isPhoto, isPlanFile, storedType } from "@/lib/uploads";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 import { endOfDay } from "@/lib/dates";
 
@@ -113,11 +114,17 @@ export async function addFiles(formData: FormData): Promise<void> {
   const max = kind === "foto" ? 3 * 1024 * 1024 : 12 * 1024 * 1024;
   const files = formData
     .getAll("files")
-    .filter((f): f is File => f instanceof File && f.size > 0 && f.size <= max && (kind === "plano" || f.type.startsWith("image/")))
+    .filter((f): f is File => f instanceof File && f.size > 0 && f.size <= max)
     .slice(0, 10);
-  const uploads: IntakeFile[] = await Promise.all(
-    files.map(async (f) => ({ kind, name: f.name.slice(0, 120), mimeType: f.type || "application/octet-stream", data: Buffer.from(await f.arrayBuffer()) })),
+  const read: IntakeFile[] = await Promise.all(
+    files.map(async (f) => {
+      const data = Buffer.from(await f.arrayBuffer());
+      return { kind, name: f.name.slice(0, 120), mimeType: storedType(data), data };
+    }),
   );
+  // Por el contenido, no por el tipo que dice el navegador.
+  const uploads = read.filter((f) => (kind === "foto" ? isPhoto(f.data) : isPlanFile(f.name, f.data)));
+  if (!uploads.length) return;
   await adminAddVenueFiles(venueId, uploads);
   revalidate(venueId);
 }
