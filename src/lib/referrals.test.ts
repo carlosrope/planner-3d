@@ -29,7 +29,10 @@ describe("códigos de referido", () => {
     expect(referralQuota({ kind: "developer", plan: "ambos", tier: "pro" })).toBe(50);
     expect(referralQuota({ kind: "planner", plan: "eventos", tier: "pro" })).toBe(5);
     expect(referralQuota({ kind: "venue", plan: "eventos", tier: "ilimitado" })).toBeNull();
-    expect(referralQuota({ kind: "venue", plan: "prueba", tier: "ilimitado" })).toBe(0);
+    expect(referralQuota({ kind: "venue", plan: "prueba", tier: "pro" })).toBe(5);
+    expect(referralQuota({ kind: "venue", plan: "prueba", tier: "ilimitado" })).toBe(5);
+    expect(referralQuota({ kind: "planner", plan: "prueba", tier: "pro" })).toBe(0);
+    expect(referralQuota({ kind: "developer", plan: "prueba", tier: "pro" })).toBe(0);
     expect(referralQuota({ kind: "planner", plan: "personal", tier: "pro" })).toBe(0);
     expect(referralQuota({ kind: "planner", plan: "invitado", tier: "pro" })).toBe(0);
     expect(referralLeft(50, 48)).toBe(2);

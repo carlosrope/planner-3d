@@ -66,9 +66,12 @@ export const isLitePlan = (plan: Plan) => plan === "personal" || plan === "invit
 /**
  * Códigos de referido que puede dar una cuenta cada mes: el dueño de un salón 10 (Pro; decisión del 15 de octubre de 2026), la desarrolladora 50, o sin
  * tope (Ilimitado); la planner o inmobiliaria 5 (Pro) o sin tope. `null` = sin tope; 0 = no reparte códigos.
+ * En prueba solo reparte el salón: 5 al mes (piloto de salones fundadores, 19 de octubre de 2026).
  */
+export const TRIAL_VENUE_REFERRALS = 5;
 export function referralQuota(org: { kind: OrgKind; plan: Plan; tier: Tier }): number | null {
-  if (org.plan === "prueba" || org.plan === "libre" || isLitePlan(org.plan)) return 0;
+  if (org.plan === "prueba") return org.kind === "venue" ? TRIAL_VENUE_REFERRALS : 0;
+  if (org.plan === "libre" || isLitePlan(org.plan)) return 0;
   if (org.tier === "ilimitado") return null;
   return org.kind === "venue" ? 10 : org.kind === "developer" ? 50 : 5;
 }
