@@ -9,7 +9,8 @@ import { ORG_KIND_LABELS, VENUE_KIND_LABELS, VENUE_STATUSES, VENUE_STATUS_LABELS
 import { siteOrigin } from "@/lib/brand";
 import { formatWhatsapp, waLink } from "@/lib/whatsapp";
 import { AdminNav } from "../../AdminNav";
-import { addFiles, deleteFile, trashVenue, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
+import { PhotoUpload } from "./PhotoUpload";
+import { addFiles, deleteFile, setFileView, trashVenue, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
 import { CopyField } from "@/app/lugares/[slug]/panel/CopyField";
 
 export const metadata: Metadata = { title: "Administración · Lugar" };
@@ -93,29 +94,43 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
           {planos.length === 0 && <li className="text-stone-500">Sin plano del dueño.</li>}
         </ul>
         {fotos.length > 0 && (
-          <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
-            {fotos.map((f) => (
-              <li key={f.id} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base */}
-                <img src={`/admin/archivos/${f.id}`} alt="" className="aspect-square w-full rounded-lg object-cover" />
-                <form action={deleteFile} className="absolute right-1 top-1">
-                  <input type="hidden" name="venueId" value={v.id} />
-                  <input type="hidden" name="fileId" value={f.id} />
-                  <button aria-label="Borrar foto" className="h-6 w-6 rounded-full bg-black/60 text-xs text-white">
-                    ×
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
+          <>
+            <p className="mt-3 text-xs text-stone-500">
+              Marca una foto «Por fuera» y otra «Por dentro» para que el catálogo y la ficha las enseñen juntas. Si la imagen no es una foto real del lugar (por
+              ejemplo, generada), marca «Ilustrativa» y saldrá con esa etiqueta.
+            </p>
+            <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {fotos.map((f) => (
+                <li key={f.id} className="relative rounded-lg border border-stone-200 p-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base */}
+                  <img src={`/admin/archivos/${f.id}`} alt="" className="aspect-square w-full rounded-md object-cover" />
+                  <form action={deleteFile} className="absolute right-2.5 top-2.5">
+                    <input type="hidden" name="venueId" value={v.id} />
+                    <input type="hidden" name="fileId" value={f.id} />
+                    <button aria-label="Borrar foto" className="h-6 w-6 rounded-full bg-black/60 text-xs text-white">
+                      ×
+                    </button>
+                  </form>
+                  <form action={setFileView} className="mt-1.5 grid gap-1.5 text-xs">
+                    <input type="hidden" name="venueId" value={v.id} />
+                    <input type="hidden" name="fileId" value={f.id} />
+                    <select name="side" defaultValue={f.side ?? ""} aria-label="Vista" className="h-8 rounded-md border border-stone-300 bg-white px-1.5">
+                      <option value="">Sin marcar</option>
+                      <option value="fuera">Por fuera</option>
+                      <option value="dentro">Por dentro</option>
+                    </select>
+                    <label className="flex items-center gap-1.5">
+                      <input type="checkbox" name="illustrative" defaultChecked={f.illustrative} /> Ilustrativa
+                    </label>
+                    <button className="h-7 rounded-md bg-stone-900 font-medium text-white">Guardar</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <form action={addFiles} className="flex flex-wrap items-center gap-2 rounded-xl bg-stone-50 p-2">
-            <input type="hidden" name="venueId" value={v.id} />
-            <input type="hidden" name="kind" value="foto" />
-            <input name="files" type="file" accept="image/*" multiple required className="min-w-0 flex-1 text-sm" />
-            <button className="h-9 rounded-xl bg-stone-900 px-3 text-sm font-medium text-white">Agregar fotos</button>
-          </form>
+          <PhotoUpload venueId={v.id} />
           <form action={addFiles} className="flex flex-wrap items-center gap-2 rounded-xl bg-stone-50 p-2">
             <input type="hidden" name="venueId" value={v.id} />
             <input type="hidden" name="kind" value="plano" />

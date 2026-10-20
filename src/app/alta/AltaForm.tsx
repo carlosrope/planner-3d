@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useState, type ChangeEvent, type FormEvent } from "react";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 import { VENUE_KIND_LABELS, type VenueKind } from "@/lib/domain";
 import { submitVenue } from "./actions";
 
@@ -12,29 +13,6 @@ export const MAX_PLAN_FILES = 3;
 const MAX_PLAN_BYTES = 12 * 1024 * 1024;
 /** Igual que el servidor: planos y fotos juntos en un solo envío. */
 const MAX_TOTAL_BYTES = 36 * 1024 * 1024;
-
-/** Reduce una foto a 1600 px (JPEG) para que pese unos 300 KB. */
-async function shrinkPhoto(file: File): Promise<File> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((ok, fail) => {
-      const i = new Image();
-      i.onload = () => ok(i);
-      i.onerror = fail;
-      i.src = url;
-    });
-    const k = Math.min(1, 1600 / Math.max(img.width, img.height));
-    const cv = document.createElement("canvas");
-    cv.width = Math.round(img.width * k);
-    cv.height = Math.round(img.height * k);
-    cv.getContext("2d")!.drawImage(img, 0, 0, cv.width, cv.height);
-    const blob = await new Promise<Blob | null>((ok) => cv.toBlob(ok, "image/jpeg", 0.85));
-    if (!blob) return file;
-    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
 
 export function AltaForm({ owner }: { owner: { name: string; contact: string } | null }) {
   const [state, action, pending] = useActionState(submitVenue, null);

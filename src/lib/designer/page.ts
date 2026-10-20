@@ -2,6 +2,7 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { CONTACT_WHATSAPP } from "../brand";
+import { SHARE_IMAGE } from "../site";
 import { withoutVendors, type DesignerPlan, type PropertyDetails } from "./types";
 import { EVENT_KIND_LABELS, SALON_EVENT_KINDS } from "../domain";
 
@@ -131,7 +132,8 @@ export type VenueNotice = {
 export async function designerResponse(
   plan: DesignerPlan,
   host?: HostData,
-  meta?: { image?: string; description?: string; url?: string; siteName?: string },
+  /** Vista previa del enlace. Sin `image` se usa la imagen general de Plantea; `canonical` solo en páginas públicas. */
+  meta?: { image?: string; imageWidth?: number; imageHeight?: number; description?: string; url?: string; canonical?: string; siteName?: string },
   options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string; captura?: boolean; lang?: string | null; guideSeen?: boolean },
 ) {
   const html = await file("disenador.html");
@@ -178,15 +180,19 @@ export async function designerResponse(
     meta?.description ?? (plan.kind === "salon" ? "Plano 2D y recorrido 3D del evento" : "Plano 2D y recorrido 3D de la casa"),
   );
   const tag = (property: string, content: string) => `\n<meta property="${property}" content="${escapeHtml(content)}">`;
-  const image = meta?.image
-    ? tag("og:image", meta.image) + tag("og:image:type", "image/jpeg") + tag("og:image:width", "1200") +
-      tag("og:image:height", "630") + tag("og:image:alt", plan.title) + `\n<meta name="twitter:card" content="summary_large_image">`
-    : "";
+  // Siempre lleva imagen: la propia (foto del lugar o captura del evento) o la general de Plantea; las medidas solo si se conocen.
+  const fallback = plan.kind === "salon" ? SHARE_IMAGE.salon : SHARE_IMAGE.casa;
+  const img = meta?.image ? { url: meta.image, width: meta.imageWidth, height: meta.imageHeight } : fallback;
+  const image =
+    tag("og:image", img.url) + tag("og:image:type", "image/jpeg") +
+    (img.width && img.height ? tag("og:image:width", String(img.width)) + tag("og:image:height", String(img.height)) : "") +
+    tag("og:image:alt", plan.title) + `\n<meta name="twitter:card" content="summary_large_image">`;
   const extra = tag("og:type", "website") + tag("og:locale", "es_MX") +
-    (meta?.url ? tag("og:url", meta.url) : "") + (meta?.siteName ? tag("og:site_name", meta.siteName) : "");
+    (meta?.url ? tag("og:url", meta.url) : "") + (meta?.siteName ? tag("og:site_name", meta.siteName) : "") +
+    (meta?.canonical ? `\n<link rel="canonical" href="${escapeHtml(meta.canonical)}">` : "");
   const page = html.replace(
     /<title>[^<]*<\/title>/,
-    `<title>${title}</title>\n<meta property="og:title" content="${title}">\n<meta property="og:description" content="${description}">${extra}${image}`,
+    `<title>${title}</title>\n<meta name="description" content="${description}">\n<meta property="og:title" content="${title}">\n<meta property="og:description" content="${description}">${extra}${image}`,
   );
   // Los datos van antes del primer <script> porque el diseñador los lee al cargar.
   const at = page.indexOf("<script");

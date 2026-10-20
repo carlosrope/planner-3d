@@ -9,7 +9,7 @@ import { waLink } from "@/lib/whatsapp";
 export const metadata: Metadata = {
   title: "Quiénes somos y cómo verificarnos",
   description:
-    "Plantea es un software para planear eventos y casas en 3D sobre planos reales. Quién está detrás, cómo contactarnos, cómo pagar con seguridad y cómo comprobar que somos reales.",
+    "Quién está detrás de Plantea, cómo contactarnos, cómo pagar con seguridad y cómo comprobar que somos un negocio real de México.",
   alternates: { canonical: "/nosotros" },
 };
 

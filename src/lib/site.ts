@@ -6,6 +6,12 @@ export const SITE_URL = (process.env.SITE_URL || "https://plantea.com.mx").repla
 /** Dirección vieja de Railway: se redirige a SITE_URL (los enlaces y QR que ya circulan siguen funcionando). */
 export const LEGACY_HOST = "planner-3d-production.up.railway.app";
 
+/** Imagen para la vista previa al compartir cuando el lugar o el evento no tiene foto propia (medidas reales del archivo). */
+export const SHARE_IMAGE = {
+  salon: { url: `${SITE_URL}/portada/espacios-salon-3d.jpg`, width: 800, height: 575 },
+  casa: { url: `${SITE_URL}/portada/espacios-casa-2d.jpg`, width: 800, height: 575 },
+};
+
 /** Rutas que no deben aparecer en buscadores: cuentas, paneles, enlaces privados y la API. */
 export const PRIVATE_PATHS = ["/admin", "/api", "/inicio", "/eventos", "/negocio", "/lugares/*/panel", "/revisar", "/v/", "/olvide", "/restablecer", "/alta/gracias"];
 

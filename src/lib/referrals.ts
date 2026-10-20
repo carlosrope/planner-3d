@@ -29,6 +29,12 @@ export function newReferralCode(venueName: string, random: (n: number) => Uint8A
   return `${referralPrefix(venueName)}-${suffix}`;
 }
 
+/** Saca el código de lo que se pegó: a veces es el mensaje completo de WhatsApp («Tu código es PALMAS-7K3MQ2…»). */
+export function codeFrom(text: string): string {
+  const found = /\b[A-Z0-9]{1,6}-(?:[A-Z0-9]{6}|[A-Z0-9]{4})\b/i.exec(text);
+  return (found ? found[0] : text.trim()).toUpperCase().replace(/\s+/g, "").slice(0, 24);
+}
+
 /** Lo que escribió el cliente, como se guardó: mayúsculas, sin espacios; acepta el guion escrito o no. */
 export function normalizeReferralCode(raw: string): string | null {
   const s = raw.trim().toUpperCase().replace(/\s+/g, "");

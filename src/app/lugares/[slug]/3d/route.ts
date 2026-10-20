@@ -1,8 +1,9 @@
 import { isPreviewBot } from "@/lib/activity";
-import { bumpVenueViews, getVenuePlanForView } from "@/lib/dal";
+import { bumpVenueViews, getVenueBasics, getVenuePlanForView } from "@/lib/dal";
 import { designerResponse, publicOrigin } from "@/lib/designer/page";
 import { withStarter } from "@/lib/designer/starter";
 import { sectionOf } from "@/lib/domain";
+import { SITE_URL } from "@/lib/site";
 
 // 3D público de un lugar del catálogo (o revisión del dueño con ?r=token): se puede mover todo; nada se guarda.
 // Con ?r=token&captura=1 lo abre PortadaAuto.tsx en un iframe para tomar la portada automática.
@@ -21,12 +22,17 @@ export async function GET(request: Request, ctx: RouteContext<"/lugares/[slug]/3
   const base = found.plan.kind === "salon" ? withStarter(found.plan, { guests: 200, kind: "boda" }) : found.plan;
   const plan = { ...base, id: `lugar-${key}`, title: found.name };
   const origin = publicOrigin(request);
+  // Vista previa al compartir: la foto de fuera o la portada del lugar (sin ellas, la imagen general de Plantea).
+  const basics = await getVenueBasics(key);
+  const photo = basics?.outside ?? basics?.cover;
   return designerResponse(
     plan,
     undefined,
     {
       description: found.kind === "salon" ? `Recorre ${found.name} en 3D y prueba el montaje de tu evento.` : `Recorre ${found.name} en 3D.`,
       url: `${origin}/lugares/${key}/3d`,
+      canonical: review ? undefined : `${SITE_URL}/lugares/${key}/3d`,
+      image: photo ? `${SITE_URL}/lugares/${key}/foto/${photo}` : undefined,
       siteName: "Plantea",
     },
     {

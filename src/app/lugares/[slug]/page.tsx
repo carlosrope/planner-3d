@@ -2,28 +2,32 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { CodeInput } from "@/components/CodeInput";
 import { PageLink } from "@/components/PageLink";
 import { getPublicVenue, getVenueBasics } from "@/lib/dal";
 import { sectionOf } from "@/lib/domain";
 import { waLink } from "@/lib/whatsapp";
 import { InquiryForm } from "./InquiryForm";
-import { SITE_URL, jsonLd, venueJsonLd } from "@/lib/site";
+import { SHARE_IMAGE, SITE_URL, jsonLd, venueJsonLd } from "@/lib/site";
 
 export async function generateMetadata({ params }: PageProps<"/lugares/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const v = await getVenueBasics(slug);
   if (!v || v.status !== "publicado") return { title: "Lugar no encontrado" };
   const title = `${v.name} en 3D`;
-  const description = v.kind === "salon" ? `Recorre ${v.name} en 3D y prueba el montaje de tu evento.` : `Recorre ${v.name} en 3D y pruébalo amueblado.`;
+  const description = v.kind === "salon" ? `Recorre ${v.name} en 3D y prueba el montaje de tu evento.` : `Recorre ${v.name} en 3D y cámbiale muebles y pisos.`;
   const key = v.slug ?? v.id;
-  // Vista previa al compartir el enlace o el QR por WhatsApp: la portada (foto real o vista 3D automática).
-  const image = v.cover ? `${SITE_URL}/lugares/${key}/foto/${v.cover}` : null;
+  // Vista previa al compartir el enlace o el QR por WhatsApp: la foto de fuera, la portada (foto o vista 3D automática)
+  // o, si todavía no tiene, la imagen general de Plantea (de esa sí se saben las medidas).
+  const own = v.outside ?? v.cover;
+  const fallback = v.kind === "salon" ? SHARE_IMAGE.salon : SHARE_IMAGE.casa;
+  const image = own ? { url: `${SITE_URL}/lugares/${key}/foto/${own}`, alt: title } : { ...fallback, alt: title };
   return {
     title,
     description,
     alternates: { canonical: `/lugares/${key}` },
-    openGraph: { title, description, type: "website", locale: "es_MX", siteName: "Plantea", url: `${SITE_URL}/lugares/${key}`, images: image ? [{ url: image, width: 1200, height: 900, alt: title }] : undefined },
-    twitter: image ? { card: "summary_large_image" } : undefined,
+    openGraph: { title, description, type: "website", locale: "es_MX", siteName: "Plantea", url: `${SITE_URL}/lugares/${key}`, images: [image] },
+    twitter: { card: "summary_large_image" },
   };
 }
 
@@ -51,7 +55,12 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
     v.address ? v.address : null,
     v.city,
   ].filter((f): f is string => Boolean(f));
-  const [cover, ...rest] = v.photos;
+  const outside = v.photos.find((p) => p.kind === "foto" && p.side === "fuera");
+  const inside = v.photos.find((p) => p.kind === "foto" && p.side === "dentro");
+  const pair = outside && inside ? [outside, inside] : null;
+  const [cover, ...others] = v.photos;
+  // Con la pareja fuera/dentro arriba, las miniaturas son las demás fotos.
+  const rest = pair ? v.photos.filter((p) => p.id !== outside!.id && p.id !== inside!.id) : others;
   const ld = venueJsonLd({
     kind: v.kind,
     name: v.name,
@@ -60,7 +69,7 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
     address: v.address,
     description: v.description,
     capacity: v.capacity,
-    image: cover ? `${SITE_URL}/lugares/${slug}/foto/${cover.id}` : null,
+    image: (outside ?? cover) ? `${SITE_URL}/lugares/${slug}/foto/${(outside ?? cover)!.id}` : null,
   });
 
   return (
@@ -77,11 +86,32 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
 
       {cover ? (
         <div className="mt-4 grid gap-2">
-          <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-            <img src={`/lugares/${slug}/foto/${cover.id}`} alt={v.name} className="aspect-[16/10] w-full rounded-2xl object-cover" />
-            {cover.kind === "render" && <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">Vista 3D</span>}
-          </div>
+          {pair ? (
+            <div className="relative grid grid-cols-2 gap-2">
+              {pair.map((p) => {
+                const label = p.side === "fuera" ? "Por fuera" : "Por dentro";
+                return (
+                  <div key={p.id} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
+                    <img src={`/lugares/${slug}/foto/${p.id}`} alt={`${v.name}, ${label.toLowerCase()}`} className="aspect-[4/5] w-full rounded-2xl object-cover sm:aspect-[4/3]" />
+                    <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">{label}</span>
+                  </div>
+                );
+              })}
+              {pair.some((p) => p.illustrative) && (
+                <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-800">Imagen ilustrativa</span>
+              )}
+            </div>
+          ) : (
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
+              <img src={`/lugares/${slug}/foto/${cover.id}`} alt={v.name} className="aspect-[16/10] w-full rounded-2xl object-cover" />
+              {cover.kind === "render" && <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">Vista 3D</span>}
+              {cover.kind === "foto" && cover.illustrative && (
+                <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-800">Imagen ilustrativa</span>
+              )}
+            </div>
+          )}
           {rest.length > 0 && (
             <ul className="grid grid-cols-4 gap-2">
               {rest.slice(0, 8).map((p) => (
@@ -128,15 +158,9 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
           <p className="mt-1 text-sm text-stone-600">
             Si ya apartaste el salón, pídele tu código: con él armas tu evento en 3D sin costo, acomodas a tus invitados y lo compartes con tu familia.
           </p>
-          <div className="mt-3 flex gap-2">
-            <input
-              name="codigo"
-              required
-              autoComplete="off"
-              autoCapitalize="characters"
-              placeholder="Código, por ejemplo PALMAS-7K3M"
-              className="h-12 min-w-0 flex-1 rounded-xl border border-stone-300 bg-white px-3 text-base uppercase outline-none focus:border-stone-800"
-            />
+          <p className="mt-3 text-sm font-medium text-stone-800">Tu código</p>
+          <div className="mt-1.5 flex items-start gap-2">
+            <CodeInput name="codigo" required />
             <button className="h-12 shrink-0 rounded-xl bg-stone-900 px-4 font-medium text-white">Entrar</button>
           </div>
         </form>

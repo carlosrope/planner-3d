@@ -16,13 +16,19 @@ export const spei = () =>
 /** Origen público de la app para armar enlaces absolutos fuera de una petición (páginas). */
 export const siteOrigin = () => process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "";
 
+/** Redes de Plantea (las cuentas existen: @plantea.3d en Instagram y Plantea3D en Facebook). */
+export const SOCIAL = {
+  facebook: "https://www.facebook.com/Plantea3D",
+  instagram: "https://www.instagram.com/plantea.3d",
+};
+
 /**
  * Datos opcionales para verificar a Plantea (página /nosotros y datos estructurados). Solo se muestran si existen
  * en las variables de Railway: no se inventa ninguno.
  */
 export const trustData = () => ({
   rfc: process.env.PLANTEA_RFC?.trim() || null,
-  instagram: process.env.PLANTEA_INSTAGRAM?.trim() || null,
-  facebook: process.env.PLANTEA_FACEBOOK?.trim() || null,
+  instagram: process.env.PLANTEA_INSTAGRAM?.trim() || SOCIAL.instagram,
+  facebook: process.env.PLANTEA_FACEBOOK?.trim() || SOCIAL.facebook,
   google: process.env.PLANTEA_GOOGLE_PROFILE?.trim() || null,
 });

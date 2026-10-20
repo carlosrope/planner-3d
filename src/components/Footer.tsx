@@ -20,29 +20,30 @@ export function Footer() {
             {" · "}Automatización empresarial con IA · México
           </p>
         </div>
-        <nav className="grid gap-1 text-sm sm:text-right" aria-label="Más">
-          <Link href="/salones" className="text-stone-700 hover:underline">
+        {/* En celular, dos columnas de enlaces de 44 px de alto (lo cómodo para el dedo); en computadora, una lista compacta. */}
+        <nav className="grid grid-cols-2 gap-x-4 text-sm sm:grid-cols-1 sm:gap-1 sm:text-right" aria-label="Más">
+          <Link href="/salones" className="flex min-h-11 items-center text-stone-700 hover:underline sm:block sm:min-h-0">
             Salones en 3D
           </Link>
-          <Link href="/casas" className="text-stone-700 hover:underline">
+          <Link href="/casas" className="flex min-h-11 items-center text-stone-700 hover:underline sm:block sm:min-h-0">
             Modelos de casa
           </Link>
-          <Link href="/alta" className="text-stone-700 hover:underline">
+          <Link href="/alta" className="flex min-h-11 items-center text-stone-700 hover:underline sm:block sm:min-h-0">
             Registra tu lugar
           </Link>
-          <Link href="/para-salones" className="text-stone-700 hover:underline">
+          <Link href="/para-salones" className="flex min-h-11 items-center text-stone-700 hover:underline sm:block sm:min-h-0">
             Para dueños de salón
           </Link>
-          <Link href="/planes" className="text-stone-700 hover:underline">
+          <Link href="/planes" className="flex min-h-11 items-center text-stone-700 hover:underline sm:block sm:min-h-0">
             Planes y precios
           </Link>
-          <Link href="/nosotros" className="text-stone-700 hover:underline">
+          <Link href="/nosotros" className="flex min-h-11 items-center text-stone-700 hover:underline sm:block sm:min-h-0">
             Quiénes somos
           </Link>
-          <Link href="/privacidad" className="text-stone-500 hover:underline">
+          <Link href="/privacidad" className="flex min-h-11 items-center text-stone-600 hover:underline sm:block sm:min-h-0">
             Aviso de privacidad
           </Link>
-          <Link href="/terminos" className="text-stone-500 hover:underline">
+          <Link href="/terminos" className="flex min-h-11 items-center text-stone-600 hover:underline sm:block sm:min-h-0">
             Términos de servicio
           </Link>
         </nav>

@@ -33,6 +33,8 @@ export async function GET(request: Request, ctx: RouteContext<"/v/[token]">) {
   const origin = publicOrigin(request);
   return designerResponse({ ...full, title: data.event.title }, hostFor("view", data.event, data.layouts, wanted, brand, comments), {
     image: data.previewVersion ? `${origin}/v/${token}/vista.jpg?v=${data.previewVersion}` : undefined,
+    imageWidth: data.previewVersion ? 1200 : undefined,
+    imageHeight: data.previewVersion ? 630 : undefined,
     description,
     url: `${origin}/v/${token}${tour ? "?visita=1" : ""}`,
     siteName: brand.name || undefined,

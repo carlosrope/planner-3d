@@ -248,6 +248,10 @@ export const venueFile = pgTable(
     size: integer("size").notNull(),
     data: bytea("data").notNull(),
     position: integer("position").notNull().default(0),
+    /** En fotos: si es la vista de fuera o de dentro (la tarjeta del catálogo y la ficha las muestran juntas). */
+    side: text("side").$type<"fuera" | "dentro">(),
+    /** Imagen hecha para ilustrar (no es foto real del lugar): se etiqueta «Imagen ilustrativa». */
+    illustrative: boolean("illustrative").notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [index("venue_file_venue_idx").on(t.venueId)],

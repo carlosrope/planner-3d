@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
+import { CodeInput } from "@/components/CodeInput";
 import { authClient } from "@/lib/auth-client";
 
 const input =
@@ -138,7 +139,7 @@ export function AuthForm({
         {registering && inviteValue ? (
           <input type="hidden" name="invite" value={inviteValue} />
         ) : registering ? (
-          <input name="invite" autoComplete="off" placeholder="Código del salón o de invitación (opcional)" className={input} />
+          <CodeInput name="invite" placeholder="Código del salón (opcional)" />
         ) : null}
         {error && <p className="text-sm text-red-600">{error}</p>}
         {!registering && (

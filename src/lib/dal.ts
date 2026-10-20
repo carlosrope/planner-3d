@@ -443,6 +443,13 @@ export async function isEventMember(eventId: string, userId: string) {
 const coverOf = sql<string | null>`(select vf.id from venue_file vf where vf.venue_id = venue.id and vf.kind in ('foto', 'render') order by vf.position asc, vf.created_at asc limit 1)`;
 /** Si la portada es la vista 3D automática (para etiquetarla como tal y no hacerla pasar por foto). */
 const coverIsRender = sql<boolean>`coalesce((select vf.kind = 'render' from venue_file vf where vf.venue_id = venue.id and vf.kind in ('foto', 'render') order by vf.position asc, vf.created_at asc limit 1), false)`;
+/** Si la portada es una imagen ilustrativa (no foto real), para etiquetarla. */
+const coverIsIllustrative = sql<boolean>`coalesce((select vf.illustrative from venue_file vf where vf.venue_id = venue.id and vf.kind in ('foto', 'render') order by vf.position asc, vf.created_at asc limit 1), false)`;
+/** Primera foto marcada «por fuera» y «por dentro»: con las dos, la tarjeta y la ficha las enseñan juntas. */
+const sideOf = (side: "fuera" | "dentro") =>
+  sql<string | null>`(select vf.id from venue_file vf where vf.venue_id = venue.id and vf.kind = 'foto' and vf.side = ${side} order by vf.position asc, vf.created_at asc limit 1)`;
+/** Si alguna de las dos vistas es ilustrativa. */
+const sidesIllustrative = sql<boolean>`coalesce((select bool_or(vf.illustrative) from venue_file vf where vf.venue_id = venue.id and vf.kind = 'foto' and vf.side in ('fuera', 'dentro')), false)`;
 
 const catalogFields = {
   id: venue.id,
@@ -462,6 +469,10 @@ const catalogFields = {
   viewCount: venue.viewCount,
   cover: coverOf,
   coverIsRender,
+  coverIsIllustrative,
+  outside: sideOf("fuera"),
+  inside: sideOf("dentro"),
+  sidesIllustrative,
 };
 export type CatalogVenue = Awaited<ReturnType<typeof listCatalog>>[number];
 
@@ -534,7 +545,7 @@ export async function getVenuePlanForView(slugOrId: string, reviewToken?: string
 /** Fotos del lugar y, al final, su portada automática (kind "render"). */
 export async function listVenuePhotos(venueId: string) {
   return db
-    .select({ id: venueFile.id, name: venueFile.name, kind: venueFile.kind })
+    .select({ id: venueFile.id, name: venueFile.name, kind: venueFile.kind, side: venueFile.side, illustrative: venueFile.illustrative })
     .from(venueFile)
     .where(and(eq(venueFile.venueId, venueId), sql`${venueFile.kind} in ('foto', 'render')`))
     .orderBy(asc(venueFile.position), asc(venueFile.createdAt));
@@ -554,7 +565,7 @@ export async function getVenuePhoto(slugOrId: string, fileId: string) {
 /** Lo mínimo de un lugar en cualquier estado (página de gracias del alta, QR). */
 export async function getVenueBasics(slugOrId: string) {
   const [row] = await db
-    .select({ id: venue.id, slug: venue.slug, name: venue.name, kind: venue.kind, status: venue.status, hasPlan: sql<boolean>`(${venue.plan} is not null)`, cover: coverOf })
+    .select({ id: venue.id, slug: venue.slug, name: venue.name, kind: venue.kind, status: venue.status, hasPlan: sql<boolean>`(${venue.plan} is not null)`, cover: coverOf, outside: sideOf("fuera") })
     .from(venue)
     .where(bySlugOrId(slugOrId))
     .limit(1);
@@ -1144,7 +1155,7 @@ export async function adminGetVenue(id: string) {
     .limit(1);
   if (!found) return null;
   const files = await db
-    .select({ id: venueFile.id, kind: venueFile.kind, name: venueFile.name, size: venueFile.size, mimeType: venueFile.mimeType })
+    .select({ id: venueFile.id, kind: venueFile.kind, name: venueFile.name, size: venueFile.size, mimeType: venueFile.mimeType, side: venueFile.side, illustrative: venueFile.illustrative })
     .from(venueFile)
     .where(eq(venueFile.venueId, id))
     .orderBy(asc(venueFile.kind), asc(venueFile.position));
@@ -1225,6 +1236,14 @@ export async function adminGetVenueFile(fileId: string) {
   return row ?? null;
 }
 
+/** Marca una foto como vista de fuera o de dentro (o ninguna) y si es una imagen ilustrativa. */
+export async function adminSetVenueFileView(venueId: string, fileId: string, side: "fuera" | "dentro" | null, illustrative: boolean) {
+  await db
+    .update(venueFile)
+    .set({ side, illustrative })
+    .where(and(eq(venueFile.id, fileId), eq(venueFile.venueId, venueId), eq(venueFile.kind, "foto")));
+}
+
 export async function adminDeleteVenueFile(fileId: string) {
   await db.delete(venueFile).where(eq(venueFile.id, fileId));
 }
@@ -1235,7 +1254,8 @@ export async function adminAddVenueFiles(venueId: string, files: IntakeFile[]) {
   const [{ next }] = await db
     .select({ next: sql<number>`coalesce(max(${venueFile.position}), -1) + 1` })
     .from(venueFile)
-    .where(eq(venueFile.venueId, venueId));
+    // Sin contar la portada automática (render, position 1000+): las fotos reales deben quedar antes que ella.
+    .where(and(eq(venueFile.venueId, venueId), sql`${venueFile.kind} <> 'render'`));
   await db.insert(venueFile).values(
     files.map((f, i) => ({ venueId, kind: f.kind, name: f.name, mimeType: f.mimeType, size: f.data.length, data: f.data, position: Number(next) + i })),
   );

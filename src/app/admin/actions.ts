@@ -8,6 +8,7 @@ import {
   adminRestoreEvent,
   adminTrashVenue,
   adminDeleteVenueFile,
+  adminSetVenueFileView,
   adminResolvePayment,
   adminSetVenuePlan,
   adminUpdateOrg,
@@ -105,13 +106,13 @@ export async function uploadVenuePlan(formData: FormData): Promise<void> {
   revalidate(venueId.data);
 }
 
-/** Fotos (hasta 3 MB cada una) o planos (hasta 12 MB) que la administración agrega a un lugar. */
+/** Fotos (hasta 8 MB cada una) o planos (hasta 12 MB) que la administración agrega a un lugar. */
 export async function addFiles(formData: FormData): Promise<void> {
   await requireAdmin();
   const parsed = z.object({ venueId: id, kind: z.enum(["foto", "plano"]) }).safeParse({ venueId: formData.get("venueId"), kind: formData.get("kind") });
   if (!parsed.success) return;
   const { venueId, kind } = parsed.data;
-  const max = kind === "foto" ? 3 * 1024 * 1024 : 12 * 1024 * 1024;
+  const max = kind === "foto" ? 8 * 1024 * 1024 : 12 * 1024 * 1024;
   const files = formData
     .getAll("files")
     .filter((f): f is File => f instanceof File && f.size > 0 && f.size <= max)
@@ -135,6 +136,18 @@ export async function deleteFile(formData: FormData): Promise<void> {
   if (!parsed.success) return;
   await adminDeleteVenueFile(parsed.data.fileId);
   revalidate(parsed.data.venueId);
+}
+
+/** Foto vista de fuera o de dentro (para enseñarlas juntas en el catálogo) y si es una imagen ilustrativa. */
+export async function setFileView(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const parsed = z
+    .object({ venueId: id, fileId: id, side: z.enum(["", "fuera", "dentro"]), illustrative: z.boolean() })
+    .safeParse({ venueId: formData.get("venueId"), fileId: formData.get("fileId"), side: formData.get("side") ?? "", illustrative: formData.get("illustrative") === "on" });
+  if (!parsed.success) return;
+  const { venueId, fileId, side, illustrative } = parsed.data;
+  await adminSetVenueFileView(venueId, fileId, side || null, illustrative);
+  revalidate(venueId);
 }
 
 export async function updateOrgPlan(formData: FormData): Promise<void> {

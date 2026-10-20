@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { referralPlanEnd, referralQuota } from "./domain";
-import { monthStart, newReferralCode, normalizeReferralCode, referralCodeCandidates, referralLeft, referralPrefix } from "./referrals";
+import { codeFrom, monthStart, newReferralCode, normalizeReferralCode, referralCodeCandidates, referralLeft, referralPrefix } from "./referrals";
 
 describe("códigos de referido", () => {
   it("el prefijo recuerda al lugar, sin acentos ni artículos", () => {
@@ -58,5 +58,16 @@ describe("códigos de referido", () => {
     expect(monthStart(new Date("2026-10-13T18:00:00Z")).toISOString()).toBe("2026-10-01T07:00:00.000Z");
     // A las 23:00 del 31 en Sinaloa todavía es octubre aunque en UTC ya sea noviembre.
     expect(monthStart(new Date("2026-11-01T06:30:00Z")).toISOString()).toBe("2026-10-01T07:00:00.000Z");
+  });
+});
+
+describe("pegar el código", () => {
+  it("lo saca del mensaje completo de WhatsApp", () => {
+    expect(codeFrom("Hola Daniela, tu código de Plantea es palmas-7k3mq2. Entra en plantea.com.mx")).toBe("PALMAS-7K3MQ2");
+    expect(codeFrom("Tu código: JARDIN-A6MF")).toBe("JARDIN-A6MF");
+  });
+  it("si solo pegó el código, lo deja en mayúsculas y sin espacios", () => {
+    expect(codeFrom("  e2e7 ")).toBe("E2E7");
+    expect(codeFrom("PALMAS 7K3MQ2")).toBe("PALMAS7K3MQ2");
   });
 });

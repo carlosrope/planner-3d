@@ -155,6 +155,13 @@
       "when": 1792507859042,
       "tag": "0021_suscripcion-del-cliente",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792536353895,
+      "tag": "0022_fotos-fuera-dentro",
+      "breakpoints": true
     }
   ]
 }
