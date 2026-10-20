@@ -24,7 +24,7 @@ const FAQ = [
   },
   {
     q: "¿A nombre de quién se paga?",
-    a: `Solo por transferencia (SPEI) a la cuenta a nombre de ${RESPONSABLE.nombre}, y desde tu cuenta en Plantea, donde subes el comprobante. Nunca pedimos pagos a nombre de otra persona, en efectivo ni con tarjetas de regalo.`,
+    a: `Siempre desde tu cuenta en Plantea, de una de dos formas: con tarjeta en la página de Mercado Pago (Mercado Pago procesa el cobro y te da tu comprobante) o por transferencia (SPEI) a la cuenta a nombre de ${RESPONSABLE.nombre}, subiendo el comprobante. Nunca pedimos pagos por fuera de tu cuenta, a nombre de otra persona, en efectivo ni con tarjetas de regalo.`,
   },
   {
     q: "¿Dan factura?",
@@ -50,7 +50,7 @@ export default function NosotrosPage() {
     ["WhatsApp", <a key="w" href={whatsapp} target="_blank" rel="noopener" className="underline">{RESPONSABLE.whatsapp}</a>],
     ["Sitio oficial", <a key="s" href={SITE_URL} className="underline">plantea.com.mx</a>],
     ["Desarrollado por", <a key="p" href={PARTNER_SITE} target="_blank" rel="noopener" className="underline">ProLink365</a>],
-    ["Pagos", `SPEI a nombre de ${RESPONSABLE.nombre} · factura CFDI · IVA incluido`],
+    ["Pagos", `Tarjeta por Mercado Pago o SPEI a nombre de ${RESPONSABLE.nombre} · factura CFDI · IVA incluido`],
   ];
 
   return (
@@ -110,7 +110,7 @@ export default function NosotrosPage() {
           {[
             ["Pruébalo sin pagar.", "La demostración del salón y de la casa funciona completa, sin cuenta y sin dar datos."],
             ["Habla con nosotros.", "Escríbenos por WhatsApp o a hola@plantea.com.mx; te contestamos directamente."],
-            ["Paga cuando ya lo viste.", "Si tienes un salón o una casa, primero la convertimos a 3D y la revisas. El pago es por SPEI a nombre del responsable y con factura."],
+            ["Paga cuando ya lo viste.", "Si tienes un salón o una casa, primero la convertimos a 3D y la revisas. El pago es con tarjeta por Mercado Pago o por SPEI a nombre del responsable, con factura."],
             ["Lee nuestras reglas.", "El aviso de privacidad y los términos de servicio dicen quién es el responsable y qué incluye cada plan."],
           ].map(([t1, t2], i) => (
             <li key={t1} className="flex gap-4 rounded-2xl border border-stone-200 bg-white p-4">

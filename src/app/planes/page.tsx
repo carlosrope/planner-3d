@@ -16,7 +16,10 @@ const FAQ = [
   { q: "¿Qué necesitan de mi salón o de mis casas?", a: "El plano (CAD o PDF) o un croquis con medidas y fotos. Lo convertimos a 3D y lo revisas antes de publicarlo." },
   { q: "¿Los precios incluyen IVA?", a: "Sí, todos los precios son en pesos con IVA incluido. Te damos factura." },
   { q: "¿Cómo sé que Plantea es real?", a: "En plantea.com.mx/nosotros están quién es el responsable, cómo contactarnos y cómo comprobarlo antes de pagar. La demo es gratis y sin cuenta." },
-  { q: "¿Cómo pago?", a: "Por transferencia (SPEI) desde tu cuenta en Plantea; subes el comprobante y activamos tu plan el mismo día." },
+  {
+    q: "¿Cómo pago?",
+    a: "Desde tu cuenta en Plantea: con tarjeta por Mercado Pago (el mensual se cobra solo y lo cancelas cuando quieras; tu plan se activa al aprobarse el pago) o por transferencia (SPEI), subiendo el comprobante; esa la activamos el mismo día hábil.",
+  },
 ];
 
 export default function PlanesPage() {

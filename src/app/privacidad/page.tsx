@@ -14,7 +14,7 @@ export default function PrivacidadPage() {
     <Legal
       tag="Plantea · Legal"
       title="Aviso de privacidad"
-      updated="19 de octubre de 2026"
+      updated="20 de octubre de 2026"
       intro={
         <p>
           <b>En corto:</b> Plantea guarda lo mínimo para que funcione tu cuenta, tu lugar y tus eventos. <b>El plano de tu salón o de tu casa
@@ -66,8 +66,9 @@ export default function PrivacidadPage() {
             invitados aproximados y mensaje, para entregárselos al lugar.
           </li>
           <li>
-            <b>Pagos:</b> el comprobante de transferencia que subes (imagen o PDF), el plan y el monto. No guardamos números de tarjeta: Plantea no procesa
-            tarjetas.
+            <b>Pagos:</b> si pagas por transferencia, el comprobante que subes (imagen o PDF), el plan y el monto. Si pagas con tarjeta, Mercado Pago
+            procesa el cobro y nos informa el plan, el monto, el estado del pago y su número de operación (y, en un pago mensual, el estado de tu
+            suscripción). No vemos ni guardamos los números de tu tarjeta.
           </li>
           <li>
             <b>Códigos de referido:</b> el nombre del cliente y la fecha del evento que escribe quien genera el código, y qué cuenta lo usó.
@@ -136,6 +137,11 @@ export default function PrivacidadPage() {
             <b>Inicio de sesión con Google</b> (solo si lo eliges): Google confirma tu identidad y nos comparte tu nombre, tu correo y tu foto.
           </li>
           <li>
+            <b>Pagos con tarjeta:</b> Mercado Pago (DeRemate.com de México, S. de R.L. de C.V., la empresa que aparece en mercadopago.com.mx) procesa los cobros con tarjeta y las suscripciones
+            mensuales con sus propios términos y aviso de privacidad. Le compartimos el plan, el monto y una referencia del pago; tus datos de tarjeta
+            los escribes directo en Mercado Pago.
+          </li>
+          <li>
             <b>Errores:</b> cuando está activo, Sentry (Estados Unidos) recibe reportes técnicos de las fallas (la página, el navegador y el error),
             sin contraseñas ni el contenido de tus proyectos.
           </li>
@@ -149,8 +155,8 @@ export default function PrivacidadPage() {
         </ul>
         <p>
           Estos proveedores guardan o procesan datos fuera de México solo para darte el servicio, y no los usan para nada más. Fuera de eso, solo
-          compartiríamos datos si una autoridad competente lo exige por ley. Si agregamos un proveedor (por ejemplo, pagos con tarjeta), actualizaremos
-          este aviso antes de usarlo.
+          compartiríamos datos si una autoridad competente lo exige por ley. Si agregamos otro proveedor, actualizaremos este aviso antes de
+          usarlo.
         </p>
       </Seccion>
 

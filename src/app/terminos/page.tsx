@@ -15,7 +15,7 @@ export default function TerminosPage() {
     <Legal
       tag="Plantea · Legal"
       title="Términos de servicio"
-      updated="19 de octubre de 2026"
+      updated="20 de octubre de 2026"
       intro={
         <p>
           <b>En corto:</b> Plantea es una herramienta para planear eventos y mostrar casas en 2D y 3D. Tu contenido (planos, fotos, eventos) sigue siendo
@@ -63,10 +63,23 @@ export default function TerminosPage() {
             </Link>
             .
           </li>
-          <li>El plan se paga por adelantado, por mes o por año, por transferencia (SPEI). Queda activo cuando confirmamos el pago, normalmente el mismo día hábil. Emitimos factura CFDI.</li>
+          <li>
+            El plan se paga por adelantado, por mes o por año, de dos formas: por <b>transferencia (SPEI)</b>, que queda activa cuando confirmamos tu
+            comprobante (normalmente el mismo día hábil), o con <b>tarjeta por Mercado Pago</b>, que queda activa en cuanto Mercado Pago aprueba el pago.
+            Emitimos factura CFDI.
+          </li>
+          <li>
+            <b>Pago mensual con tarjeta:</b> es una suscripción. Al aceptarla en Mercado Pago, autorizas que se cobre el mismo monto cada mes, con el plan
+            que elegiste, hasta que la canceles. La cancelas cuando quieras desde Mi negocio (o desde tu cuenta de Mercado Pago); ya no se hacen cobros
+            nuevos y tu plan sigue hasta el final del mes que ya pagaste. <b>Pago anual con tarjeta:</b> es un solo cobro y no se renueva solo.
+          </li>
+          <li>
+            Los cobros con tarjeta los procesa Mercado Pago con sus propios términos; Plantea no ve ni guarda los datos de tu tarjeta. Los meses sin
+            intereses u otras formas de pago dependen de lo que Mercado Pago ofrezca en ese momento.
+          </li>
           <li>Precio fijo durante 12 meses desde tu primer pago. Si cambia después, te avisaremos con 30 días de anticipación.</li>
           <li>Plantea es un servicio que se paga por periodo completo: no hay reembolsos por periodos pagados, usados o no.</li>
-          <li>No hay plazo forzoso: puedes dejar de pagar cuando quieras. Al vencer el plan, tus proyectos siguen guardados y visibles, pero no se pueden crear ni editar hasta reactivar.</li>
+          <li>No hay plazo forzoso: puedes dejar de pagar o cancelar tu suscripción cuando quieras. Al vencer el plan, tus proyectos siguen guardados y visibles, pero no se pueden crear ni editar hasta reactivar.</li>
           <li>Plan de prueba: dura los días que indique tu código de invitación, sin costo y sin tarjeta.</li>
         </ul>
       </Seccion>
