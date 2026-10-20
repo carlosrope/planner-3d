@@ -77,14 +77,14 @@ button {
   }
   .plan-card:hover::before {
     opacity: 1;
-    animation: plan-giro 2.2s linear infinite;
+    animation: plan-giro 4s linear infinite;
   }
 }
 /* En anual, todas las tarjetas llevan el borde girando para que resalte el ahorro */
 .plan-card-giro::before,
 .plan-card:focus-within::before {
   opacity: 1;
-  animation: plan-giro 2.2s linear infinite;
+  animation: plan-giro 4s linear infinite;
 }
 @keyframes plan-giro {
   to {
