@@ -10,6 +10,7 @@ import { siteOrigin } from "@/lib/brand";
 import { formatWhatsapp, waLink } from "@/lib/whatsapp";
 import { AdminNav } from "../../AdminNav";
 import { PhotoUpload } from "./PhotoUpload";
+import { SaveButton } from "../../SaveButton";
 import { addFiles, deleteFile, setFileView, trashVenue, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
 import { CopyField } from "@/app/lugares/[slug]/panel/CopyField";
 
@@ -122,7 +123,7 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
                     <label className="flex items-center gap-1.5">
                       <input type="checkbox" name="illustrative" defaultChecked={f.illustrative} /> Ilustrativa
                     </label>
-                    <button className="h-7 rounded-md bg-stone-900 font-medium text-white">Guardar</button>
+                    <SaveButton className="h-7 rounded-md bg-stone-900 font-medium text-white">Guardar</SaveButton>
                   </form>
                 </li>
               ))}
@@ -213,7 +214,7 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
             <input type="checkbox" name="isPublic" defaultChecked={v.isPublic} className="h-5 w-5" />
             Abierto a todas las planners (catálogo)
           </label>
-          <button className={`${btn} sm:col-span-3`}>Guardar estado</button>
+          <SaveButton className={`${btn} sm:col-span-3`}>Guardar estado</SaveButton>
         </form>
         {reviewUrl && (
           <div className="mt-4 space-y-2">
@@ -268,7 +269,7 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
             <span className="text-sm text-stone-600">Correo</span>
             <input name="contactEmail" type="email" defaultValue={v.contactEmail ?? ""} maxLength={120} className={field} />
           </label>
-          <button className={`${btn} sm:col-span-2`}>Guardar ficha</button>
+          <SaveButton className={`${btn} sm:col-span-2`}>Guardar ficha</SaveButton>
         </form>
       </section>
       {!v.deletedAt && (
