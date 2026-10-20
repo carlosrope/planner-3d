@@ -53,6 +53,9 @@ test("pago por SPEI con comprobante y confirmación en /admin", async ({ page, b
   await signIn(page, planner.email);
   await page.goto("/negocio");
   await page.waitForLoadState("networkidle");
+  // Con pago con tarjeta disponible, la transferencia viene plegada: se abre.
+  const spei = page.getByText("¿Prefieres pagar por transferencia (SPEI)?");
+  if (await spei.isVisible()) await spei.click();
   await expect(page.getByText("000000000000000000")).toBeVisible();
   await page.locator('select[name="plan"]').selectOption("eventos");
   await page.locator('select[name="tier"]').selectOption("ilimitado");
