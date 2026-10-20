@@ -132,3 +132,30 @@ button {
     transition: none !important;
   }
 }
+
+/* Catálogo y ficha · deslizador «por fuera / por dentro»: al cargar, la línea hace un vaivén una sola vez */
+@property --x {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 50%;
+}
+@keyframes comparar-guia {
+  0%,
+  100% {
+    --x: 50%;
+  }
+  30% {
+    --x: 32%;
+  }
+  65% {
+    --x: 68%;
+  }
+}
+.comparar-guia {
+  animation: comparar-guia 1.8s ease-in-out 0.6s 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .comparar-guia {
+    animation: none;
+  }
+}

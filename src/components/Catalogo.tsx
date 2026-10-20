@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CompareSlider } from "./CompareSlider";
 import { PageLink } from "@/components/PageLink";
 import { listCatalog, listCatalogCities, type CatalogVenue } from "@/lib/dal";
 import type { VenueKind } from "@/lib/domain";
@@ -84,39 +85,37 @@ export function Tarjeta({ v }: { v: CatalogVenue }) {
   ].filter(Boolean);
   return (
     <article className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
-      <PageLink href={`/lugares/${slug}`} className="block">
-        {v.outside && v.inside ? (
-          // Con una foto de fuera y otra de dentro, se ven las dos en el mismo recuadro.
-          <div className="relative grid aspect-[4/3] w-full grid-cols-2 gap-0.5 bg-white">
-            {(
-              [
-                ["Por fuera", v.outside],
-                ["Por dentro", v.inside],
-              ] as const
-            ).map(([label, file]) => (
-              <div key={label} className="relative overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-                <img src={`/lugares/${slug}/foto/${file}`} alt={`${v.name}, ${label.toLowerCase()}`} className="h-full w-full object-cover" loading="lazy" />
-                <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">{label}</span>
-              </div>
-            ))}
-            {v.sidesIllustrative && <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium text-stone-800">Imagen ilustrativa</span>}
-          </div>
-        ) : v.cover ? (
-          <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-            <img src={`/lugares/${slug}/foto/${v.cover}`} alt={v.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
-            {v.coverIsRender && <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">Vista 3D</span>}
-            {!v.coverIsRender && v.coverIsIllustrative && (
-              <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium text-stone-800">Imagen ilustrativa</span>
-            )}
-          </div>
-        ) : (
-          <div className="flex aspect-[4/3] w-full items-center justify-center bg-stone-100 text-sm text-stone-500">Sin fotos todavía</div>
-        )}
-      </PageLink>
+      {v.outside && v.inside ? (
+        // Fuera y dentro en el mismo recuadro, con una línea que se arrastra; la ficha se abre con el nombre o con «Ficha».
+        <CompareSlider
+          outside={`/lugares/${slug}/foto/${v.outside}`}
+          inside={`/lugares/${slug}/foto/${v.inside}`}
+          place={v.kind === "salon" ? "Salón" : "Casa"}
+          name={v.name}
+          illustrative={v.sidesIllustrative}
+        />
+      ) : (
+        <PageLink href={`/lugares/${slug}`} className="block">
+          {v.cover ? (
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
+              <img src={`/lugares/${slug}/foto/${v.cover}`} alt={v.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+              {v.coverIsRender && <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">Vista 3D</span>}
+              {!v.coverIsRender && v.coverIsIllustrative && (
+                <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium text-stone-800">Imagen ilustrativa</span>
+              )}
+            </div>
+          ) : (
+            <div className="flex aspect-[4/3] w-full items-center justify-center bg-stone-100 text-sm text-stone-500">Sin fotos todavía</div>
+          )}
+        </PageLink>
+      )}
       <div className="p-4">
-        <h2 className="font-semibold">{v.name}</h2>
+        <h2 className="font-semibold">
+          <PageLink href={`/lugares/${slug}`} className="hover:underline">
+            {v.name}
+          </PageLink>
+        </h2>
         <p className="text-sm text-stone-500">{facts.join(" · ")}</p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <PageLink href={`/lugares/${slug}/3d`} className="flex h-10 items-center justify-center rounded-xl bg-stone-900 text-sm font-medium text-white">

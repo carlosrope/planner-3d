@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CodeInput } from "@/components/CodeInput";
+import { CompareSlider } from "@/components/CompareSlider";
 import { PageLink } from "@/components/PageLink";
 import { getPublicVenue, getVenueBasics } from "@/lib/dal";
 import { sectionOf } from "@/lib/domain";
@@ -87,21 +88,15 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
       {cover ? (
         <div className="mt-4 grid gap-2">
           {pair ? (
-            <div className="relative grid grid-cols-2 gap-2">
-              {pair.map((p) => {
-                const label = p.side === "fuera" ? "Por fuera" : "Por dentro";
-                return (
-                  <div key={p.id} className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-                    <img src={`/lugares/${slug}/foto/${p.id}`} alt={`${v.name}, ${label.toLowerCase()}`} className="aspect-[4/5] w-full rounded-2xl object-cover sm:aspect-[4/3]" />
-                    <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">{label}</span>
-                  </div>
-                );
-              })}
-              {pair.some((p) => p.illustrative) && (
-                <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-800">Imagen ilustrativa</span>
-              )}
-            </div>
+            <CompareSlider
+              outside={`/lugares/${slug}/foto/${outside!.id}`}
+              inside={`/lugares/${slug}/foto/${inside!.id}`}
+              place={salon ? "Salón" : "Casa"}
+              name={v.name}
+              illustrative={pair.some((p) => p.illustrative)}
+              className="aspect-[4/3] sm:aspect-[16/10]"
+              rounded="rounded-2xl"
+            />
           ) : (
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
