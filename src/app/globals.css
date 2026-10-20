@@ -80,6 +80,8 @@ button {
     animation: plan-giro 2.2s linear infinite;
   }
 }
+/* En anual, todas las tarjetas llevan el borde girando para que resalte el ahorro */
+.plan-card-giro::before,
 .plan-card:focus-within::before {
   opacity: 1;
   animation: plan-giro 2.2s linear infinite;

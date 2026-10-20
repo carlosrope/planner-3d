@@ -42,7 +42,10 @@ export default function PlanesPage() {
           <h2 className="text-xl font-semibold">{p.title}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {p.plans.map((plan) => (
-              <div key={plan.name} className={`flex flex-col rounded-2xl border bg-white p-5 ${plan.featured ? "border-[#b5653a]" : "border-stone-200"}`}>
+              <div key={plan.name} className={`relative flex flex-col rounded-2xl border bg-white p-5 ${plan.featured ? "border-[#b5653a] ring-1 ring-[#b5653a]" : "border-stone-200"}`}>
+                {plan.featured && plan.name === "Ilimitado" && (
+                  <span className="absolute -top-2.5 left-5 rounded-full bg-[#b5653a] px-2.5 py-0.5 text-xs font-semibold text-white">Recomendado</span>
+                )}
                 <p className="font-semibold">{plan.name}</p>
                 <p className="mt-1">
                   <span className="text-3xl font-semibold">{plan.price}</span> <span className="text-sm text-stone-500">al mes</span>

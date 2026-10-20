@@ -84,7 +84,7 @@ export function PlanPicker({ cards }: { cards: PlanCardData[] }) {
               // La clave cambia con el periodo para que las tarjetas vuelvan a entrar con su animación.
               key={`${c.key}|${period}`}
               style={{ animationDelay: `${i * 70}ms` }}
-              className={`plan-card plan-entra flex flex-col rounded-2xl border bg-white p-4 ${c.featured ? "border-[#b5653a] ring-1 ring-[#b5653a]" : "border-stone-200"}`}
+              className={`plan-card plan-entra ${period === "anio" ? "plan-card-giro" : ""} flex flex-col rounded-2xl border bg-white p-4 ${c.featured ? "border-[#b5653a] ring-1 ring-[#b5653a]" : "border-stone-200"}`}
             >
               {(c.current || c.featured) && (
                 <span
