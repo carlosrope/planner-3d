@@ -1,0 +1,2 @@
+ALTER TABLE "card_checkout" ADD COLUMN "mp_subscription_id" text;--> statement-breakpoint
+ALTER TABLE "card_checkout" ADD CONSTRAINT "card_checkout_mp_subscription_id_unique" UNIQUE("mp_subscription_id");

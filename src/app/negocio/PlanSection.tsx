@@ -44,7 +44,7 @@ async function cardOptions(org: Org): Promise<CardOption[]> {
 }
 
 /** Tu plan: qué incluye, cuándo vence, cómo pagar (tarjeta o transferencia) y los pagos enviados. */
-export async function PlanSection({ org, wanted, result, email }: { org: Org; wanted?: Plan; result?: string; email?: string }) {
+export async function PlanSection({ org, wanted, result }: { org: Org; wanted?: Plan; result?: string }) {
   const card = mpEnabled() && org.plan !== "invitado";
   const [payments, origin, options, checkouts] = await Promise.all([
     listPayments(org.id),
@@ -52,7 +52,8 @@ export async function PlanSection({ org, wanted, result, email }: { org: Org; wa
     card ? cardOptions(org) : Promise.resolve([] as CardOption[]),
     card ? listCardCheckouts(org.id) : Promise.resolve([]),
   ]);
-  const subscriptions = checkouts.filter((c) => c.kind === "suscripcion" && c.mpId && ["activa", "pausada", "pendiente"].includes(c.status));
+  // Solo las suscripciones a las que el cliente ya se suscribió en Mercado Pago (las demás son intentos sin terminar).
+  const subscriptions = checkouts.filter((c) => c.kind === "suscripcion" && c.mpSubscriptionId && ["activa", "pausada"].includes(c.status));
   const notice = result ? RESULT[result] : undefined;
   const preferred = options.find((o) => o.value.startsWith(`${wanted ?? org.plan}|${org.tier}|`))?.value;
   const bank = spei();
@@ -115,7 +116,7 @@ export async function PlanSection({ org, wanted, result, email }: { org: Org; wa
             Con Mercado Pago: tarjeta de crédito o débito (y OXXO en el pago anual). El plan mensual se cobra solo cada mes y lo cancelas cuando quieras;
             tu plan se activa en cuanto Mercado Pago aprueba el pago.
           </p>
-          <CardPaymentForm options={options} current={preferred} email={email} />
+          <CardPaymentForm options={options} current={preferred} />
           {subscriptions.length > 0 && (
             <ul className="mt-4 space-y-2 text-sm">
               {subscriptions.map((s) => (

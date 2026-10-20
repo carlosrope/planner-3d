@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { processPayment, processPreapproval } from "@/lib/card-sync";
+import { processPayment, processPreapproval, processSubscriptionCheckout } from "@/lib/card-sync";
 import { siteOrigin } from "@/lib/brand";
 import { getCardCheckout } from "@/lib/dal";
 import { reportError } from "@/lib/sentry";
@@ -17,10 +17,13 @@ export async function GET(request: Request) {
     if (paymentId && paymentId !== "null") {
       const r = await processPayment(paymentId);
       result = r.status === "approved" ? "ok" : r.status === "rejected" ? "rechazado" : "pendiente";
-    } else {
-      const id = preapprovalId ?? (checkoutId ? (await getCardCheckout(checkoutId))?.mpId : null);
-      if (id) {
-        const r = await processPreapproval(id);
+    } else if (preapprovalId) {
+      const r = await processPreapproval(preapprovalId);
+      result = r.status === "authorized" ? "suscripcion" : "pendiente";
+    } else if (checkoutId) {
+      const checkout = await getCardCheckout(checkoutId);
+      if (checkout) {
+        const r = await processSubscriptionCheckout(checkout);
         result = r.status === "authorized" ? "suscripcion" : "pendiente";
       }
     }

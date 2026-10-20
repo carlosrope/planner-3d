@@ -1,7 +1,7 @@
 import "server-only";
 import { checkoutRef, paymentMatches, parseCheckoutRef } from "./card";
-import { applyCardPayment, getCardCheckout, getCardCheckoutByMpId, listCardCheckouts, setCardCheckout, type CardCheckout } from "./dal";
-import { getAuthorizedPayment, getPayment, getPreapproval, searchAuthorizedPayments, searchPayments, type MpPayment } from "./mercadopago";
+import { applyCardPayment, getCardCheckout, getCardCheckoutByMpId, getCardCheckoutBySubscription, listCardCheckouts, setCardCheckout, type CardCheckout } from "./dal";
+import { getAuthorizedPayment, getPayment, getPreapproval, searchAuthorizedPayments, searchPayments, searchSubscriptionsOfPlan, type MpPayment } from "./mercadopago";
 import { reportError } from "./sentry";
 
 /**
@@ -34,7 +34,7 @@ export async function processPayment(id: string | number) {
 /** Cobro mensual de una suscripción. */
 export async function processAuthorizedPayment(id: string | number) {
   const ap = await getAuthorizedPayment(id);
-  const checkout = await getCardCheckoutByMpId(ap.preapproval_id);
+  const checkout = (await getCardCheckoutBySubscription(ap.preapproval_id)) ?? (await processPreapproval(ap.preapproval_id)).checkout ?? null;
   if (!checkout || !ap.payment) return { applied: false };
   const applied = await applyIfPaid(checkout, { id: ap.payment.id, status: ap.payment.status, currency_id: ap.currency_id, transaction_amount: ap.transaction_amount });
   return { applied, checkout };
@@ -44,15 +44,30 @@ export async function processAuthorizedPayment(id: string | number) {
 export async function processPreapproval(id: string) {
   const pa = await getPreapproval(id);
   const checkoutId = parseCheckoutRef(pa.external_reference);
-  const checkout = (checkoutId ? await getCardCheckout(checkoutId) : null) ?? (await getCardCheckoutByMpId(pa.id));
+  const checkout =
+    (checkoutId ? await getCardCheckout(checkoutId) : null) ??
+    (await getCardCheckoutBySubscription(pa.id)) ??
+    (pa.preapproval_plan_id ? await getCardCheckoutByMpId(pa.preapproval_plan_id) : null);
   if (!checkout) return { status: pa.status, applied: false };
   const next = PREAPPROVAL_STATUS[pa.status];
-  if (next && next !== checkout.status) await setCardCheckout(checkout.id, { status: next });
+  // Se guarda la suscripción del cliente (para sus cobros mensuales y para cancelarla desde Mi negocio).
+  if ((next && next !== checkout.status) || checkout.mpSubscriptionId !== pa.id) {
+    await setCardCheckout(checkout.id, { ...(next ? { status: next } : {}), mpSubscriptionId: pa.id });
+  }
   let applied = false;
   for (const ap of await searchAuthorizedPayments(pa.id)) {
     if (ap.payment) applied = (await applyIfPaid(checkout, { id: ap.payment.id, status: ap.payment.status, currency_id: ap.currency_id, transaction_amount: ap.transaction_amount })) || applied;
   }
   return { status: pa.status, applied, checkout };
+}
+
+/** Regreso de una suscripción: busca la suscripción del cliente en el plan del intento y la aplica. */
+export async function processSubscriptionCheckout(checkout: CardCheckout) {
+  if (checkout.mpSubscriptionId) return processPreapproval(checkout.mpSubscriptionId);
+  if (!checkout.mpId) return { status: "pending", applied: false };
+  let last: { status: string; applied: boolean } = { status: "pending", applied: false };
+  for (const sub of await searchSubscriptionsOfPlan(checkout.mpId)) last = await processPreapproval(sub.id);
+  return last;
 }
 
 /** "Revisar mi pago": vuelve a preguntar a Mercado Pago por los intentos recientes del negocio. */
@@ -64,8 +79,10 @@ export async function syncOrgCardPayments(orgId: string) {
     try {
       if (c.kind === "pago") {
         for (const p of await searchPayments(checkoutRef(c.id))) if (await applyIfPaid(c, p)) applied++;
+      } else if (c.mpSubscriptionId) {
+        if ((await processPreapproval(c.mpSubscriptionId)).applied) applied++;
       } else if (c.mpId) {
-        if ((await processPreapproval(c.mpId)).applied) applied++;
+        for (const sub of await searchSubscriptionsOfPlan(c.mpId)) if ((await processPreapproval(sub.id)).applied) applied++;
       }
     } catch (e) {
       void reportError({ message: `No se pudo revisar el intento ${c.id} en Mercado Pago: ${e instanceof Error ? e.message : e}`, source: "server" });

@@ -849,12 +849,17 @@ export async function createCardCheckout(
   return row;
 }
 
-export async function setCardCheckout(id: string, patch: { mpId?: string; status?: string }) {
+export async function setCardCheckout(id: string, patch: { mpId?: string; mpSubscriptionId?: string; status?: string }) {
   await db.update(cardCheckout).set(patch).where(eq(cardCheckout.id, id));
 }
 
 export async function getCardCheckout(id: string) {
   const [row] = await db.select().from(cardCheckout).where(eq(cardCheckout.id, id)).limit(1);
+  return row ?? null;
+}
+
+export async function getCardCheckoutBySubscription(subscriptionId: string) {
+  const [row] = await db.select().from(cardCheckout).where(eq(cardCheckout.mpSubscriptionId, subscriptionId)).limit(1);
   return row ?? null;
 }
 

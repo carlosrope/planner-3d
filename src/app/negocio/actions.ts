@@ -17,7 +17,7 @@ import {
   setCardCheckout,
   setReferralTemplate,
 } from "@/lib/dal";
-import { cancelPreapproval, createPreapproval, createPreference, mpEnabled } from "@/lib/mercadopago";
+import { cancelPreapproval, createPreference, createSubscriptionPlan, mpEnabled } from "@/lib/mercadopago";
 import { reportError } from "@/lib/sentry";
 import { MAX_BODY_LENGTH, MESSAGE_STYLES, serializeSetting } from "@/lib/referral-message";
 import { db } from "@/lib/db";
@@ -169,8 +169,6 @@ export async function startCardPayment(_prev: CardState, formData: FormData): Pr
   const parsed = cardBody.safeParse({ plan, tier, period });
   if (!parsed.success) return { error: "Elige el plan que quieres pagar." };
   const d = parsed.data;
-  const mpEmail = z.string().trim().toLowerCase().email().max(120).safeParse(formData.get("mpEmail"));
-  if (!mpEmail.success) return { error: "Escribe el correo de tu cuenta de Mercado Pago." };
   // El monto sale de la tabla de precios (nunca del navegador); un salón paga también sus salones adicionales.
   const extraVenues = org.kind === "venue" ? Math.max(0, (await countOwnedPublishedVenues(org.id)) - 1) : 0;
   const price = cardPrice({ ...d, tier: d.plan === "personal" ? "pro" : d.tier, orgKind: org.kind, extraVenues });
@@ -185,8 +183,8 @@ export async function startCardPayment(_prev: CardState, formData: FormData): Pr
   });
   let goTo: string;
   try {
-    const input = { checkoutId: checkout.id, title: price.title, amount: price.amount, email: mpEmail.data };
-    const created = checkout.kind === "pago" ? await createPreference(input) : await createPreapproval(input);
+    const input = { checkoutId: checkout.id, title: price.title, amount: price.amount, email: user.email };
+    const created = checkout.kind === "pago" ? await createPreference(input) : await createSubscriptionPlan(input);
     if (!created.init_point) throw new Error("Mercado Pago no regresó la página de pago");
     await setCardCheckout(checkout.id, { mpId: created.id });
     goTo = created.init_point;
@@ -215,9 +213,9 @@ export async function cancelSubscriptionAction(formData: FormData): Promise<void
   const id = z.string().uuid().safeParse(formData.get("checkoutId"));
   if (!id.success) return;
   const checkout = await getCardCheckout(id.data);
-  if (!checkout || checkout.orgId !== org.id || checkout.kind !== "suscripcion" || !checkout.mpId) return;
+  if (!checkout || checkout.orgId !== org.id || checkout.kind !== "suscripcion" || !checkout.mpSubscriptionId) return;
   try {
-    await cancelPreapproval(checkout.mpId);
+    await cancelPreapproval(checkout.mpSubscriptionId);
     await setCardCheckout(checkout.id, { status: "cancelada" });
   } catch (e) {
     void reportError({ message: `No se pudo cancelar la suscripción ${checkout.id}: ${e instanceof Error ? e.message : e}`, source: "server" });

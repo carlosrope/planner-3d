@@ -321,8 +321,10 @@ export const cardCheckout = pgTable(
     period: text("period").$type<PaymentPeriod>().notNull(),
     amount: integer("amount").notNull(),
     title: text("title").notNull(),
-    /** Id de la preferencia (pago) o de la suscripción (preapproval) en Mercado Pago. */
+    /** Id de la preferencia (pago) o del plan de suscripción (preapproval_plan) en Mercado Pago. */
     mpId: text("mp_id").unique(),
+    /** Id de la suscripción (preapproval) cuando el cliente ya se suscribió al plan. */
+    mpSubscriptionId: text("mp_subscription_id").unique(),
     /** pendiente · pagado (pago único) · activa, pausada o cancelada (suscripción) · fallida. */
     status: text("status").notNull().default("pendiente"),
     createdAt: createdAt(),

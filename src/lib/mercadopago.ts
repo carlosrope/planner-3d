@@ -5,8 +5,8 @@ import { checkoutRef } from "./card";
 
 /**
  * Cliente mínimo de la API de Mercado Pago (HTTP, sin SDK). Con MP_ACCESS_TOKEN el botón "Pagar con tarjeta" aparece en
- * Mi negocio; sin él, solo hay SPEI. En local se usan las credenciales de un vendedor de prueba y MP_TEST_PAYER_EMAIL (el
- * correo del comprador de prueba), porque en modo de prueba las suscripciones solo aceptan compradores de prueba.
+ * Mi negocio; sin él, solo hay SPEI. En local se usan las credenciales de un vendedor de prueba y se paga entrando con el
+ * comprador de prueba en la página de Mercado Pago.
  */
 const API = "https://api.mercadopago.com";
 
@@ -46,7 +46,6 @@ function urls() {
   return { origin, https, back: `${origin}/api/pagos/mercadopago/regreso`, notify: https ? `${origin}/api/pagos/mercadopago` : undefined };
 }
 
-const payerEmail = (email: string) => process.env.MP_TEST_PAYER_EMAIL?.trim() || email;
 
 export type MpPayment = {
   id: number;
@@ -58,7 +57,14 @@ export type MpPayment = {
   date_approved?: string | null;
 };
 
-export type MpPreapproval = { id: string; status: string; init_point?: string; external_reference?: string | null; reason?: string };
+export type MpPreapproval = {
+  id: string;
+  status: string;
+  init_point?: string;
+  external_reference?: string | null;
+  preapproval_plan_id?: string | null;
+  reason?: string;
+};
 
 export type MpAuthorizedPayment = {
   id: number;
@@ -76,7 +82,7 @@ export async function createPreference(input: { checkoutId: string; title: strin
     method: "POST",
     body: {
       items: [{ id: input.checkoutId, title: input.title, quantity: 1, unit_price: input.amount, currency_id: "MXN" }],
-      payer: { email: payerEmail(input.email) },
+      payer: { email: input.email },
       external_reference: checkoutRef(input.checkoutId),
       back_urls: { success: u.back, pending: u.back, failure: u.back },
       ...(u.https ? { auto_return: "approved" } : {}),
@@ -86,21 +92,27 @@ export async function createPreference(input: { checkoutId: string; title: strin
   });
 }
 
-/** Suscripción mensual sin plan asociado: Mercado Pago cobra sola cada mes hasta que se cancela. */
-export async function createPreapproval(input: { checkoutId: string; title: string; amount: number; email: string }) {
+/**
+ * Suscripción mensual: un plan de suscripción (preapproval_plan) por intento; el cliente entra con su propia cuenta de
+ * Mercado Pago y se suscribe (así no importa con qué correo tenga su cuenta). Mercado Pago cobra solo cada mes.
+ */
+export async function createSubscriptionPlan(input: { checkoutId: string; title: string; amount: number }) {
   const u = urls();
-  return mp<MpPreapproval>("/preapproval", {
+  return mp<{ id: string; init_point: string; status: string }>("/preapproval_plan", {
     method: "POST",
     body: {
       reason: input.title,
       external_reference: checkoutRef(input.checkoutId),
-      payer_email: payerEmail(input.email),
       auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: input.amount, currency_id: "MXN" },
       // La suscripción no acepta regresar a http; en local regresa a plantea.com.mx y se revisa con "Revisar mi pago".
       back_url: u.https ? `${u.back}?suscripcion=${input.checkoutId}` : `https://plantea.com.mx/negocio`,
-      status: "pending",
     },
   });
+}
+
+export async function searchSubscriptionsOfPlan(planId: string) {
+  const r = await mp<{ results?: MpPreapproval[] }>(`/preapproval/search?preapproval_plan_id=${encodeURIComponent(planId)}`);
+  return r.results ?? [];
 }
 
 export const getPayment = (id: string | number) => mp<MpPayment>(`/v1/payments/${encodeURIComponent(String(id))}`);
