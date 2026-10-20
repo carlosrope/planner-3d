@@ -12,6 +12,8 @@ export type PlanCardData = {
   points: string[];
   featured?: boolean;
   current?: boolean;
+  /** Lo que distingue al plan va primero y resaltado (Ilimitado: códigos sin tope). */
+  lead?: boolean;
   monthly?: PlanPeriodPrice;
   annual?: PlanPeriodPrice;
 };
@@ -44,7 +46,12 @@ export function PlanPicker({ cards }: { cards: PlanCardData[] }) {
     <div>
       {hasAnnual && (
         <div className="mt-4 flex justify-center">
-          <div role="radiogroup" aria-label="Forma de pago" className="inline-flex rounded-full border border-stone-200 bg-stone-100 p-1 text-sm font-medium">
+          <div role="radiogroup" aria-label="Forma de pago" className="relative grid grid-cols-2 rounded-full border border-stone-200 bg-stone-100 p-1 text-sm font-medium">
+            {/* La pastilla blanca se desliza a la opción elegida */}
+            <span
+              aria-hidden="true"
+              className={`plan-pastilla absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-white shadow-sm ${period === "anio" ? "translate-x-full" : ""}`}
+            />
             {(["mes", "anio"] as const).map((p) => (
               <button
                 key={p}
@@ -52,9 +59,16 @@ export function PlanPicker({ cards }: { cards: PlanCardData[] }) {
                 role="radio"
                 aria-checked={period === p}
                 onClick={() => setPeriod(p)}
-                className={`rounded-full px-4 py-2 transition ${period === p ? "bg-white text-stone-900 shadow-sm" : "text-stone-500"}`}
+                className={`relative z-10 flex items-center justify-center gap-2 rounded-full px-4 py-2 transition-colors ${period === p ? "text-stone-900" : "text-stone-500 hover:text-stone-800"}`}
               >
-                {p === "mes" ? "Mensual" : "Anual · 2 meses gratis"}
+                {p === "mes" ? (
+                  "Mensual"
+                ) : (
+                  <>
+                    Anual
+                    <span className={`rounded-full bg-[#b5653a] px-2 py-0.5 text-xs font-semibold text-white ${period === "anio" ? "" : "plan-gratis"}`}>2 meses gratis</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -62,12 +76,15 @@ export function PlanPicker({ cards }: { cards: PlanCardData[] }) {
       )}
 
       <ul className={`mt-4 grid gap-3 ${shown.length >= 2 ? "sm:grid-cols-2" : ""}`}>
-        {shown.map((c) => {
+        {shown.map((c, i) => {
           const price = (period === "anio" ? c.annual : c.monthly)!;
+          const saved = period === "anio" && c.monthly ? c.monthly.amount * 12 - price.amount : 0;
           return (
             <li
-              key={c.key}
-              className={`relative flex flex-col rounded-2xl border bg-white p-4 ${c.featured ? "border-[#b5653a] ring-1 ring-[#b5653a]" : "border-stone-200"}`}
+              // La clave cambia con el periodo para que las tarjetas vuelvan a entrar con su animación.
+              key={`${c.key}|${period}`}
+              style={{ animationDelay: `${i * 70}ms` }}
+              className={`plan-card plan-entra flex flex-col rounded-2xl border bg-white p-4 ${c.featured ? "border-[#b5653a] ring-1 ring-[#b5653a]" : "border-stone-200"}`}
             >
               {(c.current || c.featured) && (
                 <span
@@ -85,9 +102,12 @@ export function PlanPicker({ cards }: { cards: PlanCardData[] }) {
               <p className="text-xs text-stone-500">
                 {period === "mes" ? "Se cobra solo cada mes · cancela cuando quieras" : `Un solo pago · equivale a ${money(Math.round(price.amount / 12))} al mes`}
               </p>
+              {saved > 0 && (
+                <p className="mt-2 self-start whitespace-nowrap rounded-full bg-[#f3e3d6] px-2.5 py-1 text-xs font-semibold text-[#8a4421]">Ahorras {money(saved)} al año</p>
+              )}
               <ul className="my-4 space-y-1.5 text-sm text-stone-700">
-                {c.points.map((p) => (
-                  <li key={p} className="flex gap-2">
+                {c.points.map((p, j) => (
+                  <li key={p} className={`flex gap-2 ${c.lead && j === 0 ? "font-semibold text-stone-900" : ""}`}>
                     <span aria-hidden="true" className="text-[#b5653a]">
                       ✓
                     </span>

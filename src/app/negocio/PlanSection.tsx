@@ -61,7 +61,9 @@ async function planCards(org: Org, wanted?: Plan): Promise<PlanCardData[]> {
           who: plan === "personal" ? "Organizo mi fiesta" : plan === "casas" ? "Casas" : who,
           name,
           points: pointsFor(plan, tier, org.kind),
-          featured: wanted ? wanted === plan && tier === "pro" : tier === "pro" && plan === (org.kind === "agency" || org.kind === "developer" ? "casas" : "eventos"),
+          // Se recomienda Ilimitado en eventos (salones y planners) y el único plan de Casas para inmobiliarias.
+          featured: (wanted ? wanted === plan : plan === (org.kind === "agency" || org.kind === "developer" ? "casas" : "eventos")) && tier === (plan === "eventos" ? "ilimitado" : "pro"),
+          lead: tier === "ilimitado",
           current: org.plan === plan && org.tier === tier && Boolean(org.planEndsAt) && org.planEndsAt!.getTime() > Date.now(),
           monthly: monthly && { value: monthly.value, amount: monthly.amount },
           annual: annual && { value: annual.value, amount: annual.amount },
@@ -101,13 +103,17 @@ export async function PlanSection({ org, wanted, result }: { org: Org; wanted?: 
           {!isLitePlan(org.plan) && org.plan !== "prueba" && !free ? ` ${TIER_LABELS[org.tier]}` : ""}
         </p>
         {free ? (
-          <p className="text-sm text-stone-600">
-            Con tu cuenta ves el catálogo y las demos. Para crear tus proyectos, elige tu plan en{" "}
-            <Link href={PRICES_URL} className="underline">
-              plantea.com.mx/planes
-            </Link>{" "}
-            y págalo aquí abajo.
-          </p>
+          cardsShown ? (
+            <p className="text-sm text-stone-600">Elige tu plan aquí abajo para crear tus proyectos.</p>
+          ) : (
+            <p className="text-sm text-stone-600">
+              Para crear tus proyectos, elige tu plan en{" "}
+              <Link href={PRICES_URL} className="underline">
+                plantea.com.mx/planes
+              </Link>{" "}
+              y págalo aquí abajo.
+            </p>
+          )
         ) : origin ? (
           <p className="text-sm text-stone-600">
             Tu evento en {origin.venueName} lo cubre el plan de {origin.issuerName}: un evento, con el diseñador completo y enlace para compartir.
@@ -126,12 +132,14 @@ export async function PlanSection({ org, wanted, result }: { org: Org; wanted?: 
               : `Vigente hasta el ${formatInstant(org.planEndsAt, "long")}${soon ? ` (quedan ${daysLeft} días)` : ""}.`
             : "Sin fecha de vencimiento."}
         </p>}
-        <p className="mt-2 text-sm">
-          Planes y precios:{" "}
-          <Link href={PRICES_URL} className="underline">
-            plantea.com.mx/planes
-          </Link>
-        </p>
+        {!cardsShown && !free && (
+          <p className="mt-2 text-sm">
+            Planes y precios:{" "}
+            <Link href={PRICES_URL} className="underline">
+              plantea.com.mx/planes
+            </Link>
+          </p>
+        )}
       </div>
 
       {notice && <p className={`rounded-2xl border p-3 text-sm ${TONE[notice.tone]}`}>{notice.text}</p>}
