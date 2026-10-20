@@ -15,7 +15,11 @@ export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: {
   const ref = useRef<HTMLDialogElement>(null);
   const [tab, setTab] = useState(PROFILE_LIST[0].id);
   useEffect(() => {
-    if (openAtStart) ref.current?.showModal();
+    const dialog = ref.current;
+    if (openAtStart) dialog?.showModal();
+    // Next guarda la página anterior oculta al navegar: si la ventana se quedara abierta, dejaría toda la página sin
+    // poder tocarse. Se cierra al salir de la página.
+    return () => dialog?.close();
   }, [openAtStart]);
   const profile = PROFILE_LIST.find((p) => p.id === tab) ?? PROFILE_LIST[0];
   const pay = `/negocio?plan=${PAY_PLAN[profile.id] ?? "eventos"}#pagar`;
@@ -34,7 +38,8 @@ export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: {
         aria-labelledby="planesTitulo"
         className="m-auto w-[min(560px,calc(100vw-24px))] max-h-[calc(100dvh-24px)] overflow-y-auto rounded-3xl bg-[#f7f4ef] p-0 text-stone-900 shadow-2xl backdrop:bg-stone-900/50"
         onClick={(e) => {
-          if (e.target === ref.current) ref.current?.close();
+          // Clic fuera de la ventana, o en cualquier enlace de adentro (la ventana se cierra antes de cambiar de página).
+          if (e.target === ref.current || (e.target as HTMLElement).closest("a")) ref.current?.close();
         }}
       >
         <div className="p-5 sm:p-6">
@@ -106,9 +111,6 @@ export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: {
                   Registrar mi salón
                 </Link>
                 <p className="text-center text-xs text-stone-500">Mandas tu plano, en 7 días lo tienes en 3D y lo revisas antes de pagar.</p>
-                <Link href={pay} className="flex h-11 items-center justify-center rounded-xl border border-stone-300 bg-white text-sm font-medium active:bg-stone-100">
-                  Ya lo registré: pagar mi plan
-                </Link>
               </>
             ) : (
               <Link href={pay} className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] font-medium text-white active:bg-[#9c5430]">

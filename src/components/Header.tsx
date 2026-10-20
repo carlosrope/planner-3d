@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getCurrentUser, isAdmin, requireOrg } from "@/lib/dal";
 import { isOwnerKind } from "@/lib/domain";
 import { SignOutButton } from "@/app/eventos/SignOutButton";
+import { MenuAutoClose } from "./MenuAutoClose";
 
 // Encabezado de toda la app: el logo (La mesa + Plantea) y el menú. Sin sesión: Salones · Casas ·
 // Registra tu lugar · Entrar. Con sesión: Proyectos · Mis lugares (salones y desarrolladoras) ·
@@ -155,6 +156,10 @@ export function Header() {
               <path d="M6 6l12 12M18 6L6 18" className="hidden group-open:block" />
             </svg>
           </summary>
+          {/* Lee la ruta: con Cache Components va dentro de <Suspense>. */}
+          <Suspense fallback={null}>
+            <MenuAutoClose />
+          </Suspense>
           <div className="absolute right-0 mt-2 w-64 space-y-1 rounded-2xl border border-stone-200 bg-white p-2 shadow-xl">
             <PublicLinks className="block" />
             <div className="my-1 h-px bg-stone-100" aria-hidden="true" />
