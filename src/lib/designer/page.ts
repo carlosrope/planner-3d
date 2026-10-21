@@ -172,6 +172,8 @@ export async function designerResponse(
   // vista del cliente, cuando el dueño revisa la conversión de su plano ni al capturar la portada.
   // Incrustado en la portada de plantea.com.mx (Hero3D.tsx): solo el lugar, sin barras, sin guía y fuera de Google.
   if (options?.embed) head += `<meta name="robots" content="noindex">\n` + inline(await file("embed.js"));
+  // Barra más sencilla: capas y opciones del 3D en menús, zoom flotante (src/designer/barra.js)
+  else head += inline(await file("barra.js"));
   if (host?.mode !== "view" && !options?.venue?.reviewHref && !options?.captura && !options?.embed) {
     const mode = host ? "edit" : options?.venue ? "lugar" : "demo";
     // seen: en proyectos, la cuenta ya la vio (en cualquier equipo o dominio); entonces no se abre sola.

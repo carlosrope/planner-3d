@@ -2302,6 +2302,19 @@ sub(
     "    if (on) orbit.addEventListener('start', () => { orbit.autoRotate = false; }, {once: true}); }};",
 )
 
+# Pantalla completa: solo el ícono (el texto ocupaba media barra); el nombre queda en el título y para lectores de pantalla.
+sub(
+    "  b.textContent = '⛶ ' + (on ? tr('退出全屏', 'Exit fullscreen') : tr('全屏', 'Fullscreen'));\n",
+    "  b.innerHTML = on\n"
+    "    ? '<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5\"/></svg>'\n"
+    "    : '<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5\"/></svg>';\n"
+    "  b.setAttribute('aria-label', on ? tr('退出全屏', 'Exit fullscreen') : tr('全屏', 'Fullscreen'));\n",
+)
+sub(
+    '<button class="btn" id="fullscreen" title="全屏 (Shift+F)" style="border:1px solid var(--line);background:#fff">⛶ 全屏</button>',
+    '<button class="btn ico" id="fullscreen" title="全屏 (Shift+F)" aria-label="Pantalla completa" style="border:1px solid var(--line);background:#fff"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>',
+)
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")
