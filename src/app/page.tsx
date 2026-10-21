@@ -15,7 +15,7 @@ const PASOS = [
   { n: "03", t: "Siéntalos y recórrelo", p: "Pon a tus invitados por mesa, míralo en 3D como si ya estuvieras ahí y compártelo por WhatsApp." },
 ];
 
-// Fotos ilustrativas (generadas); la de familias alterna con novios y quinceañera cuando estén en public/portada/.
+// Fotos ilustrativas (generadas); la tercera tarjeta alterna novios, quinceañera y familia.
 const QUIEN = [
   {
     t: "Salones de eventos",
@@ -36,7 +36,11 @@ const QUIEN = [
     p: "Si ya apartaste el salón, pídele tu código: armas tu evento sin costo y lo compartes con tu familia.",
     href: "/salones",
     cta: "Buscar mi salón",
-    img: [{ src: "/portada/quien-familia.jpg", alt: "Una familia viendo en el celular cómo quedará su fiesta" }],
+    img: [
+      { src: "/portada/quien-novios.jpg", alt: "Una pareja de novios viendo en el celular cómo quedará su boda" },
+      { src: "/portada/quien-quinceanera.jpg", alt: "Una quinceañera y su mamá planeando su fiesta en una tablet" },
+      { src: "/portada/quien-familia.jpg", alt: "Una familia viendo en el celular cómo quedará su fiesta" },
+    ],
   },
   {
     t: "Inmobiliarias y desarrolladoras",
@@ -111,7 +115,7 @@ export default function Home() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {QUIEN.map((q) => (
               <article key={q.t} className="group flex flex-col overflow-hidden rounded-[25px] border border-stone-200/70 bg-white">
-                <FadeImages images={q.img} className="aspect-[3/2] w-full" />
+                <FadeImages images={q.img} every={5500} className="aspect-[3/2] w-full" />
                 <div className="flex flex-1 flex-col p-5">
                   <h3 className="text-lg font-semibold text-stone-900">{q.t}</h3>
                   <p className="mt-1 flex-1 text-stone-600">{q.p}</p>

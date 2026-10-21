@@ -37,7 +37,7 @@ export function FadeImages({ images, every = 4500, className = "" }: { images: {
           alt={img.alt}
           aria-hidden={n !== i}
           loading="lazy"
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1600ms] ease-in-out ${n === i ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1800ms] ease-in-out ${n === i ? "opacity-100" : "opacity-0"}`}
         />
       ))}
     </div>
