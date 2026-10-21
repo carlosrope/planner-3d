@@ -95,7 +95,7 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
               name={v.name}
               illustrative={pair.some((p) => p.illustrative)}
               className="aspect-[4/3] sm:aspect-[16/10]"
-              rounded="rounded-2xl"
+              rounded="rounded-[25px]"
             />
           ) : (
             <div className="relative">

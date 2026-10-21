@@ -136,7 +136,7 @@ export async function designerResponse(
   host?: HostData,
   /** Vista previa del enlace. Sin `image` se usa la imagen general de Plantea; `canonical` solo en páginas públicas. */
   meta?: { image?: string; imageWidth?: number; imageHeight?: number; description?: string; url?: string; canonical?: string; siteName?: string },
-  options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string; captura?: boolean; lang?: string | null; guideSeen?: boolean },
+  options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string; captura?: boolean; lang?: string | null; guideSeen?: boolean; embed?: boolean },
 ) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
@@ -170,7 +170,9 @@ export async function designerResponse(
   if (options?.captura) head += inline(`window.__CAPTURA__ = true;\n${await file("captura.js")}`);
   // Guía en pantalla la primera vez (demo, 3D público del lugar y edición); no en el enlace de solo
   // vista del cliente, cuando el dueño revisa la conversión de su plano ni al capturar la portada.
-  if (host?.mode !== "view" && !options?.venue?.reviewHref && !options?.captura) {
+  // Incrustado en la portada de plantea.com.mx (Hero3D.tsx): solo el lugar, sin barras, sin guía y fuera de Google.
+  if (options?.embed) head += `<meta name="robots" content="noindex">\n` + inline(await file("embed.js"));
+  if (host?.mode !== "view" && !options?.venue?.reviewHref && !options?.captura && !options?.embed) {
     const mode = host ? "edit" : options?.venue ? "lugar" : "demo";
     // seen: en proyectos, la cuenta ya la vio (en cualquier equipo o dominio); entonces no se abre sola.
     const guide = { kind: plan.kind ?? "casa", mode, eventId: host?.eventId ?? null, eventKind: options?.eventKind ?? "boda", seen: !!options?.guideSeen };

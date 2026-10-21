@@ -84,7 +84,7 @@ export function Tarjeta({ v }: { v: CatalogVenue }) {
     v.city,
   ].filter(Boolean);
   return (
-    <article className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
+    <article className="overflow-hidden rounded-[25px] border border-stone-200 bg-white">
       {v.outside && v.inside ? (
         // Fuera y dentro en el mismo recuadro, con una línea que se arrastra; la ficha se abre con el nombre o con «Ficha».
         <CompareSlider

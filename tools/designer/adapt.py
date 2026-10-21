@@ -2294,6 +2294,14 @@ sub(
     "  slides.forEach(sl => { const tg = sl.open ? sl.to : 0; sl.cur += (tg - sl.cur) * Math.min(1, dt*5); sl.groups.forEach(q => { q.g.position[q.axis] = q.base + sl.cur; }); });\n",
 )
 
+# Portada de plantea.com.mx (src/designer/embed.js): el 3D gira solo, despacio, hasta que la persona lo toca.
+sub(
+    "  tour: () => startTour(), flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk'};",
+    "  tour: () => startTour(), flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk',\n"
+    "  spin: on => { if (!orbit) return; orbit.autoRotate = !!on; orbit.autoRotateSpeed = .7;\n"
+    "    if (on) orbit.addEventListener('start', () => { orbit.autoRotate = false; }, {once: true}); }};",
+)
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

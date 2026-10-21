@@ -3873,7 +3873,9 @@ window.View3D = {
   flashHint,enter, exit, relang, sync:() => sync(), shot, groundAt,
   snap: () => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); },
   viewFrom: (x, y, tx, ty) => sitAt([x, y], [tx, ty]),
-  tour: () => startTour(), flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk'};
+  tour: () => startTour(), flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk',
+  spin: on => { if (!orbit) return; orbit.autoRotate = !!on; orbit.autoRotateSpeed = .7;
+    if (on) orbit.addEventListener('start', () => { orbit.autoRotate = false; }, {once: true}); }};
 </script>
 </body>
 </html>

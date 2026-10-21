@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { EnPlantea } from "@/components/EnPlantea";
+import { Hero3D } from "@/components/Hero3D";
 import { PageLink } from "@/components/PageLink";
 import { jsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/site";
 
@@ -50,25 +51,13 @@ export default function Home() {
             </p>
           </div>
           <div className="relative">
-            {/* Grabación real del Salón Demostración: el plano 2D pasa a 3D (8 s, sin sonido, se repite). */}
-            <video
-              src="/portada/plano-a-3d.mp4"
-              poster="/portada/plano-a-3d.jpg"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              aria-label="El plano 2D del salón se convierte en el salón en 3D"
-              width={640}
-              height={602}
-              className="w-full rounded-2xl border border-stone-200 bg-[#e6e2dc] shadow-2xl shadow-stone-900/15"
-            />
-            <div className="absolute -right-3 -top-3 flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium shadow-lg">
+            {/* El Salón Demostración en 3D de verdad: se gira, se acerca y cambia entre 2D y 3D ahí mismo */}
+            <Hero3D />
+            <p className="mt-3 flex items-center justify-center gap-2 text-sm text-stone-600">
               {/* eslint-disable-next-line @next/next/no-img-element -- símbolo */}
               <img src="/marca/plantea-symbol-color.svg" alt="" className="h-5 w-5" />
-              2D + 3D, el mismo plano
-            </div>
+              El mismo plano, en 2D y en 3D. Muévelo tú.
+            </p>
           </div>
         </div>
       </section>
