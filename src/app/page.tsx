@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { EnPlantea } from "@/components/EnPlantea";
 import { Hero3D } from "@/components/Hero3D";
+import { LoopVideo } from "@/components/LoopVideo";
 import { PageLink } from "@/components/PageLink";
 import { jsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/site";
 
@@ -104,16 +105,24 @@ export default function Home() {
       <section className="mx-auto max-w-5xl px-4 py-10 md:py-14">
         <div className="grid gap-4 md:grid-cols-2">
           <Link href="/salones" className="group relative overflow-hidden rounded-2xl border border-stone-200 bg-white">
-            {/* eslint-disable-next-line @next/next/no-img-element -- captura propia */}
-            <img src="/portada/espacios-salon-2d.jpg" alt="" className="aspect-[16/9] w-full object-cover transition group-hover:scale-[1.02]" />
+            <LoopVideo
+              src="/portada/tarjeta-salones.mp4"
+              poster="/portada/tarjeta-salones.jpg"
+              label="El Salón Demostración: del plano 2D al salón en 3D con su montaje"
+              className="aspect-[16/9] w-full bg-[#efebe4] object-cover"
+            />
             <div className="p-5">
               <h3 className="text-lg font-semibold text-stone-900">Salones de eventos en 3D</h3>
               <p className="mt-1 text-stone-600">Recorre los salones del catálogo, prueba el montaje y pide informes directo al salón.</p>
             </div>
           </Link>
           <Link href="/casas" className="group relative overflow-hidden rounded-2xl border border-stone-200 bg-white">
-            {/* eslint-disable-next-line @next/next/no-img-element -- captura propia */}
-            <img src="/portada/espacios-casa-2d.jpg" alt="" className="aspect-[16/9] w-full object-cover transition group-hover:scale-[1.02]" />
+            <LoopVideo
+              src="/portada/tarjeta-casas.mp4"
+              poster="/portada/tarjeta-casas.jpg"
+              label="La Casa Chardonnay: del plano 2D a la casa amueblada en 3D y su recorrido"
+              className="aspect-[16/9] w-full bg-[#efebe4] object-cover"
+            />
             <div className="p-5">
               <h3 className="text-lg font-semibold text-stone-900">Modelos de casa en 3D</h3>
               <p className="mt-1 text-stone-600">Cada modelo amueblado y con recorrido, para verlo como si ya vivieras ahí.</p>
