@@ -4,6 +4,9 @@
 export const CONTACT_WHATSAPP = process.env.CONTACT_WHATSAPP ?? process.env.PROLINK_WHATSAPP ?? "526681305828";
 /** Planes y precios de Plantea: página propia de la app. */
 export const PRICES_URL = "/planes";
+/** Slogan de la marca (elegido por el usuario el 21 de octubre de 2026): el plano, el 3D y la fiesta. */
+export const SLOGAN = ["Plantéalo.", "Míralo.", "Vívelo."] as const;
+export const SLOGAN_TEXT = SLOGAN.join(" ");
 /** ProLink365, la empresa que desarrolla Plantea (solo para el "Hecho por" del pie). */
 export const PARTNER_SITE = "https://prolink365.com.mx";
 

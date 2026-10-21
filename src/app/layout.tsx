@@ -22,7 +22,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_MX",
     siteName: "Plantea",
-    images: [{ url: "/portada/espacios-salon-3d.jpg", width: 800, height: 575, alt: "Salón de eventos en 3D en Plantea" }],
+    // Imagen con el slogan «Plantéalo. Míralo. Vívelo.» (fuente en herramientas/marca-plantea/og, fuera del repo).
+    images: [{ url: "/og/plantea.jpg", width: 1200, height: 630, alt: "Plantea: Plantéalo. Míralo. Vívelo. Tu evento o tu casa en 3D" }],
   },
   twitter: { card: "summary_large_image" },
   title: { default: "Plantea · tu evento o tu casa en 3D", template: "%s · Plantea" },

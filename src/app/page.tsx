@@ -5,6 +5,7 @@ import { FadeImages } from "@/components/FadeImages";
 import { Hero3D } from "@/components/Hero3D";
 import { LoopVideo } from "@/components/LoopVideo";
 import { PageLink } from "@/components/PageLink";
+import { Slogan } from "@/components/Slogan";
 import { jsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/site";
 
 // Portada de Plantea: qué es, pruébalo sin cuenta, cómo funciona, para quién y cómo entra un salón.
@@ -60,6 +61,7 @@ export default function Home() {
         <div className="pointer-events-none absolute -right-24 -top-24 h-[420px] w-[420px] rounded-[48%_52%_40%_60%/55%_45%_55%_45%] bg-[#f3ece2]" aria-hidden="true" />
         <div className="mx-auto grid max-w-5xl items-center gap-8 px-4 pb-12 pt-10 md:grid-cols-[1.05fr_1fr] md:pb-16 md:pt-16">
           <div className="relative">
+            <Slogan className="mb-3 text-base text-stone-900 sm:text-lg" />
             <h1 className="text-[2.1rem] font-bold leading-[1.08] text-stone-900 sm:text-5xl" style={{ textWrap: "balance" }}>
               Plantea tu evento o tu casa <span className="text-[#b5653a]">en 3D antes de vivirlo.</span>
             </h1>

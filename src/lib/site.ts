@@ -2,6 +2,8 @@
  * Dominio público de Plantea para buscadores (canónicas, sitemap, Open Graph, datos estructurados).
  * Es fijo aunque la app también responda en la dirección de Railway, para que Google indexe una sola versión.
  */
+import { SLOGAN_TEXT } from "./brand";
+
 export const SITE_URL = (process.env.SITE_URL || "https://plantea.com.mx").replace(/\/$/, "");
 /** Dirección vieja de Railway: se redirige a SITE_URL (los enlaces y QR que ya circulan siguen funcionando). */
 export const LEGACY_HOST = "planner-3d-production.up.railway.app";
@@ -20,6 +22,7 @@ export const organizationJsonLd = (extra: { sameAs?: string[] } = {}) => ({
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "Plantea",
+  slogan: SLOGAN_TEXT,
   url: SITE_URL,
   logo: `${SITE_URL}/icon-512.png`,
   email: "hola@plantea.com.mx",

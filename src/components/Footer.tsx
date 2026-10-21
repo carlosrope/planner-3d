@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PARTNER_SITE } from "@/lib/brand";
+import { Slogan } from "./Slogan";
 
 /** Pie de toda la app: la marca, "Hecho por ProLink365" y los enlaces de siempre. */
 export function Footer() {
@@ -9,7 +10,8 @@ export function Footer() {
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element -- logo en SVG */}
           <img src="/marca/plantea-horizontal-color.svg" alt="Plantea" className="h-7 w-auto" />
-          <p className="mt-2 max-w-md text-sm text-stone-600">
+          <Slogan className="mt-3 text-lg text-stone-900" />
+          <p className="mt-1 max-w-md text-sm text-stone-600">
             Plantea tu evento o tu casa en 3D antes de vivirlo. Salones y casas reales de México, desde el celular.
           </p>
           <p className="mt-3 text-sm text-stone-600">
