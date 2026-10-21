@@ -13,6 +13,8 @@ describe("sentry", () => {
     const { eventId, body } = buildEnvelope({ message: "falló", source: "browser", url: "https://x/eventos" }, dsn, new Date("2026-10-15T00:00:00Z"), "production");
     const [header, item, event] = body.trim().split("\n").map((l) => JSON.parse(l));
     expect(header.event_id).toBe(eventId);
+    // Sentry rechaza (400) un encabezado con "dsn" que no sea el DSN completo: no se manda.
+    expect(header.dsn).toBeUndefined();
     expect(item.type).toBe("event");
     expect(event.exception.values[0].value).toBe("falló");
     expect(event.tags.source).toBe("browser");

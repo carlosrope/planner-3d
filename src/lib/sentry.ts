@@ -58,7 +58,9 @@ export function buildEnvelope(report: ErrorReport, dsn: Dsn, now = new Date(), e
     },
     extra: report.extra,
   };
-  const header = { event_id: eventId, sent_at: now.toISOString(), dsn: `${dsn.key}` };
+  // Sin "dsn" en el encabezado: es opcional y, si va, Sentry exige el DSN completo (con la clave sola contesta 400
+  // "invalid envelope header"). La clave ya viaja en ?sentry_key= de la petición.
+  const header = { event_id: eventId, sent_at: now.toISOString() };
   const body = JSON.stringify(event);
   return { eventId, body: `${JSON.stringify(header)}\n${JSON.stringify({ type: "event" })}\n${body}\n` };
 }
