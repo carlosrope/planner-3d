@@ -2127,6 +2127,173 @@ sub("g.name = e.target.value.trim() || g.name", "g.name = e.target.value.trim().
 sub("num('#fW', (g,v) => g.w = Math.max(50, Math.round(v)));", "num('#fW', (g,v) => g.w = Math.min(100000, Math.max(50, Math.round(v))));")
 sub("num('#fD', (g,v) => g.d = Math.max(50, Math.round(v)));", "num('#fD', (g,v) => g.d = Math.min(100000, Math.max(50, Math.round(v))));")
 
+# ---------------------------------------------------------------------------
+# Recorrido, arreglos del 21 de octubre de 2026 (revisión del usuario en la casa y los salones)
+
+# 1. El control táctil (joystick) solo en pantallas táctiles: en la computadora el recorrido sin puntero capturado
+#    (al ir con «Ir a…», la visita guiada o la escalera) se mueve con las flechas o W A S D y se mira arrastrando.
+sub(
+    "$('#walkOverlay').style.display = 'none'; $('#joy').style.display = 'block'; $('#walkExit').style.display = 'block';",
+    "$('#walkOverlay').style.display = 'none'; $('#joy').style.display = COARSE ? 'block' : 'none'; $('#walkExit').style.display = 'block';",
+)
+sub(
+    "function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : touchWalk || COARSE ? HINT_TOUCHWALK_HTML() : HINT_WALK_HTML(); }",
+    "const HINT_DESKWALK_HTML = () => chip('teclado', tr('方向键或 WASD 移动', 'Arrow keys or W A S D to move', 'Flechas o W A S D para moverte')) +\n"
+    "  chip('mouse', tr('拖动转向', 'drag to look', 'Arrastra para mirar')) + chip('dostoques', tr('双击地面走过去', 'double-click the floor to go there', 'Doble clic en el piso para ir ahí'));\n"
+    "function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : COARSE ? HINT_TOUCHWALK_HTML() : touchWalk ? HINT_DESKWALK_HTML() : HINT_WALK_HTML(); }",
+)
+
+# 2. «Subir a la planta alta» / «Bajar» solo junto a la escalera y viéndola: antes salía a 2 m del punto de llegada de la
+#    planta (que puede ser un cuarto vecino) y también a través de una pared.
+sub(
+    "L.push({dir: 'subir', level: ABOVE, at: near(e.foot), away: [-e.up[0], -e.up[1]], step2: e.second, lift: 1, rise: st.rise || .18});",
+    "L.push({dir: 'subir', level: ABOVE, at: near(e.foot), near: e.foot, away: [-e.up[0], -e.up[1]], step2: e.second, lift: 1, rise: st.rise || .18});",
+)
+sub(
+    "L.push({dir: 'bajar', level: BELOW, at: near(e.top), away: e.out, step2: e.prev, lift: -1, rise: st.rise || .18});",
+    "L.push({dir: 'bajar', level: BELOW, at: near(e.top), near: e.top, away: e.out, step2: e.prev, lift: -1, rise: st.rise || .18});",
+)
+sub(
+    "const l = busy ? null : STAIR_LINKS.find(k => Math.hypot(here[0] - k.at[0], here[1] - k.at[1]) < 2000) || null;",
+    "const fw = new THREE.Vector3(); camera.getWorldDirection(fw);\n"
+    "  // Cerca de la escalera, sin pared de por medio y mirando hacia ella (no de espaldas ni desde el cuarto de al lado)\n"
+    "  const facing = k => { const dx = k.step2[0] - here[0], dy = k.step2[1] - here[1], L = Math.hypot(dx, dy) || 1, f = Math.hypot(fw.x, fw.z) || 1;\n"
+    "    return (fw.x/f)*(dx/L) + (fw.z/f)*(dy/L) > .3; };\n"
+    "  const l = busy ? null : STAIR_LINKS.find(k => Math.hypot(here[0] - k.near[0], here[1] - k.near[1]) < 1800 && clearPath(here, k.near) && facing(k)) || null;",
+)
+
+# 3. El botón que pliega «De pie / Sentado» y las velocidades: una flecha clara que siempre apunta a la derecha
+#    (antes era un triangulito que apuntaba arriba o abajo y no se entendía).
+sub(
+    "  up: '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M6 15h12l-6-7z\"/></svg>',\n",
+    "  up: '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M6 15h12l-6-7z\"/></svg>',\n"
+    "  fold: '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8.6 4.6 6.9 6.3 12.6 12l-5.7 5.7 1.7 1.7L16 12z\"/></svg>',\n",
+)
+sub("$('#whFold').innerHTML = walk.compact ? ICON.up : ICON.down;", "$('#whFold').innerHTML = ICON.fold;")
+sub(".wh-fold{width:36px;padding:0}", ".wh-fold{width:36px;padding:0}\n.wh-fold svg{width:22px!important;height:22px!important}")
+
+# 4. «Ir a…» con la lista de Plantea en lugar del menú del navegador (el <select> se queda oculto: la lógica no cambia).
+sub(
+    "<label class=\"wh-pill\">${esc(tr('前往…', 'Go to…', 'Ir a…'))} ▾<select id=\"whGo\" aria-label=\"${esc(tr('前往', 'Go to', 'Ir a'))}\"></select></label>",
+    "<span class=\"wh-go\"><button class=\"wh-pill\" id=\"whGoBtn\" aria-haspopup=\"listbox\" aria-expanded=\"false\">${esc(tr('前往…', 'Go to…', 'Ir a…'))}"
+    " <svg class=\"wh-caret\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M7 9.5 12 14.5 17 9.5\"/></svg></button>"
+    "<select id=\"whGo\" hidden aria-hidden=\"true\" tabindex=\"-1\"></select><div id=\"whGoMenu\" role=\"listbox\" aria-label=\"${esc(tr('前往', 'Go to', 'Ir a'))}\" hidden></div></span>",
+)
+sub(
+    ".wh-fold{width:36px;padding:0}\n",
+    ".wh-fold{width:36px;padding:0}\n"
+    ".wh-go{position:relative;display:inline-flex}\n"
+    ".wh-caret{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}\n"
+    "#whGoBtn[aria-expanded=true] .wh-caret{transform:rotate(180deg)}\n"
+    "#whGoMenu{position:absolute;left:0;top:42px;z-index:6;min-width:220px;max-width:min(320px,calc(100vw - 24px));max-height:min(60vh,420px);overflow:auto;"
+    "padding:6px;border-radius:16px;background:#fffdf9;box-shadow:0 14px 36px rgba(28,25,23,.22);border:1px solid #ece5da;font:500 14px/1.3 'DM Sans',system-ui,sans-serif;color:#1c1917}\n"
+    "#whGoMenu .g{padding:10px 10px 4px;font:700 11px/1 'DM Sans',system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#b5653a}\n"
+    "#whGoMenu button{display:block;width:100%;text-align:left;padding:10px 12px;border:0;border-radius:10px;background:none;color:inherit;font:inherit;cursor:pointer}\n"
+    "#whGoMenu button:hover,#whGoMenu button:focus-visible{background:#f3ece2;outline:none}\n",
+)
+sub(
+    "    else if (b.id === 'whFold'){ walk.compact = !walk.compact; saveWalk(); syncWalkHud(); }\n",
+    "    else if (b.id === 'whFold'){ walk.compact = !walk.compact; saveWalk(); syncWalkHud(); }\n"
+    "    else if (b.id === 'whGoBtn') goMenu(!!$('#whGoMenu').hidden);\n"
+    "    else if (b.parentElement?.id === 'whGoMenu'){ const sel = $('#whGo'); goMenu(false); sel.value = b.dataset.v; sel.dispatchEvent(new Event('change', {bubbles: true})); }\n",
+)
+sub(
+    "function bindWalkHud(){\n",
+    "// Lista de «Ir a…»: se arma con las opciones del <select> oculto (grupos y lugares) y se cierra al elegir, al tocar fuera o con Esc\n"
+    "function goMenu(open){\n"
+    "  const m = $('#whGoMenu'), b = $('#whGoBtn'), sel = $('#whGo'); if (!m || !b || !sel) return;\n"
+    "  if (open){\n"
+    "    m.innerHTML = [...sel.children].map(n => n.tagName === 'OPTGROUP'\n"
+    "      ? `<div class=\"g\">${esc(n.label)}</div>` + [...n.children].map(o => `<button type=\"button\" role=\"option\" data-v=\"${esc(o.value)}\">${esc(o.textContent)}</button>`).join('')\n"
+    "      : n.value === '' ? '' : `<button type=\"button\" role=\"option\" data-v=\"${esc(n.value)}\">${esc(n.textContent)}</button>`).join('');\n"
+    "  }\n"
+    "  m.hidden = !open; b.setAttribute('aria-expanded', String(open));\n"
+    "  if (open) m.querySelector('button')?.focus({preventScroll: true});\n"
+    "}\n"
+    "document.addEventListener('pointerdown', e => { if (!e.target.closest?.('.wh-go')) goMenu(false); }, true);\n"
+    "document.addEventListener('keydown', e => { if (e.key === 'Escape') goMenu(false); });\n"
+    "// Con el mouse capturado (la mira al centro), un clic abre o cierra la puerta o la ventana a la que se apunta\n"
+    "document.addEventListener('mousedown', e => { if (e.button !== 0 || opt.mode !== 'walk' || !walkCtl.isLocked) return;\n"
+    "  const h = pick(), d = h?.door || h?.slide; if (d && h.dist < (h.slide ? 6 : 3.5)) d.open = !d.open; });\n"
+    "function bindWalkHud(){\n",
+)
+
+# 5. Clic derecho prohibido en el recorrido (casas y salones): abría el menú del navegador, se perdía el «soltar» y la
+#    vista se quedaba girando sola.
+sub(
+    "  cv.addEventListener('pointerdown', e => {\n    downAt = [e.clientX, e.clientY]; window.closeDrawers();\n",
+    "  cv.addEventListener('contextmenu', e => { if (opt.mode === 'walk') e.preventDefault(); });\n"
+    "  cv.addEventListener('pointerdown', e => {\n"
+    "    if (opt.mode === 'walk' && e.pointerType === 'mouse' && e.button !== 0){ e.preventDefault(); e.stopImmediatePropagation(); return; }\n"
+    "    downAt = [e.clientX, e.clientY]; window.closeDrawers();\n",
+)
+sub(
+    "  if (opt.mode === 'walk' && e.code === 'KeyE'){ const h = pick(); if (h?.door && h.dist < 2.5) h.door.open = !h.door.open; }",
+    "  if (opt.mode === 'walk' && e.code === 'KeyE'){ const h = pick(), d = h?.door || h?.slide; if (d && h.dist < (h.slide ? 6 : 2.5)) d.open = !d.open; }",
+)
+
+# 6. Ventanas y canceles corredizos que se abren y cierran con un toque, como las puertas: una hoja se corre detrás de
+#    la otra. (Antes el vidrio era una sola pieza fija y los toques lo atravesaban.)
+sub("const doors = [], keys = {};", "const doors = [], slides = [], keys = {};")
+sub("clearGroup(archFloor); clearGroup(archUp); lampG.clear(); doors.length = 0; colliders = [];",
+    "clearGroup(archFloor); clearGroup(archUp); lampG.clear(); doors.length = 0; slides.length = 0; colliders = [];")
+sub(
+    "    const pane = new THREE.Mesh(new THREE.BoxGeometry(hz ? L : .01, gh, hz ? .01 : L), glassMat); pane.position.set(cx, sill + gh/2, cz); archUp.add(pane);\n"
+    "    const n = Math.max(1, Math.round(L/.9));\n"
+    "    for (let k = 0; k <= n; k++){ const t = -L/2 + k*L/n, mu = new THREE.Mesh(new THREE.BoxGeometry(hz ? .04 : .06, gh, hz ? .06 : .04), frameMat);\n"
+    "      mu.position.set(cx + (hz ? t : 0), sill + gh/2, cz + (hz ? 0 : t)); mu.castShadow = true; archUp.add(mu); }\n",
+    "    // Dos hojas: la izquierda fija y la derecha corrediza (va por detrás y se corre sobre la otra)\n"
+    "    const sw = L/2 + .02, slide = {open: false, cur: 0, to: -(L/2 - .04), groups: []};\n"
+    "    [[-1, -.012], [1, .012]].forEach(([s, off]) => {\n"
+    "      const g = new THREE.Group(); g.position.set(cx + (hz ? s*(L/2 - sw/2) : off), sill + gh/2, cz + (hz ? off : s*(L/2 - sw/2)));\n"
+    "      const glass = new THREE.Mesh(new THREE.BoxGeometry(hz ? sw : .01, gh, hz ? .01 : sw), glassMat);\n"
+    "      const edge = (along, size) => { const m = new THREE.Mesh(new THREE.BoxGeometry(...size), frameMat); m.position.set(...along); m.castShadow = true; return m; };\n"
+    "      g.add(glass, edge(hz ? [-sw/2, 0, 0] : [0, 0, -sw/2], [hz ? .04 : .05, gh, hz ? .05 : .04]), edge(hz ? [sw/2, 0, 0] : [0, 0, sw/2], [hz ? .04 : .05, gh, hz ? .05 : .04]));\n"
+    "      g.traverse(o => { o.userData.slide = slide; });\n"
+    "      archUp.add(g); if (s > 0){ slide.groups.push({g, axis: hz ? 'x' : 'z', base: hz ? g.position.x : g.position.z}); }\n"
+    "    });\n"
+    "    slides.push(slide);\n",
+)
+# Canceles: la hoja derecha se corre sobre la izquierda
+sub(
+    "  SLIDES.forEach(({rect:[x0, y0, x1, y1], v}) => {\n"
+    "    const L = M(v ? y1-y0 : x1-x0), ph = Math.min(v ? 2.4 : 2.1, top), pl = L*.55;\n"
+    "    [[-1, -.02], [1, .02]].forEach(([s, off]) => {\n",
+    "  SLIDES.forEach(({rect:[x0, y0, x1, y1], v}) => {\n"
+    "    const L = M(v ? y1-y0 : x1-x0), ph = Math.min(v ? 2.4 : 2.1, top), pl = L*.55;\n"
+    "    const slide = {open: false, cur: 0, to: -(L - pl), groups: []}; slides.push(slide);\n"
+    "    [[-1, -.02], [1, .02]].forEach(([s, off]) => {\n"
+    "      const g = new THREE.Group(); archUp.add(g);\n",
+)
+sub(
+    "      const p = new THREE.Mesh(new THREE.BoxGeometry(v ? .02 : pl, ph, v ? pl : .02), glassMat); p.position.set(x, ph/2, z); archUp.add(p);\n"
+    "      [ph - .03, .03].forEach(y => { const fr = new THREE.Mesh(new THREE.BoxGeometry(v ? .04 : pl, .05, v ? pl : .04), frameMat); fr.position.set(x, y, z); archUp.add(fr); });\n"
+    "      [-1, 1].forEach(e => { const fr = new THREE.Mesh(new THREE.BoxGeometry(.04, ph, .04), frameMat); fr.position.set(v ? x : x + e*pl/2, ph/2, v ? z + e*pl/2 : z); archUp.add(fr); });\n",
+    "      const p = new THREE.Mesh(new THREE.BoxGeometry(v ? .02 : pl, ph, v ? pl : .02), glassMat); p.position.set(x, ph/2, z); g.add(p);\n"
+    "      [ph - .03, .03].forEach(y => { const fr = new THREE.Mesh(new THREE.BoxGeometry(v ? .04 : pl, .05, v ? pl : .04), frameMat); fr.position.set(x, y, z); g.add(fr); });\n"
+    "      [-1, 1].forEach(e => { const fr = new THREE.Mesh(new THREE.BoxGeometry(.04, ph, .04), frameMat); fr.position.set(v ? x : x + e*pl/2, ph/2, v ? z + e*pl/2 : z); g.add(fr); });\n"
+    "      g.traverse(o => { o.userData.slide = slide; });\n"
+    "      if (s > 0) slide.groups.push({g, axis: v ? 'z' : 'x', base: 0});\n",
+)
+sub(
+    "    if (o.material === glassMat) continue;\n    if (o.userData.door) return {door:o.userData.door, dist:h.distance};\n",
+    "    if (o.userData.slide) return {slide:o.userData.slide, dist:h.distance};\n"
+    "    if (o.material === glassMat) continue;\n    if (o.userData.door) return {door:o.userData.door, dist:h.distance};\n",
+)
+sub(
+    "      if (tap){ const h = pick(e); if (h?.door && h.dist < 3.5) h.door.open = !h.door.open; else walkTap(e); }",
+    "      if (tap){ const h = pick(e), d = h?.door || h?.slide; if (d && h.dist < (h.slide ? 6 : 3.5)) d.open = !d.open; else walkTap(e); }",
+)
+sub(
+    "    const h = pick(e);\n    if (h?.door) h.door.open = !h.door.open;\n",
+    "    const h = pick(e);\n    if (h?.door || h?.slide){ const d = h.door || h.slide; d.open = !d.open; }\n",
+)
+sub(
+    "  doors.forEach(d => { const tg = d.open ? d.a1 : d.a0; d.cur += (tg - d.cur) * Math.min(1, dt*6); d.pivot.rotation.y = d.cur; });\n",
+    "  doors.forEach(d => { const tg = d.open ? d.a1 : d.a0; d.cur += (tg - d.cur) * Math.min(1, dt*6); d.pivot.rotation.y = d.cur; });\n"
+    "  slides.forEach(sl => { const tg = sl.open ? sl.to : 0; sl.cur += (tg - sl.cur) * Math.min(1, dt*5); sl.groups.forEach(q => { q.g.position[q.axis] = q.base + sl.cur; }); });\n",
+)
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

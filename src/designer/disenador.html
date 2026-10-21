@@ -212,6 +212,14 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
 .wh-side{position:absolute;right:16px;bottom:16px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .wh-row{display:flex;align-items:center;gap:6px}
 .wh-fold{width:36px;padding:0}
+.wh-go{position:relative;display:inline-flex}
+.wh-caret{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+#whGoBtn[aria-expanded=true] .wh-caret{transform:rotate(180deg)}
+#whGoMenu{position:absolute;left:0;top:42px;z-index:6;min-width:220px;max-width:min(320px,calc(100vw - 24px));max-height:min(60vh,420px);overflow:auto;padding:6px;border-radius:16px;background:#fffdf9;box-shadow:0 14px 36px rgba(28,25,23,.22);border:1px solid #ece5da;font:500 14px/1.3 'DM Sans',system-ui,sans-serif;color:#1c1917}
+#whGoMenu .g{padding:10px 10px 4px;font:700 11px/1 'DM Sans',system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#b5653a}
+#whGoMenu button{display:block;width:100%;text-align:left;padding:10px 12px;border:0;border-radius:10px;background:none;color:inherit;font:inherit;cursor:pointer}
+#whGoMenu button:hover,#whGoMenu button:focus-visible{background:#f3ece2;outline:none}
+.wh-fold svg{width:22px!important;height:22px!important}
 #whCycle{min-width:54px;font-size:14px}
 .wh-side:not(.compact) #whCycle,.wh-side.compact #whEye,.wh-side.compact #whSpeed{display:none}
 #whMap{position:absolute;right:12px;top:12px;display:block;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.22);cursor:pointer}
@@ -1759,7 +1767,7 @@ let inited = false, active = false, raf = 0, anim = null, fly = null;
 let renderer, labelRenderer, scene, camera, orbit, walkCtl, hemi, sun, ground, glassMat, wallMat, capMat, frameMat;
 let archFloor, archUp, furnG, labelG, lampG, colliders = [], selKey = null, selHelper = null;
 let sigArch = '', sigFurn = '', sigLabels = '', grow = 1, furnGrow = 1;
-const doors = [], keys = {};
+const doors = [], slides = [], keys = {};
 
 /* ======================= 初始化 ======================= */
 function init(){
@@ -1800,7 +1808,9 @@ function init(){
   scene.add(archFloor, archUp, furnG, labelG, lampG);
 
   const cv = renderer.domElement; let downAt = null, look = null;
+  cv.addEventListener('contextmenu', e => { if (opt.mode === 'walk') e.preventDefault(); });
   cv.addEventListener('pointerdown', e => {
+    if (opt.mode === 'walk' && e.pointerType === 'mouse' && e.button !== 0){ e.preventDefault(); e.stopImmediatePropagation(); return; }
     downAt = [e.clientX, e.clientY]; window.closeDrawers();
     if (touchWalk && !look){ look = {id:e.pointerId, x:e.clientX, y:e.clientY}; cv.setPointerCapture(e.pointerId); }
   });
@@ -1839,12 +1849,12 @@ function init(){
     const tap = downAt && Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]) <= TAP;
     if (look?.id === e.pointerId){
       look = null;
-      if (tap){ const h = pick(e); if (h?.door && h.dist < 3.5) h.door.open = !h.door.open; else walkTap(e); }   // 漫游时点门开关
+      if (tap){ const h = pick(e), d = h?.door || h?.slide; if (d && h.dist < (h.slide ? 6 : 3.5)) d.open = !d.open; else walkTap(e); }   // 漫游时点门开关
       return;
     }
     if (anim || opt.mode !== 'orbit' || !tap) return;
     const h = pick(e);
-    if (h?.door) h.door.open = !h.door.open;
+    if (h?.door || h?.slide){ const d = h.door || h.slide; d.open = !d.open; }
     else if (h?.fid) window.select({kind:'furn', id:h.fid});
     else if (h?.room) window.select({kind:'room', id:h.room});
     else window.select(null);
@@ -2530,7 +2540,7 @@ const edgeMat = new THREE.LineBasicMaterial({color:0x6f675b}), skirtMat = new TH
 function shapeOf(poly, flip){ const s = new THREE.Shape(); poly.forEach(([x, y], i) => s[i ? 'lineTo' : 'moveTo'](wx(x), flip ? wz(y) : -wz(y))); return s; }
 
 function buildArch(){
-  clearGroup(archFloor); clearGroup(archUp); lampG.clear(); doors.length = 0; colliders = [];
+  clearGroup(archFloor); clearGroup(archUp); lampG.clear(); doors.length = 0; slides.length = 0; colliders = [];
   const top = opt.cut;
   ROOMS.forEach(r => {
     if (r.void) return;   // doble altura: sin piso
@@ -2564,10 +2574,17 @@ function buildArch(){
     colliders.push([wx(r[0]), wz(r[1]), wx(r[2]), wz(r[3])]);
     const gTop = Math.min(head, top); if (gTop <= sill) return;
     const [x0, y0, x1, y1] = r, hz = (x1-x0) >= (y1-y0), L = M(hz ? x1-x0 : y1-y0), gh = gTop - sill, cx = wx((x0+x1)/2), cz = wz((y0+y1)/2);
-    const pane = new THREE.Mesh(new THREE.BoxGeometry(hz ? L : .01, gh, hz ? .01 : L), glassMat); pane.position.set(cx, sill + gh/2, cz); archUp.add(pane);
-    const n = Math.max(1, Math.round(L/.9));
-    for (let k = 0; k <= n; k++){ const t = -L/2 + k*L/n, mu = new THREE.Mesh(new THREE.BoxGeometry(hz ? .04 : .06, gh, hz ? .06 : .04), frameMat);
-      mu.position.set(cx + (hz ? t : 0), sill + gh/2, cz + (hz ? 0 : t)); mu.castShadow = true; archUp.add(mu); }
+    // Dos hojas: la izquierda fija y la derecha corrediza (va por detrás y se corre sobre la otra)
+    const sw = L/2 + .02, slide = {open: false, cur: 0, to: -(L/2 - .04), groups: []};
+    [[-1, -.012], [1, .012]].forEach(([s, off]) => {
+      const g = new THREE.Group(); g.position.set(cx + (hz ? s*(L/2 - sw/2) : off), sill + gh/2, cz + (hz ? off : s*(L/2 - sw/2)));
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(hz ? sw : .01, gh, hz ? .01 : sw), glassMat);
+      const edge = (along, size) => { const m = new THREE.Mesh(new THREE.BoxGeometry(...size), frameMat); m.position.set(...along); m.castShadow = true; return m; };
+      g.add(glass, edge(hz ? [-sw/2, 0, 0] : [0, 0, -sw/2], [hz ? .04 : .05, gh, hz ? .05 : .04]), edge(hz ? [sw/2, 0, 0] : [0, 0, sw/2], [hz ? .04 : .05, gh, hz ? .05 : .04]));
+      g.traverse(o => { o.userData.slide = slide; });
+      archUp.add(g); if (s > 0){ slide.groups.push({g, axis: hz ? 'x' : 'z', base: hz ? g.position.x : g.position.z}); }
+    });
+    slides.push(slide);
     [sill + .02, gTop - .02].forEach(y => { const tr = new THREE.Mesh(new THREE.BoxGeometry(hz ? L : .06, .04, hz ? .06 : L), frameMat); tr.position.set(cx, y, cz); archUp.add(tr); });
   });
   DOORS.forEach(d => {
@@ -2606,11 +2623,15 @@ function buildArch(){
   }
   SLIDES.forEach(({rect:[x0, y0, x1, y1], v}) => {
     const L = M(v ? y1-y0 : x1-x0), ph = Math.min(v ? 2.4 : 2.1, top), pl = L*.55;
+    const slide = {open: false, cur: 0, to: -(L - pl), groups: []}; slides.push(slide);
     [[-1, -.02], [1, .02]].forEach(([s, off]) => {
+      const g = new THREE.Group(); archUp.add(g);
       const c = s < 0 ? -L/2 + pl/2 : L/2 - pl/2, x = v ? wx((x0+x1)/2) + off : wx(x0) + L/2 + c, z = v ? wz(y0) + L/2 + c : wz((y0+y1)/2) + off;
-      const p = new THREE.Mesh(new THREE.BoxGeometry(v ? .02 : pl, ph, v ? pl : .02), glassMat); p.position.set(x, ph/2, z); archUp.add(p);
-      [ph - .03, .03].forEach(y => { const fr = new THREE.Mesh(new THREE.BoxGeometry(v ? .04 : pl, .05, v ? pl : .04), frameMat); fr.position.set(x, y, z); archUp.add(fr); });
-      [-1, 1].forEach(e => { const fr = new THREE.Mesh(new THREE.BoxGeometry(.04, ph, .04), frameMat); fr.position.set(v ? x : x + e*pl/2, ph/2, v ? z + e*pl/2 : z); archUp.add(fr); });
+      const p = new THREE.Mesh(new THREE.BoxGeometry(v ? .02 : pl, ph, v ? pl : .02), glassMat); p.position.set(x, ph/2, z); g.add(p);
+      [ph - .03, .03].forEach(y => { const fr = new THREE.Mesh(new THREE.BoxGeometry(v ? .04 : pl, .05, v ? pl : .04), frameMat); fr.position.set(x, y, z); g.add(fr); });
+      [-1, 1].forEach(e => { const fr = new THREE.Mesh(new THREE.BoxGeometry(.04, ph, .04), frameMat); fr.position.set(v ? x : x + e*pl/2, ph/2, v ? z + e*pl/2 : z); g.add(fr); });
+      g.traverse(o => { o.userData.slide = slide; });
+      if (s > 0) slide.groups.push({g, axis: v ? 'z' : 'x', base: 0});
     });
   });
   applyLight(); applyGrow();
@@ -2786,6 +2807,7 @@ function pick(e){
   const hits = ray.intersectObjects([...(opt.furn ? [furnG] : []), archUp, archFloor], true);
   for (const h of hits){
     let o = h.object;
+    if (o.userData.slide) return {slide:o.userData.slide, dist:h.distance};
     if (o.material === glassMat) continue;
     if (o.userData.door) return {door:o.userData.door, dist:h.distance};
     if (o.userData.room) return {room:o.userData.room};
@@ -2835,7 +2857,9 @@ const HINT_WALK = () => tr('WASD 移动 · 鼠标转向 · 1 2 3 速度 · C 坐
   'WASD para moverte · el mouse mira · 1 2 3 velocidad · C para sentarte · doble clic para ir · Esc pausa');
 const HINT_TOUCHWALK_HTML = () => chip('control', tr('摇杆移动', 'joystick moves you', 'El control te mueve')) + chip('mirar', tr('拖动转向', 'drag to look', 'Arrastra para mirar')) + chip('dostoques', tr('双击地面走过去', 'double-tap the floor to go there', '2 toques en el piso: ir ahí'));
 const HINT_WALK_HTML = () => chip('teclado', tr('WASD 移动', 'WASD to move', 'W A S D para moverte')) + chip('mouse', tr('鼠标转向', 'mouse looks', 'Mueve el mouse para mirar')) + chip('dostoques', tr('双击走过去', 'double-click to go there', 'Doble clic: ir ahí')) + chip('tecla', tr('Esc 暂停', 'Esc pauses', 'Esc: pausa'));
-function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : touchWalk || COARSE ? HINT_TOUCHWALK_HTML() : HINT_WALK_HTML(); }
+const HINT_DESKWALK_HTML = () => chip('teclado', tr('方向键或 WASD 移动', 'Arrow keys or W A S D to move', 'Flechas o W A S D para moverte')) +
+  chip('mouse', tr('拖动转向', 'drag to look', 'Arrastra para mirar')) + chip('dostoques', tr('双击地面走过去', 'double-click the floor to go there', 'Doble clic en el piso para ir ahí'));
+function syncHint3d(){ $('#hint3d').innerHTML = opt.mode === 'orbit' ? HINT_ORBIT() : COARSE ? HINT_TOUCHWALK_HTML() : touchWalk ? HINT_DESKWALK_HTML() : HINT_WALK_HTML(); }
 let touchWalk = false;
 const joy = {x:0, y:0, id:null}, eul = new THREE.Euler(0, 0, 0, 'YXZ');
 function lookBy(dx, dy){
@@ -2849,7 +2873,7 @@ function lookBy(dx, dy){
 }
 function startTouchWalk(){
   touchWalk = true;
-  $('#walkOverlay').style.display = 'none'; $('#joy').style.display = 'block'; $('#walkExit').style.display = 'block';
+  $('#walkOverlay').style.display = 'none'; $('#joy').style.display = COARSE ? 'block' : 'none'; $('#walkExit').style.display = 'block';
   syncHint3d(); flashHint(); $('#view3d').classList.add('touchwalk');
 }
 function stopTouchWalk(){
@@ -3166,7 +3190,7 @@ function syncWalkHud(){
   const side = $('#whSide');
   if (side){   // con las opciones ocultas queda un solo botón que cambia la velocidad con cada toque
     side.classList.toggle('compact', walk.compact);
-    $('#whFold').innerHTML = walk.compact ? ICON.up : ICON.down;
+    $('#whFold').innerHTML = ICON.fold;
     $('#whFold').setAttribute('aria-label', walk.compact ? tr('显示选项', 'Show options', 'Mostrar opciones') : tr('隐藏选项', 'Hide options', 'Ocultar opciones'));
     $('#whCycle').textContent = 'x' + walk.speed;
     $('#whCycle').setAttribute('aria-label', tr('速度', `Speed x${walk.speed}: tap to change`, `Velocidad x${walk.speed}: toca para cambiarla`));
@@ -3181,7 +3205,7 @@ function renderWalkHud(){
   const seg = items => items.map(([k, v, l]) => `<button data-${k}="${v}">${esc(l)}</button>`).join('');
   $('#walkHud').innerHTML = `
     <div class="wh-top">
-      <label class="wh-pill">${esc(tr('前往…', 'Go to…', 'Ir a…'))} ▾<select id="whGo" aria-label="${esc(tr('前往', 'Go to', 'Ir a'))}"></select></label>
+      <span class="wh-go"><button class="wh-pill" id="whGoBtn" aria-haspopup="listbox" aria-expanded="false">${esc(tr('前往…', 'Go to…', 'Ir a…'))} <svg class="wh-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9.5 12 14.5 17 9.5"/></svg></button><select id="whGo" hidden aria-hidden="true" tabindex="-1"></select><div id="whGoMenu" role="listbox" aria-label="${esc(tr('前往', 'Go to', 'Ir a'))}" hidden></div></span>
       <button class="wh-pill" id="whTourBtn" aria-label="${esc(tr('导览', 'Guided tour', 'Visita guiada'))}">${ICON.play}</button>
       ${recAllowed() ? `<button class="wh-pill" id="whRecBtn" aria-label="${esc(tr('录制视频', 'Record a video', 'Grabar video'))}">${ICON.rec}</button>` : ''}
       <button class="wh-pill" id="whCfg" aria-label="${esc(tr('设置', 'Settings', 'Ajustes'))}">⚙&#xFE0E;</button>
@@ -3230,6 +3254,22 @@ function renderWalkHud(){
   bigMap(false); tourCard(); nearLink = null;
   if (opt.mode === 'walk'){ buildWalkGo(); syncWalkHud(); walkMapTick(true); }
 }
+// Lista de «Ir a…»: se arma con las opciones del <select> oculto (grupos y lugares) y se cierra al elegir, al tocar fuera o con Esc
+function goMenu(open){
+  const m = $('#whGoMenu'), b = $('#whGoBtn'), sel = $('#whGo'); if (!m || !b || !sel) return;
+  if (open){
+    m.innerHTML = [...sel.children].map(n => n.tagName === 'OPTGROUP'
+      ? `<div class="g">${esc(n.label)}</div>` + [...n.children].map(o => `<button type="button" role="option" data-v="${esc(o.value)}">${esc(o.textContent)}</button>`).join('')
+      : n.value === '' ? '' : `<button type="button" role="option" data-v="${esc(n.value)}">${esc(n.textContent)}</button>`).join('');
+  }
+  m.hidden = !open; b.setAttribute('aria-expanded', String(open));
+  if (open) m.querySelector('button')?.focus({preventScroll: true});
+}
+document.addEventListener('pointerdown', e => { if (!e.target.closest?.('.wh-go')) goMenu(false); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') goMenu(false); });
+// Con el mouse capturado (la mira al centro), un clic abre o cierra la puerta o la ventana a la que se apunta
+document.addEventListener('mousedown', e => { if (e.button !== 0 || opt.mode !== 'walk' || !walkCtl.isLocked) return;
+  const h = pick(), d = h?.door || h?.slide; if (d && h.dist < (h.slide ? 6 : 3.5)) d.open = !d.open; });
 function bindWalkHud(){
   const hud = $('#walkHud');
   hud.addEventListener('click', e => {
@@ -3238,6 +3278,8 @@ function bindWalkHud(){
     if (d.sp) setSpeed(+d.sp);
     else if (b.id === 'whCycle') setSpeed(walk.speed % 3 + 1);          // x1 → x2 → x3 → x1
     else if (b.id === 'whFold'){ walk.compact = !walk.compact; saveWalk(); syncWalkHud(); }
+    else if (b.id === 'whGoBtn') goMenu(!!$('#whGoMenu').hidden);
+    else if (b.parentElement?.id === 'whGoMenu'){ const sel = $('#whGo'); goMenu(false); sel.value = b.dataset.v; sel.dispatchEvent(new Event('change', {bubbles: true})); }
     else if (d.eye) setSit(d.eye === 'sit');
     else if (d.look){ walk.look = +d.look; saveWalk(); syncWalkHud(); }
     else if (d.map){ walk.map = d.map === '1'; saveWalk(); syncWalkHud(); walkMapTick(true); }
@@ -3283,6 +3325,7 @@ const ICON = {
   again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1.5L7 6l5 4.5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>',
   down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12l-6 7z"/></svg>',
   up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15h12l-6-7z"/></svg>',
+  fold: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 6.9 6.3 12.6 12l-5.7 5.7 1.7 1.7L16 12z"/></svg>',
   rec: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="#d93a2b"/></svg>',
   stairs: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 22h20V2h-4v4h-4v4h-4v4h-4v4H2z"/></svg>',
 };
@@ -3535,8 +3578,8 @@ function stairEnds(st){
 // planta está junto al desembarco, ese es el punto (el plano dice dónde se llega).
 const STAIR_LINKS = (() => {
   const W = PLANTA.walk, L = [], near = p => W && Math.hypot(W.from[0] - p[0], W.from[1] - p[1]) < 2500 ? W.from : p;
-  if (ABOVE) STAIRS.forEach(st => { const e = stairEnds(st); L.push({dir: 'subir', level: ABOVE, at: near(e.foot), away: [-e.up[0], -e.up[1]], step2: e.second, lift: 1, rise: st.rise || .18}); });
-  if (BELOW) (BELOW.stairs || []).forEach(st => { const e = stairEnds(st); L.push({dir: 'bajar', level: BELOW, at: near(e.top), away: e.out, step2: e.prev, lift: -1, rise: st.rise || .18}); });
+  if (ABOVE) STAIRS.forEach(st => { const e = stairEnds(st); L.push({dir: 'subir', level: ABOVE, at: near(e.foot), near: e.foot, away: [-e.up[0], -e.up[1]], step2: e.second, lift: 1, rise: st.rise || .18}); });
+  if (BELOW) (BELOW.stairs || []).forEach(st => { const e = stairEnds(st); L.push({dir: 'bajar', level: BELOW, at: near(e.top), near: e.top, away: e.out, step2: e.prev, lift: -1, rise: st.rise || .18}); });
   return L;
 })();
 const linkLabel = l => {
@@ -3562,7 +3605,11 @@ let nearLink = null, climbing = null;
 function stairTick(){
   const b = $('#whStair'); if (!b) return;
   const busy = climbing || glide || rec || (tour && !tour.paused && tour.phase !== 'end'), here = planXY(camera.position);
-  const l = busy ? null : STAIR_LINKS.find(k => Math.hypot(here[0] - k.at[0], here[1] - k.at[1]) < 2000) || null;
+  const fw = new THREE.Vector3(); camera.getWorldDirection(fw);
+  // Cerca de la escalera, sin pared de por medio y mirando hacia ella (no de espaldas ni desde el cuarto de al lado)
+  const facing = k => { const dx = k.step2[0] - here[0], dy = k.step2[1] - here[1], L = Math.hypot(dx, dy) || 1, f = Math.hypot(fw.x, fw.z) || 1;
+    return (fw.x/f)*(dx/L) + (fw.z/f)*(dy/L) > .3; };
+  const l = busy ? null : STAIR_LINKS.find(k => Math.hypot(here[0] - k.near[0], here[1] - k.near[1]) < 1800 && clearPath(here, k.near) && facing(k)) || null;
   if (l === nearLink) return;
   nearLink = l; b.hidden = !l;
   if (l){ b.innerHTML = `${ICON.stairs} ${esc(linkLabel(l))}`; $('#hint3d').classList.add('gone'); }
@@ -3751,7 +3798,7 @@ function recResult(blob, type){
 addEventListener('keydown', e => {
   if (!active || e.target.matches('input,select,textarea')) return;
   keys[e.code] = true;
-  if (opt.mode === 'walk' && e.code === 'KeyE'){ const h = pick(); if (h?.door && h.dist < 2.5) h.door.open = !h.door.open; }
+  if (opt.mode === 'walk' && e.code === 'KeyE'){ const h = pick(), d = h?.door || h?.slide; if (d && h.dist < (h.slide ? 6 : 2.5)) d.open = !d.open; }
   if (opt.mode === 'walk' && /^Digit[123]$/.test(e.code)) setSpeed(+e.code[5]);
   if (opt.mode === 'walk' && e.code === 'KeyC') setSit(!walk.sit);
   if (bigOpen && e.code === 'Escape') bigMap(false);
@@ -3811,6 +3858,7 @@ function loop(){
   else if (opt.mode === 'orbit') orbit.update();
   else stepWalk(dt);
   doors.forEach(d => { const tg = d.open ? d.a1 : d.a0; d.cur += (tg - d.cur) * Math.min(1, dt*6); d.pivot.rotation.y = d.cur; });
+  slides.forEach(sl => { const tg = sl.open ? sl.to : 0; sl.cur += (tg - sl.cur) * Math.min(1, dt*5); sl.groups.forEach(q => { q.g.position[q.axis] = q.base + sl.cur; }); });
   updateSel();
   renderer.render(scene, camera);
   if (rec) recFrame(now);

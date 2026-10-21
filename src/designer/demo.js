@@ -7,6 +7,41 @@
   const D = window.__DEMO__;
   if (!D) return;
   const V = D.venue || null;
+
+  // «← Volver», a la vista arriba a la izquierda junto al nombre (en computadora y en el celular): regresa a la página
+  // de Plantea de donde vino; si entró directo, a la ficha del lugar o a la portada.
+  (function mountBack() {
+    const title = document.getElementById('casaTitle');
+    if (!title) return void document.addEventListener('DOMContentLoaded', mountBack, { once: true });
+    if (document.getElementById('demoBack')) return;
+    const st = document.createElement('style');
+    st.textContent = `.guiaTitulo{display:flex;align-items:center;gap:8px;min-width:0}
+      #demoBack{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;height:34px;padding:0 12px 0 9px;border-radius:999px;
+        border:1px solid #d6d3d1;background:#fff;color:#1c1917;font:600 14px/1 'DM Sans',system-ui,sans-serif;text-decoration:none;
+        box-shadow:0 1px 2px rgba(0,0,0,.06)}
+      #demoBack:hover{border-color:#b5653a;color:#b5653a}
+      #demoBack:focus-visible{outline:3px solid #f3c9ad;outline-offset:2px}`;
+    document.head.appendChild(st);
+    let row = title.parentElement;
+    if (!row.classList.contains('guiaTitulo')) {
+      row = document.createElement('div');
+      row.className = 'guiaTitulo';
+      title.replaceWith(row);
+      row.append(title);
+    }
+    const a = document.createElement('a');
+    a.id = 'demoBack';
+    a.href = (V && V.backHref) || '/';
+    a.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>Volver';
+    a.addEventListener('click', e => {
+      // Si llegó desde otra página de Plantea, regresa ahí (con su lugar en la página); si no, sigue el enlace.
+      let same = false;
+      try { same = !!document.referrer && new URL(document.referrer).origin === location.origin && new URL(document.referrer).pathname !== location.pathname; } catch { /* sin referencia */ }
+      if (same && history.length > 1) { e.preventDefault(); history.back(); }
+    });
+    row.prepend(a);
+  })();
+
   const KEY = V ? 'planner3d-aviso-lugar-' + V.name : 'planner3d-aviso-demo';
   try { if (sessionStorage.getItem(KEY) === '1') return; } catch { /* sin almacenamiento */ }
   const salon = D.kind === 'salon';

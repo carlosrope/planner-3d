@@ -41,6 +41,7 @@ export async function GET(request: Request, ctx: RouteContext<"/lugares/[slug]/3
         whatsapp: found.contactPhone ?? found.owner?.whatsapp ?? null,
         planHref: `/eventos?lugar=${found.id}${sectionOf(found.kind) === "casas" ? "&seccion=casas" : ""}`,
         reviewHref: review ? `/revisar/${review}` : null,
+        backHref: review ? `/revisar/${review}` : `/lugares/${key}`,
       },
       captura,
     },

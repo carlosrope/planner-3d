@@ -127,6 +127,8 @@ export type VenueNotice = {
   planHref: string;
   /** El dueño lo abrió desde su enlace de revisión: vuelve ahí para confirmar. */
   reviewHref: string | null;
+  /** A dónde lleva «← Volver» si se entró directo (sin página anterior de Plantea): la ficha del lugar. */
+  backHref?: string;
 };
 
 export async function designerResponse(
