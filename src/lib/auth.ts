@@ -5,9 +5,9 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { account, membership, organization, referralCode, session, user, venue, verification } from "./db/schema";
+import { account, auditLog, membership, organization, referralCode, session, trialCode, user, venue, verification } from "./db/schema";
 import { activeModules, sectionOf } from "./domain";
-import { FREE_ACCOUNT, FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, type Invite } from "./invites";
+import { FREE_ACCOUNT, FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, trialInvite, type Invite } from "./invites";
 import { referralCodeCandidates } from "./referrals";
 import { lanOrigins } from "./lan";
 import { passwordResetEmail, sendEmail } from "./email";
@@ -56,13 +56,24 @@ async function referralFor(raw: string): Promise<Invite | null> {
   if (!activeModules(row).includes(sectionOf(row.venueKind))) return null;
   return referralInvite(row);
 }
+/** Código de mes gratis sin usar ni desactivar (los genera la administración en /admin/codigos). */
+async function trialFor(raw: string): Promise<Invite | null> {
+  const codes = referralCodeCandidates(raw);
+  if (!codes.length) return null;
+  const [row] = await db
+    .select({ id: trialCode.id, code: trialCode.code, kind: trialCode.kind, days: trialCode.days })
+    .from(trialCode)
+    .where(and(inArray(trialCode.code, codes), isNull(trialCode.usedAt), isNull(trialCode.disabledAt)))
+    .limit(1);
+  return row ? trialInvite(row) : null;
+}
 const inviteRequired = invites.size > 0;
 /**
- * La invitación de un registro: con código, la de ese código (de SIGNUP_CODES o de referido; null si no sirve, para avisarle);
+ * La invitación de un registro: con código, la de ese código (de SIGNUP_CODES, de mes gratis o de referido; null si no sirve, para avisarle);
  * sin código, una cuenta sin plan (en producción) o acceso completo (en desarrollo sin códigos definidos).
  */
 const inviteFor = async (raw: string): Promise<Invite | null> =>
-  raw ? (invites.get(raw) ?? (await referralFor(raw))) : inviteRequired || process.env.NODE_ENV === "production" ? FREE_ACCOUNT : FULL_ACCESS;
+  raw ? (invites.get(raw) ?? (await trialFor(raw)) ?? (await referralFor(raw))) : inviteRequired || process.env.NODE_ENV === "production" ? FREE_ACCOUNT : FULL_ACCESS;
 /** Invitación de cada registro en curso, por correo, para crearle su negocio al terminar. */
 const pendingInvites = new Map<string, Invite>();
 
@@ -176,13 +187,37 @@ export const auth = betterAuth({
                   .where(and(eq(referralCode.id, invite.referral.codeId), isNull(referralCode.usedAt)))
                   .returning({ id: referralCode.id })
               : [];
-            const final = invite.referral && !claimed.length ? FREE_ACCOUNT : invite;
+            // Igual con un código de mes gratis (y si lo desactivaron mientras tanto, la cuenta nace sin plan).
+            const now = new Date();
+            const claimedTrial = invite.trial
+              ? await tx
+                  .update(trialCode)
+                  .set({ usedAt: now, usedByEmail: email })
+                  .where(and(eq(trialCode.id, invite.trial.codeId), isNull(trialCode.usedAt), isNull(trialCode.disabledAt)))
+                  .returning({ id: trialCode.id })
+              : [];
+            const final = (invite.referral && !claimed.length) || (invite.trial && !claimedTrial.length) ? FREE_ACCOUNT : invite;
+            const values = orgValuesFor(final, now);
             const [org] = await tx
               .insert(organization)
-              .values({ name: created.name, ...orgValuesFor(final) })
+              .values({ name: created.name, ...values })
               .returning({ id: organization.id });
             await tx.insert(membership).values({ orgId: org.id, userId: created.id, role: "owner" });
             if (claimed.length) await tx.update(referralCode).set({ usedByOrgId: org.id }).where(eq(referralCode.id, claimed[0].id));
+            if (claimedTrial.length && invite.trial) {
+              // El de una planner empieza hoy; el de un salón, cuando su salón quede publicado (dal.ts, startVenueTrial).
+              const started = invite.trial.startsOnPublish ? {} : { startedAt: now, endsAt: values.planEndsAt };
+              await tx.update(trialCode).set({ usedByOrgId: org.id, ...started }).where(eq(trialCode.id, claimedTrial[0].id));
+              await tx.insert(auditLog).values({
+                actorUserId: created.id,
+                actor: email,
+                action: "codigo_canjeado",
+                targetType: "organization",
+                targetId: org.id,
+                targetLabel: created.name,
+                details: { codigo: invite.trial.code, nota: "al crear su cuenta" },
+              });
+            }
           });
         },
       },

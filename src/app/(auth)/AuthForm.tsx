@@ -139,7 +139,7 @@ export function AuthForm({
         {registering && inviteValue ? (
           <input type="hidden" name="invite" value={inviteValue} />
         ) : registering ? (
-          <CodeInput name="invite" placeholder="Código del salón (opcional)" />
+          <CodeInput name="invite" placeholder="Código (opcional)" />
         ) : null}
         {error && <p className="text-sm text-red-600">{error}</p>}
         {!registering && (

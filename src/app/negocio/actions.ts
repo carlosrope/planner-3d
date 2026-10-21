@@ -12,6 +12,7 @@ import {
   createPayment,
   createReferralCode,
   getCardCheckout,
+  redeemTrialCode,
   requireOrg,
   requireUser,
   setCardCheckout,
@@ -22,7 +23,9 @@ import { reportError } from "@/lib/sentry";
 import { MAX_BODY_LENGTH, MESSAGE_STYLES, serializeSetting } from "@/lib/referral-message";
 import { db } from "@/lib/db";
 import { organization } from "@/lib/db/schema";
-import { isRealDay, today } from "@/lib/dates";
+import { formatInstant, isRealDay, today } from "@/lib/dates";
+import { clientIp, makeLimiter } from "@/lib/suggestion";
+import { headers } from "next/headers";
 import { isReceipt, storedType } from "@/lib/uploads";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 
@@ -223,3 +226,26 @@ export async function cancelSubscriptionAction(formData: FormData): Promise<void
   revalidatePath("/negocio");
 }
 
+
+export type RedeemState = { ok: true; message: string } | { ok: false; error: string } | null;
+
+// Para que nadie pruebe códigos al azar: 10 intentos por hora desde la misma conexión.
+const redeemTries = makeLimiter(10, 60 * 60 * 1000);
+
+/** Canjea un código de mes gratis (los genera la administración en /admin/codigos). */
+export async function redeemTrialAction(_prev: RedeemState, formData: FormData): Promise<RedeemState> {
+  const user = await requireUser();
+  const org = await requireOrg(user);
+  if (!redeemTries(clientIp(await headers()))) return { ok: false, error: "Probaste muchos códigos seguidos. Espera una hora o escríbenos por WhatsApp." };
+  const raw = String(formData.get("code") ?? "").slice(0, 40);
+  const result = await redeemTrialCode(user, org, raw);
+  if (!result.ok) return result;
+  revalidatePath("/negocio");
+  revalidatePath("/eventos");
+  return {
+    ok: true,
+    message: result.waitsForVenue
+      ? `¡Listo! Tu cuenta ya está en plan Prueba. Tu mes gratis empieza a contar el día que tu salón quede publicado en Plantea; mientras tanto puedes entrar hasta el ${formatInstant(result.endsAt, "long")}.`
+      : `¡Listo! Tu mes gratis ya empezó: tu plan Prueba está vigente hasta el ${formatInstant(result.endsAt, "long")}.`,
+  };
+}

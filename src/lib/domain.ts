@@ -173,7 +173,22 @@ export const SHARE_ROLES = ["cliente", "staff", "proveedor", "salon"] as const;
 export type ShareRole = (typeof SHARE_ROLES)[number];
 
 /** Acciones que quedan en el rastro (tabla audit_log, visible en /admin/rastro). */
-export const AUDIT_ACTIONS = ["pago_confirmado", "pago_rechazado", "plan_cambiado", "lugar_estado", "lugar_publicado", "lugar_retirado", "lugar_papelera", "lugar_restaurado", "interfaz_cambiada"] as const;
+export const AUDIT_ACTIONS = [
+  "pago_confirmado",
+  "pago_rechazado",
+  "plan_cambiado",
+  "lugar_estado",
+  "lugar_publicado",
+  "lugar_retirado",
+  "lugar_papelera",
+  "lugar_restaurado",
+  "interfaz_cambiada",
+  "codigos_generados",
+  "codigo_desactivado",
+  "codigo_reactivado",
+  "codigo_canjeado",
+  "mes_gratis_iniciado",
+] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   pago_confirmado: "Confirmó un pago",
@@ -185,6 +200,11 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   lugar_papelera: "Mandó el lugar a la papelera",
   lugar_restaurado: "Restauró el lugar",
   interfaz_cambiada: "Cambió la interfaz del diseñador",
+  codigos_generados: "Generó códigos de mes gratis",
+  codigo_desactivado: "Desactivó un código de mes gratis",
+  codigo_reactivado: "Reactivó un código de mes gratis",
+  codigo_canjeado: "Canjeó un código de mes gratis",
+  mes_gratis_iniciado: "Empezó su mes gratis",
 };
 /** Acción del rastro para un cambio de estado de un lugar. */
 export const venueStatusAction = (status: VenueStatus): AuditAction =>

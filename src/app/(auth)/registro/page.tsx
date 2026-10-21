@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import { Suspense } from "react";
-import { getReferralInvite } from "@/lib/dal";
+import { getReferralInvite, getTrialCode } from "@/lib/dal";
+import { TRIAL_CODE_DAYS, startsOnPublish } from "@/lib/trial-codes";
 import { normalizeReferralCode } from "@/lib/referrals";
 import { AuthForm } from "../AuthForm";
 import { formatDay } from "@/lib/dates";
@@ -23,7 +25,7 @@ export default function RegistroPage({ searchParams }: PageProps<"/registro">) {
 }
 
 
-/** ?codigo=: código de referido de un salón o una planner; se valida y se llena solo. */
+/** ?codigo=: código de mes gratis de Plantea o código de referido de un salón o una planner; se valida y se llena solo. */
 async function Registro({ searchParams }: { searchParams: PageProps<"/registro">["searchParams"] }) {
   const { codigo, error } = await searchParams;
   const google = googleEnabled();
@@ -34,11 +36,27 @@ async function Registro({ searchParams }: { searchParams: PageProps<"/registro">
         ? "No se pudo crear tu cuenta con Google. Revisa tu código o crea la cuenta con tu correo."
         : undefined;
   const code = typeof codigo === "string" ? normalizeReferralCode(codigo) : null;
+  // El límite usa la hora actual: se calcula al pedir la página, no al prerenderizar.
+  if (code) await connection();
   const limited = code ? !lookups(clientIp(await headers())) : false;
-  const ref = code && !limited ? await getReferralInvite(String(codigo)) : null;
   if (limited) {
     return <AuthForm mode="registro" google={google} notice="Probaste muchos códigos seguidos. Espera una hora o pídele el enlace a tu salón." />;
   }
+  const trial = code ? await getTrialCode(String(codigo)) : null;
+  if (trial) {
+    const span = trial.days === TRIAL_CODE_DAYS ? "un mes" : `${trial.days} días`;
+    return (
+      <AuthForm
+        mode="registro"
+        inviteValue={trial.code}
+        google={google}
+        notice={`${googleError ? `${googleError} ` : ""}Código de Plantea: ${span} sin costo${
+          startsOnPublish(trial.kind) ? " para tu salón, con 5 códigos para tus clientes. Tu mes empieza a contar el día que tu salón quede publicado" : ""
+        }. Crea tu cuenta para activarlo.`}
+      />
+    );
+  }
+  const ref = code ? await getReferralInvite(String(codigo)) : null;
   if (!ref) {
     return (
       <AuthForm

@@ -9,6 +9,8 @@ import { cancelSubscriptionAction, syncCardPaymentsAction } from "./actions";
 import { PlanPicker, type PlanCardData } from "./PlanPicker";
 import { PERSONAL_PROFILE, PROFILES } from "@/lib/plans";
 import { PaymentForm } from "./PaymentForm";
+import { TrialRedeemForm } from "./TrialRedeemForm";
+import { canRedeemTrial } from "@/lib/trial-codes";
 import { formatDate, formatInstant } from "@/lib/dates";
 
 
@@ -143,6 +145,9 @@ export async function PlanSection({ org, wanted, result }: { org: Org; wanted?: 
       </div>
 
       {notice && <p className={`rounded-2xl border p-3 text-sm ${TONE[notice.tone]}`}>{notice.text}</p>}
+
+      {/* Sin plan de pago: aquí se escribe el código de mes gratis que manda Plantea (también sirve al crear la cuenta). */}
+      {canRedeemTrial(org) && <TrialRedeemForm />}
 
       {cardsShown && (
         <div id="pagar" className="scroll-mt-20 rounded-2xl border border-stone-200 bg-stone-50/60 p-4 sm:p-5">

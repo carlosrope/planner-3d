@@ -1,5 +1,6 @@
 import { addDays, endOfDay, today } from "./dates";
 import { ALL_SECTIONS, PLAN_MODULES, isOrgKind, isPlan, isSection, referralPlanEnd, sectionOf, type OrgKind, type Plan, type Section } from "./domain";
+import { TRIAL_CODE_MODULES, startsOnPublish, type TrialCodeKind } from "./trial-codes";
 
 /** Días de la prueba cuando el código no dice otra cosa (decisión del 15 de octubre de 2026: 7 días). */
 export const TRIAL_DAYS = 7;
@@ -22,6 +23,8 @@ export type Invite = {
   days: number | null;
   /** Código de referido de un salón o una planner: la cuenta dura hasta 30 días después del evento. */
   referral?: { codeId: string; eventDate: string | null };
+  /** Código de mes gratis de la administración (/admin/codigos); el de un salón empieza a contar al publicarse su salón. */
+  trial?: { codeId: string; code: string; startsOnPublish: boolean };
 };
 
 export const FULL_ACCESS: Invite = { kind: "planner", plan: "ambos", modules: [...ALL_SECTIONS], days: null };
@@ -73,4 +76,15 @@ export function orgValuesFor(invite: Invite, now = new Date()) {
 /** Invitación que abre un código de referido: cuenta "Con código", solo el módulo del lugar. */
 export function referralInvite(ref: { id: string; eventDate: string | null; venueKind: string }): Invite {
   return { kind: "planner", plan: "invitado", modules: [sectionOf(ref.venueKind)], days: null, referral: { codeId: ref.id, eventDate: ref.eventDate } };
+}
+
+/** Invitación que abre un código de mes gratis: plan Prueba con Eventos por los días del código (cuenta de salón o planner). */
+export function trialInvite(c: { id: string; code: string; kind: TrialCodeKind; days: number }): Invite {
+  return {
+    kind: c.kind === "venue" ? "venue" : "planner",
+    plan: "prueba",
+    modules: [...TRIAL_CODE_MODULES],
+    days: c.days,
+    trial: { codeId: c.id, code: c.code, startsOnPublish: startsOnPublish(c.kind) },
+  };
 }

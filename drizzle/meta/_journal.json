@@ -162,6 +162,13 @@
       "when": 1792536353895,
       "tag": "0022_fotos-fuera-dentro",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792602698355,
+      "tag": "0023_codigos-de-mes-gratis",
+      "breakpoints": true
     }
   ]
 }

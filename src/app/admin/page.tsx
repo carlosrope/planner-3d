@@ -56,6 +56,7 @@ const SHORTCUTS = [
   { href: "/admin/lugares", title: "Lugares", text: "Planos por convertir, revisión y publicación" },
   { href: "/admin/piloto", title: "Piloto", text: "Salones en prueba y si le sacan provecho" },
   { href: "/admin/cuentas", title: "Cuentas", text: "Tipo, plan, módulos y fin de cada cuenta" },
+  { href: "/admin/codigos", title: "Códigos de mes gratis", text: "Genera, manda y desactiva códigos; quién los usó" },
   { href: "/admin/pagos", title: "Pagos", text: "Comprobantes por SPEI" },
   { href: "/admin/actividad", title: "Actividad", text: "Qué hace cada cliente en Plantea" },
   { href: "/admin/rastro", title: "Rastro", text: "Quién cambió qué y cuándo" },

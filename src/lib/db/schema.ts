@@ -29,6 +29,7 @@ import type {
   VenueStatus,
 } from "../domain";
 import type { DesignDoc, DesignerPlan, PropertyDetails } from "../designer/types";
+import type { TrialCodeKind } from "../trial-codes";
 
 const id = () =>
   text("id")
@@ -170,6 +171,37 @@ export const referralCode = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("referral_code_org_idx").on(t.orgId), index("referral_code_venue_idx").on(t.venueId)],
+);
+
+/**
+ * Código de mes gratis que genera la administración en /admin/codigos (src/lib/trial-codes.ts): con él, una cuenta
+ * nueva (o una sin plan de pago, desde Mi negocio) queda en plan Prueba con Eventos. De un solo uso.
+ */
+export const trialCode = pgTable(
+  "trial_code",
+  {
+    id: id(),
+    /** Legible, por ejemplo MES-7K3MQ2. */
+    code: text("code").notNull().unique(),
+    /** Salón (cuenta de salón con 5 códigos; el mes cuenta desde que se publica su salón) o planner (desde que entra). */
+    kind: text("kind").$type<TrialCodeKind>().notNull(),
+    days: integer("days").notNull().default(30),
+    /** Para quién es, como lo apuntó la administración ("Salón Atalia · Guasave", "Recomendó a Jardín Real"). */
+    note: text("note"),
+    /** Correo de quien lo generó. */
+    createdBy: text("created_by").notNull(),
+    /** Desactivado: ya no sirve (solo los que no se han usado). */
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    /** La cuenta que lo usó, con el correo con que entró (se guarda tal cual). */
+    usedByOrgId: text("used_by_org_id").references(() => organization.id, { onDelete: "set null" }),
+    usedByEmail: text("used_by_email"),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    /** Cuándo empezó a correr el mes y cuándo termina (en un salón, desde que se publicó su salón). */
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("trial_code_used_by_idx").on(t.usedByOrgId), index("trial_code_created_idx").on(t.createdAt)],
 );
 
 export const membership = pgTable(
@@ -350,7 +382,7 @@ export const auditLog = pgTable(
     /** Correo o descripción de quién lo hizo, guardado tal cual (sobrevive a que se borre la cuenta). */
     actor: text("actor").notNull(),
     action: text("action").$type<AuditAction>().notNull(),
-    targetType: text("target_type").$type<"payment" | "organization" | "venue" | "setting">().notNull(),
+    targetType: text("target_type").$type<"payment" | "organization" | "venue" | "setting" | "trial_code">().notNull(),
     targetId: text("target_id").notNull(),
     /** Nombre legible del negocio o del lugar al momento del cambio. */
     targetLabel: text("target_label").notNull(),

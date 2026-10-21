@@ -50,12 +50,22 @@ function describe(details: Record<string, unknown>): string[] {
   }
   if ("monto" in details) lines.push(`$${Number(details.monto).toLocaleString("es-MX")} · ${show(details.plan)} · ${details.periodo === "anio" ? "un año" : "un mes"}`);
   if ("finDespues" in details) lines.push(`plan hasta: ${show(details.finAntes)} → ${show(details.finDespues)}`);
+  if (details.codigo) lines.push(`código: ${String(details.codigo)}`);
+  if (details.codigos) lines.push(`códigos: ${String(details.codigos)}`);
   if (details.nota) lines.push(`nota: ${String(details.nota)}`);
   return lines;
 }
 
 const href = (type: string, id: string) =>
-  type === "venue" ? `/admin/lugares/${id}` : type === "payment" ? "/admin/pagos" : type === "setting" ? "/disenador/salon-demo" : "/admin/cuentas";
+  type === "venue"
+    ? `/admin/lugares/${id}`
+    : type === "payment"
+      ? "/admin/pagos"
+      : type === "setting"
+        ? "/disenador/salon-demo"
+        : type === "trial_code"
+          ? "/admin/codigos"
+          : "/admin/cuentas";
 
 async function Rastro() {
   await requireAdmin();
@@ -65,7 +75,7 @@ async function Rastro() {
       <AdminNav current="/admin/rastro" />
       <h1 className="text-2xl font-semibold">Rastro</h1>
       <p className="mt-1 text-sm text-stone-500">
-        Quién confirmó o rechazó pagos, cambió planes y publicó, retiró o borró lugares. Solo se agrega; no se puede editar. Horas de Los Mochis.
+        Quién confirmó o rechazó pagos, cambió planes, publicó, retiró o borró lugares y generó o canjeó códigos de mes gratis. Solo se agrega; no se puede editar. Horas de Los Mochis.
       </p>
       {rows.length === 0 ? (
         <p className="mt-6 text-stone-500">Todavía no hay movimientos.</p>

@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   adminAddVenueFiles,
+  adminCreateTrialCodes,
+  adminSetTrialCodeDisabled,
   adminMarkSuggestion,
   adminRestoreEvent,
   adminTrashVenue,
@@ -21,6 +24,7 @@ import { ORG_KINDS, PLANS, TIERS, VENUE_STATUSES, isSection } from "@/lib/domain
 import { isPhoto, isPlanFile, storedType } from "@/lib/uploads";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 import { endOfDay } from "@/lib/dates";
+import { TRIAL_CODE_BATCH_MAX, TRIAL_CODE_DAYS, TRIAL_CODE_KINDS } from "@/lib/trial-codes";
 
 // Acciones de la administración de Plantea. Todas piden requireAdmin.
 
@@ -236,4 +240,35 @@ export async function markSuggestion(formData: FormData): Promise<void> {
   if (!parsed.success) return;
   await adminMarkSuggestion(parsed.data.id, parsed.data.done === "1");
   revalidatePath("/admin/sugerencias");
+}
+
+/** Genera de 1 a 50 códigos de mes gratis; la lista los muestra arriba, marcados como nuevos. */
+export async function createTrialCodes(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const parsed = z
+    .object({
+      count: z.coerce.number().int().min(1).max(TRIAL_CODE_BATCH_MAX),
+      kind: z.enum(TRIAL_CODE_KINDS),
+      days: z.coerce.number().int().min(1).max(365),
+      note: optional(120),
+    })
+    .safeParse({
+      count: formData.get("count") || 1,
+      kind: formData.get("kind"),
+      days: formData.get("days") || TRIAL_CODE_DAYS,
+      note: formData.get("note") ?? "",
+    });
+  if (!parsed.success) return;
+  const rows = await adminCreateTrialCodes(parsed.data, admin);
+  revalidatePath("/admin/rastro");
+  redirect(`/admin/codigos?nuevos=${rows.length}`);
+}
+
+export async function toggleTrialCode(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const parsed = z.object({ codeId: id, disabled: z.enum(["1", "0"]) }).safeParse({ codeId: formData.get("codeId"), disabled: formData.get("disabled") });
+  if (!parsed.success) return;
+  await adminSetTrialCodeDisabled(parsed.data.codeId, parsed.data.disabled === "1", admin);
+  revalidatePath("/admin/codigos");
+  revalidatePath("/admin/rastro");
 }

@@ -17,6 +17,7 @@ import {
   payment,
   referralCode,
   shareLink,
+  trialCode,
   user,
   venue,
   venueAccess,
@@ -46,6 +47,7 @@ import {
 } from "./domain";
 import { monthStart, newReferralCode, referralCodeCandidates, referralLeft } from "./referrals";
 import { FREE_ACCOUNT, orgValuesFor } from "./invites";
+import { TRIAL_CODE_KIND_LABELS, TRIAL_CODE_MODULES, canRedeemTrial, newTrialCode, redeemValues, startsOnPublish, trialEnd, type TrialCodeKind } from "./trial-codes";
 import { slugify, uniqueSlug } from "./slug";
 
 import { TOKEN_CHARS } from "./tokens";
@@ -67,7 +69,7 @@ async function audit(
   conn: Db | Tx,
   actor: Actor,
   action: AuditAction,
-  target: { type: "payment" | "organization" | "venue" | "setting"; id: string; label: string },
+  target: { type: "payment" | "organization" | "venue" | "setting" | "trial_code"; id: string; label: string },
   details: Record<string, unknown> = {},
 ) {
   await conn.insert(auditLog).values({
@@ -671,9 +673,11 @@ export async function confirmVenueReview(token: string) {
       .update(venue)
       .set({ status: "publicado", publishedAt: new Date(), reviewNotes: null })
       .where(and(eq(venue.reviewToken, token), venueAlive, isNotNull(venue.plan), eq(venue.status, "revision")))
-      .returning({ id: venue.id, slug: venue.slug, name: venue.name, contactName: venue.contactName });
+      .returning({ id: venue.id, slug: venue.slug, name: venue.name, contactName: venue.contactName, ownerOrgId: venue.ownerOrgId });
     if (!row) return null;
-    await audit(tx, { label: `Dueño con su enlace de revisión${row.contactName ? ` (${row.contactName})` : ""}` }, "lugar_publicado", { type: "venue", id: row.id, label: row.name });
+    const actor = { label: `Dueño con su enlace de revisión${row.contactName ? ` (${row.contactName})` : ""}` };
+    await audit(tx, actor, "lugar_publicado", { type: "venue", id: row.id, label: row.name });
+    await startVenueTrial(tx, row.ownerOrgId, actor);
     return { id: row.id, slug: row.slug };
   });
 }
@@ -1110,6 +1114,156 @@ export async function attachReferralEvent(codeId: string, eventId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Códigos de mes gratis (src/lib/trial-codes.ts): los genera la administración en /admin/codigos
+
+const usableTrialCode = (codes: string[]) => and(inArray(trialCode.code, codes), isNull(trialCode.usedAt), isNull(trialCode.disabledAt));
+
+/** Código de mes gratis que todavía sirve (sin usar ni desactivar), para el aviso de /registro?codigo=. */
+export async function getTrialCode(raw: string) {
+  const codes = referralCodeCandidates(raw);
+  if (!codes.length) return null;
+  const [row] = await db
+    .select({ id: trialCode.id, code: trialCode.code, kind: trialCode.kind, days: trialCode.days })
+    .from(trialCode)
+    .where(usableTrialCode(codes))
+    .limit(1);
+  return row ?? null;
+}
+
+const ownsPublishedVenue = async (conn: Db | Tx, orgId: string) =>
+  (await conn.select({ n: count() }).from(venue).where(and(eq(venue.ownerOrgId, orgId), published)))[0].n > 0;
+
+/**
+ * Un salón que entró con un código de mes gratis empieza su mes el día que su salón queda publicado y a su nombre
+ * (lo que pase después: que el dueño lo confirme o que la administración le asigne el dueño). Una sola vez por código.
+ * Si mientras tanto ya pagó un plan, el código queda como iniciado sin tocar su plan.
+ */
+async function startVenueTrial(tx: Tx, orgId: string | null, actor: Actor) {
+  if (!orgId) return;
+  const [code] = await tx
+    .select({ id: trialCode.id, code: trialCode.code, days: trialCode.days })
+    .from(trialCode)
+    .where(and(eq(trialCode.usedByOrgId, orgId), eq(trialCode.kind, "venue"), isNull(trialCode.startedAt)))
+    .orderBy(desc(trialCode.usedAt))
+    .limit(1);
+  if (!code || !(await ownsPublishedVenue(tx, orgId))) return;
+  const [org] = await tx
+    .select({ name: organization.name, plan: organization.plan, modules: organization.modules, planEndsAt: organization.planEndsAt })
+    .from(organization)
+    .where(eq(organization.id, orgId))
+    .limit(1);
+  if (!org) return;
+  const now = new Date();
+  const endsAt = org.plan === "prueba" ? trialEnd(code.days, now) : null;
+  if (endsAt) {
+    await tx
+      .update(organization)
+      .set({ planEndsAt: endsAt, modules: [...new Set([...org.modules, ...TRIAL_CODE_MODULES])] })
+      .where(eq(organization.id, orgId));
+    await audit(tx, actor, "mes_gratis_iniciado", { type: "organization", id: orgId, label: org.name }, { codigo: code.code, finAntes: org.planEndsAt, finDespues: endsAt });
+  }
+  await tx.update(trialCode).set({ startedAt: now, endsAt }).where(eq(trialCode.id, code.id));
+}
+
+export type RedeemResult = { ok: true; endsAt: Date; waitsForVenue: boolean } | { ok: false; error: string };
+
+/** Mi negocio: una cuenta sin plan de pago canjea un código de mes gratis. */
+export async function redeemTrialCode(user: CurrentUser, org: Org, raw: string): Promise<RedeemResult> {
+  if (!canRedeemTrial(org)) return { ok: false, error: "Tu cuenta ya tiene un plan activo. Escríbenos por WhatsApp y te sumamos el mes a tu plan." };
+  const codes = referralCodeCandidates(raw);
+  if (!codes.length) return { ok: false, error: "Escribe el código como te llegó (por ejemplo MES-7K3MQ2)." };
+  return db.transaction(async (tx) => {
+    const now = new Date();
+    // Se aparta primero: si dos cuentas lo canjean a la vez, solo una se lo queda.
+    const [code] = await tx
+      .update(trialCode)
+      .set({ usedAt: now, usedByOrgId: org.id, usedByEmail: user.email })
+      .where(usableTrialCode(codes))
+      .returning({ id: trialCode.id, code: trialCode.code, kind: trialCode.kind, days: trialCode.days });
+    if (!code) return { ok: false as const, error: "Ese código ya se usó o no es válido. Revisa que esté bien escrito." };
+    const [before] = await tx
+      .select({ name: organization.name, kind: organization.kind, plan: organization.plan, modules: organization.modules, planEndsAt: organization.planEndsAt })
+      .from(organization)
+      .where(eq(organization.id, org.id))
+      .limit(1);
+    if (!before) throw new Error("La cuenta no existe.");
+    const values = redeemValues(before, code, now);
+    await tx.update(organization).set(values).where(eq(organization.id, org.id));
+    // El de un salón espera a que su salón quede publicado (si ya lo está, empieza hoy).
+    const waitsForVenue = startsOnPublish(code.kind) && !(await ownsPublishedVenue(tx, org.id));
+    if (!waitsForVenue) await tx.update(trialCode).set({ startedAt: now, endsAt: values.planEndsAt }).where(eq(trialCode.id, code.id));
+    await audit(tx, user, "codigo_canjeado", { type: "organization", id: org.id, label: before.name }, { codigo: code.code, ...changedFields(before, values) });
+    return { ok: true as const, endsAt: values.planEndsAt, waitsForVenue };
+  });
+}
+
+/** La administración genera de 1 a 50 códigos de una vez. */
+export async function adminCreateTrialCodes(input: { count: number; kind: TrialCodeKind; days: number; note: string | null }, actor: CurrentUser) {
+  const codes = new Set<string>();
+  while (codes.size < input.count) codes.add(newTrialCode((n) => new Uint8Array(randomBytes(n))));
+  return db.transaction(async (tx) => {
+    // Con 887 millones de combinaciones casi nunca choca con uno que ya existe; si pasa, ese simplemente no se crea.
+    const rows = await tx
+      .insert(trialCode)
+      .values([...codes].map((code) => ({ code, kind: input.kind, days: input.days, note: input.note, createdBy: actor.email })))
+      .onConflictDoNothing({ target: trialCode.code })
+      .returning({ id: trialCode.id, code: trialCode.code });
+    if (rows.length) {
+      await audit(
+        tx,
+        actor,
+        "codigos_generados",
+        { type: "trial_code", id: rows[0].id, label: `${rows.length === 1 ? rows[0].code : `${rows.length} códigos`} · ${TRIAL_CODE_KIND_LABELS[input.kind]} · ${input.days} días` },
+        { codigos: rows.map((r) => r.code).join(", "), ...(input.note ? { nota: input.note } : {}) },
+      );
+    }
+    return rows;
+  });
+}
+
+/** Lista de la administración: los más nuevos primero, con quién lo usó y en qué va su mes. */
+export async function adminListTrialCodes() {
+  return db
+    .select({
+      id: trialCode.id,
+      code: trialCode.code,
+      kind: trialCode.kind,
+      days: trialCode.days,
+      note: trialCode.note,
+      createdBy: trialCode.createdBy,
+      createdAt: trialCode.createdAt,
+      disabledAt: trialCode.disabledAt,
+      usedAt: trialCode.usedAt,
+      usedByEmail: trialCode.usedByEmail,
+      usedByOrgId: trialCode.usedByOrgId,
+      usedByName: organization.name,
+      orgPlan: organization.plan,
+      orgPlanEndsAt: organization.planEndsAt,
+      startedAt: trialCode.startedAt,
+      endsAt: trialCode.endsAt,
+    })
+    .from(trialCode)
+    .leftJoin(organization, eq(organization.id, trialCode.usedByOrgId))
+    .orderBy(desc(trialCode.createdAt), asc(trialCode.code))
+    .limit(1000);
+}
+
+/** Desactiva (o vuelve a activar) un código que no se ha usado. */
+export async function adminSetTrialCodeDisabled(id: string, disabled: boolean, actor: CurrentUser) {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(trialCode)
+      .set({ disabledAt: disabled ? new Date() : null })
+      .where(and(eq(trialCode.id, id), isNull(trialCode.usedAt)))
+      .returning({ id: trialCode.id, code: trialCode.code, note: trialCode.note });
+    if (row) {
+      await audit(tx, actor, disabled ? "codigo_desactivado" : "codigo_reactivado", { type: "trial_code", id: row.id, label: row.code }, row.note ? { nota: row.note } : {});
+    }
+    return row ?? null;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Administración de Plantea (solo ADMIN_EMAILS; las páginas llaman antes a requireAdmin)
 
 const ownerName = organization.name;
@@ -1203,6 +1357,8 @@ export async function adminUpdateVenue(id: string, patch: AdminVenuePatch, actor
     if (Object.keys(changes).length) {
       await audit(tx, actor, changes.status ? venueStatusAction(patch.status!) : "lugar_estado", { type: "venue", id, label: patch.name ?? before.name }, changes);
     }
+    // Publicado y con dueño: si el dueño entró con un código de mes gratis de salón, su mes empieza hoy.
+    if (changes.status || changes.ownerOrgId) await startVenueTrial(tx, patch.ownerOrgId !== undefined ? patch.ownerOrgId : before.ownerOrgId, actor);
     return row ?? null;
   });
 }
