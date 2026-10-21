@@ -54,7 +54,7 @@ export function AltaForm({ owner }: { owner: { name: string; contact: string } |
 
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!plans.length) return setLocalError("Falta el plano: CAD, PDF o una foto del croquis con medidas.");
+    if (!plans.length) return setLocalError("Falta el plano: AutoCAD (DWG o DXF), PDF o una foto con las medidas anotadas.");
     const total = [...plans, ...photos].reduce((n, f) => n + f.size, 0);
     if (total > MAX_TOTAL_BYTES) {
       return setLocalError("Los archivos juntos pesan más de 36 MB. Quita algunas fotos o manda el plano por WhatsApp después de registrar el lugar.");
@@ -123,7 +123,8 @@ export function AltaForm({ owner }: { owner: { name: string; contact: string } |
       <div className="space-y-3 rounded-xl bg-stone-50 p-3">
         <p className="text-sm font-medium">Plano</p>
         <p className="text-sm text-stone-500">
-          CAD (DWG o DXF), PDF o una foto del croquis con medidas. Hasta {MAX_PLAN_FILES} archivos de 12 MB.
+          De preferencia AutoCAD (DWG o DXF) o PDF; el de Protección Civil sirve. Una foto del plano o de un croquis solo sirve
+          con las medidas anotadas. Hasta {MAX_PLAN_FILES} archivos de 12 MB.
         </p>
         <label className="inline-flex h-11 cursor-pointer items-center rounded-xl border border-stone-300 bg-white px-4 text-sm font-medium active:bg-stone-100">
           Elegir archivo del plano

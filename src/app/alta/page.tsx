@@ -17,7 +17,8 @@ export default function AltaPage() {
       <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Plantea</p>
       <h1 className="mt-1 text-2xl font-semibold">Pon tu salón o tu modelo de casa en 3D</h1>
       <p className="mt-2 text-stone-600">
-        Mándanos tu plano (CAD, PDF o una foto del croquis con medidas) y unas fotos. Lo convertimos a un plano 2D y
+        Mándanos tu plano en AutoCAD (DWG o DXF) o en PDF y unas fotos. Si solo tienes una foto del plano o un croquis,
+        anótale las medidas. Lo convertimos a un plano 2D y
         un recorrido 3D, te mandamos el enlace para que lo revises y, cuando lo confirmes, queda publicado con su
         enlace y su QR.
       </p>

@@ -60,7 +60,7 @@ export async function submitVenue(_prev: AltaState, formData: FormData): Promise
 
   const plans = files(formData, "planos").slice(0, 3);
   const photos = files(formData, "fotos").slice(0, 8);
-  if (!plans.length) return { error: "Falta el plano: CAD, PDF o una foto del croquis con medidas." };
+  if (!plans.length) return { error: "Falta el plano: AutoCAD (DWG o DXF), PDF o una foto con las medidas anotadas." };
   if (plans.some((f) => f.size > MAX_PLAN_BYTES)) return { error: "Cada archivo del plano puede pesar hasta 12 MB." };
   if ([...plans, ...photos].reduce((n, f) => n + f.size, 0) > MAX_TOTAL_BYTES) {
     return { error: "Los archivos juntos pesan más de 36 MB. Manda menos fotos o el plano por WhatsApp después de registrar el lugar." };

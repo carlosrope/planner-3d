@@ -19,14 +19,16 @@ const RECIBES = [
   { t: "Tu panel", p: "Solicitudes, eventos planeados en tu salón y un reporte de 6 meses." },
 ];
 
+// Decisión del 21 de octubre de 2026: de preferencia el plano en archivo (AutoCAD o PDF), para que el salón no tenga que
+// medir nada; una foto solo sirve con las medidas anotadas.
 const PLANO = [
-  { t: "Plano CAD o PDF", p: "El arquitectónico o el de Protección Civil sirve." },
-  { t: "Croquis con medidas", p: "Hecho a mano, con fotos de cada lado del salón." },
+  { t: "Lo mejor: AutoCAD o PDF", p: "El archivo del plano (DWG, DXF o PDF). El que hizo tu arquitecto para Protección Civil sirve; si solo lo tienes en papel, pídeselo en archivo." },
+  { t: "Si solo tienes una foto", p: "Del plano o de un croquis, con las medidas anotadas: largo y ancho del salón, puertas y columnas." },
   { t: "Sin plano", p: "En Los Mochis, un arquitecto va a medir tu salón sin costo extra. En otras ciudades necesitamos el plano; el de Protección Civil sirve." },
 ];
 
 const PASOS = [
-  { n: "1", t: "Registras tu salón", p: "Subes el plano o el croquis, fotos, aforo y tu contacto." },
+  { n: "1", t: "Registras tu salón", p: "Subes el plano (AutoCAD o PDF), fotos, aforo y tu contacto." },
   { n: "2", t: "Lo convertimos a 3D", p: "En 7 días desde que tenemos el plano. Está incluido en tu plan." },
   { n: "3", t: "Lo revisas y confirmas", p: "Te mandamos un enlace privado; pides cambios o lo apruebas." },
   { n: "4", t: "Se publica", p: "Aparece en el catálogo y ya puedes compartir su enlace y su QR." },
@@ -69,7 +71,7 @@ export default function ParaSalonesPage() {
 
       <section className="mt-12">
         <h2 className="text-2xl font-semibold">Qué nos mandas</h2>
-        <p className="mt-1 text-stone-600">Una de estas tres:</p>
+        <p className="mt-1 text-stone-600">De preferencia el archivo del plano: así no tienes que medir nada.</p>
         <ul className="mt-4 grid gap-3 sm:grid-cols-3">
           {PLANO.map((p) => (
             <li key={p.t} className="rounded-2xl bg-[#f3ece2] p-4">
