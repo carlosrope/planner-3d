@@ -21,7 +21,7 @@ export function CompareSlider({
 }: {
   outside: string;
   inside: string;
-  /** "Salón" o "Casa": las etiquetas dicen «Salón por fuera», «Casa por dentro»… */
+  /** "Salón" o "Casa": para el texto que leen los lectores de pantalla (las etiquetas dicen solo «Por fuera» y «Por dentro»). */
   place: "Salón" | "Casa";
   name: string;
   illustrative?: boolean;
@@ -159,10 +159,10 @@ export function CompareSlider({
       )}
       {/* Cada etiqueta se oculta cuando su lado queda muy angosto, para no quedar encima de la otra foto. */}
       <span className={`pointer-events-none absolute left-3 top-3 rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white backdrop-blur transition-opacity ${x < 38 ? "opacity-0" : ""}`}>
-        {place} por fuera
+        Por fuera
       </span>
       <span className={`pointer-events-none absolute right-3 top-3 rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white backdrop-blur transition-opacity ${x > 62 ? "opacity-0" : ""}`}>
-        {place} por dentro
+        Por dentro
       </span>
       {illustrative && (
         <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold text-stone-800">Imagen ilustrativa</span>

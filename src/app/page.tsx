@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { EnPlantea } from "@/components/EnPlantea";
+import { FadeImages } from "@/components/FadeImages";
 import { Hero3D } from "@/components/Hero3D";
 import { LoopVideo } from "@/components/LoopVideo";
 import { PageLink } from "@/components/PageLink";
@@ -14,11 +15,36 @@ const PASOS = [
   { n: "03", t: "Siéntalos y recórrelo", p: "Pon a tus invitados por mesa, míralo en 3D como si ya estuvieras ahí y compártelo por WhatsApp." },
 ];
 
+// Fotos ilustrativas (generadas); la de familias alterna con novios y quinceañera cuando estén en public/portada/.
 const QUIEN = [
-  { t: "Salones de eventos", p: "Tu salón en el catálogo con su enlace y QR; tus clientes arman su fiesta ahí con un código tuyo.", href: "/para-salones", cta: "Así funciona para tu salón" },
-  { t: "Planners y organizadores", p: "Todos tus eventos en cualquier salón: distribuciones A, B y C, hojas para imprimir y el enlace con tu marca.", href: "/planes#planner", cta: "Ver planes para planners" },
-  { t: "Novios, quinceañeras y familias", p: "Si ya apartaste el salón, pídele tu código: armas tu evento sin costo y lo compartes con tu familia.", href: "/salones", cta: "Buscar mi salón" },
-  { t: "Inmobiliarias y desarrolladoras", p: "Cada modelo de casa amueblado, con pisos y recorrido guiado, para mostrarlo con tu marca.", href: "/casas", cta: "Ver modelos" },
+  {
+    t: "Salones de eventos",
+    p: "Tu salón en el catálogo con su enlace y QR; tus clientes arman su fiesta ahí con un código tuyo.",
+    href: "/para-salones",
+    cta: "Así funciona para tu salón",
+    img: [{ src: "/portada/quien-salones.jpg", alt: "Dueño de un salón de eventos con una tablet en su salón montado para una boda" }],
+  },
+  {
+    t: "Planners y organizadores",
+    p: "Todos tus eventos en cualquier salón: distribuciones A, B y C, hojas para imprimir y el enlace con tu marca.",
+    href: "/planes#planner",
+    cta: "Ver planes para planners",
+    img: [{ src: "/portada/quien-planners.jpg", alt: "Organizadora de eventos revisando un montaje en su tablet junto a muestras de manteles" }],
+  },
+  {
+    t: "Novios, quinceañeras y familias",
+    p: "Si ya apartaste el salón, pídele tu código: armas tu evento sin costo y lo compartes con tu familia.",
+    href: "/salones",
+    cta: "Buscar mi salón",
+    img: [{ src: "/portada/quien-familia.jpg", alt: "Una familia viendo en el celular cómo quedará su fiesta" }],
+  },
+  {
+    t: "Inmobiliarias y desarrolladoras",
+    p: "Cada modelo de casa amueblado, con pisos y recorrido guiado, para mostrarlo con tu marca.",
+    href: "/casas",
+    cta: "Ver modelos",
+    img: [{ src: "/portada/quien-inmobiliarias.jpg", alt: "Asesora inmobiliaria enseñando un recorrido en su tablet a una pareja frente a una casa modelo" }],
+  },
 ];
 
 export default function Home() {
@@ -84,12 +110,15 @@ export default function Home() {
           <p className="mt-2 max-w-2xl text-stone-600">Para todos los que organizan: el dueño del salón, la planner, la familia que ya apartó la fecha y quien vende casas.</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {QUIEN.map((q) => (
-              <article key={q.t} className="flex flex-col rounded-2xl border border-stone-200/70 bg-white p-5">
-                <h3 className="text-lg font-semibold text-stone-900">{q.t}</h3>
-                <p className="mt-1 flex-1 text-stone-600">{q.p}</p>
-                <Link href={q.href} className="mt-4 inline-flex h-10 w-fit items-center rounded-xl border border-stone-900 px-4 text-sm font-semibold text-stone-900 hover:bg-stone-900 hover:text-white">
-                  {q.cta} →
-                </Link>
+              <article key={q.t} className="group flex flex-col overflow-hidden rounded-[25px] border border-stone-200/70 bg-white">
+                <FadeImages images={q.img} className="aspect-[3/2] w-full" />
+                <div className="flex flex-1 flex-col p-5">
+                  <h3 className="text-lg font-semibold text-stone-900">{q.t}</h3>
+                  <p className="mt-1 flex-1 text-stone-600">{q.p}</p>
+                  <Link href={q.href} className="mt-4 inline-flex h-10 w-fit items-center rounded-xl border border-stone-900 px-4 text-sm font-semibold text-stone-900 hover:bg-stone-900 hover:text-white">
+                    {q.cta} →
+                  </Link>
+                </div>
               </article>
             ))}
           </div>
