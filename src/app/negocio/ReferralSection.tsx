@@ -10,7 +10,18 @@ import { ReferralForm } from "./ReferralForm";
  * Códigos para los clientes del negocio: el dueño de un salón (o la planner) genera uno por cliente; el cliente
  * crea su cuenta con él y arma su evento en ese lugar sin pagar. En el panel de un lugar, `venueId` fija el lugar.
  */
-export async function ReferralSection({ org, venues, venueId }: { org: Org; venues: { id: string; name: string }[]; venueId?: string }) {
+export async function ReferralSection({
+  org,
+  venues,
+  venueId,
+  waitingForVenue = false,
+}: {
+  org: Org;
+  venues: { id: string; name: string }[];
+  venueId?: string;
+  /** Cuenta de salón sin salón publicado todavía: sus códigos se activan al publicarse. */
+  waitingForVenue?: boolean;
+}) {
   const [allowance, codes, template] = await Promise.all([referralAllowance(org), listReferralCodes(org.id, venueId), getReferralTemplate(org.id)]);
   if (allowance.quota === 0 && codes.length === 0) return null;
   const origin = siteOrigin();
@@ -50,6 +61,11 @@ export async function ReferralSection({ org, venues, venueId }: { org: Org; venu
       ) : null}
 
       {allowance.left !== 0 && places.length > 0 && <ReferralForm venues={places} venueId={venueId} origin={origin} setting={setting} />}
+      {waitingForVenue && (
+        <p className="mt-4 rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
+          Tus códigos se activan cuando tu salón esté publicado en Plantea. Te avisamos por WhatsApp en cuanto quede listo.
+        </p>
+      )}
       {allowance.left === 0 && (
         <p className="mt-4 rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
           Ya diste los códigos de este mes. Con el plan Ilimitado no hay tope: escríbenos por WhatsApp.

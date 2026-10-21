@@ -60,6 +60,13 @@ export function monthStart(now = new Date()): Date {
   return startOfDay(`${monthOf(now)}-01`);
 }
 
+/**
+ * Una cuenta de salón solo da códigos para sus propios salones, y cuando ya están publicados (decisión del 21 de octubre
+ * de 2026): con un código de mes gratis entra en prueba antes de publicarse su salón. Las planners los dan para cualquier
+ * salón del catálogo.
+ */
+export const ownVenuesOnly = (org: { kind: string }) => org.kind === "venue";
+
 /** Códigos que todavía puede dar este mes (null = sin tope). */
 export function referralLeft(quota: number | null, usedThisMonth: number): number | null {
   return quota === null ? null : Math.max(0, quota - usedThisMonth);

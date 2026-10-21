@@ -69,6 +69,9 @@ test("un salón entra con su código y su mes empieza cuando se publica su saló
   await expect(page.getByText(new RegExp(`${salon.name} · Prueba · hasta el`))).toBeVisible();
   await page.goto("/negocio");
   await expect(page.getByText("5 códigos para tus clientes al mes")).toBeVisible();
+  // Sin su salón publicado todavía no da códigos (ni para salones del catálogo que no son suyos).
+  await expect(page.getByText("Tus códigos se activan cuando tu salón esté publicado")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Generar código" })).toHaveCount(0);
 
   const admin = await adminPage(browser);
   await admin.goto("/admin/codigos");
@@ -87,6 +90,11 @@ test("un salón entra con su código y su mes empieza cuando se publica su saló
   await expect(admin.locator("li", { hasText: codes.venue! })).toContainText(/Su mes: del .+ al .+\./);
   await admin.goto("/admin/rastro");
   await expect(admin.locator("li", { hasText: salon.name }).filter({ hasText: "Empezó su mes gratis" })).toHaveCount(1);
+
+  // Con su salón publicado y a su nombre, ya puede dar sus códigos.
+  await page.goto("/negocio");
+  await expect(page.getByRole("button", { name: "Generar código" })).toBeVisible();
+  await expect(page.getByText("Tus códigos se activan cuando tu salón esté publicado")).toHaveCount(0);
 
   // Se regresa el salón de demostración como estaba.
   await admin.goto("/admin/lugares");

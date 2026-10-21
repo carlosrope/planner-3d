@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getOrgBrand, listVenues, requireOrg, requireUser } from "@/lib/dal";
+import { getOrgBrand, isAdmin, listVenues, requireOrg, requireUser } from "@/lib/dal";
+import { ownVenuesOnly } from "@/lib/referrals";
 import { isLitePlan, isPlan, type Plan } from "@/lib/domain";
 import { BrandForm } from "./BrandForm";
 import { PlanSection } from "./PlanSection";
@@ -29,12 +30,15 @@ async function NegocioContent({ searchParams }: { searchParams: PageProps<"/nego
   if (!brand) return null;
   // Personal y Con código no llevan logo (el enlace va sin marca o con la del salón) ni reparten códigos.
   const lite = isLitePlan(org.plan) || org.plan === "libre";
-  // Los códigos son para quienes rentan un salón: solo salones.
-  const venues = lite ? [] : (await listVenues(org.id)).filter((v) => v.kind === "salon");
+  // Los códigos son para quienes rentan un salón: solo salones. Una cuenta de salón, solo los suyos ya publicados.
+  const ownOnly = ownVenuesOnly(org) && !isAdmin(user);
+  const venues = lite
+    ? []
+    : (await listVenues(org.id)).filter((v) => v.kind === "salon" && (!ownOnly || (v.ownerOrgId === org.id && v.status === "publicado")));
   return (
     <>
       {/* Primero los códigos: es lo que el dueño usa cada vez que le rentan el salón. */}
-      {!lite && <ReferralSection org={org} venues={venues} />}
+      {!lite && <ReferralSection org={org} venues={venues} waitingForVenue={ownOnly && venues.length === 0} />}
       <PlanSection org={org} wanted={wanted} result={typeof pago === "string" ? pago : undefined} />
       {!lite && (
         <section className="mt-8">

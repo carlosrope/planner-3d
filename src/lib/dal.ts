@@ -45,7 +45,7 @@ import {
   type VenueKind,
   type VenueStatus,
 } from "./domain";
-import { monthStart, newReferralCode, referralCodeCandidates, referralLeft } from "./referrals";
+import { monthStart, newReferralCode, ownVenuesOnly, referralCodeCandidates, referralLeft } from "./referrals";
 import { FREE_ACCOUNT, orgValuesFor } from "./invites";
 import { TRIAL_CODE_KIND_LABELS, TRIAL_CODE_MODULES, canRedeemTrial, newTrialCode, redeemValues, startsOnPublish, trialEnd, type TrialCodeKind } from "./trial-codes";
 import { slugify, uniqueSlug } from "./slug";
@@ -196,7 +196,7 @@ const venueVisibleTo = (orgId: string) =>
 
 export async function listVenues(orgId: string, onlyVenueId?: string | null) {
   return db
-    .select({ id: venue.id, slug: venue.slug, name: venue.name, city: venue.city, kind: venue.kind })
+    .select({ id: venue.id, slug: venue.slug, name: venue.name, city: venue.city, kind: venue.kind, status: venue.status, ownerOrgId: venue.ownerOrgId })
     .from(venue)
     .where(and(venueVisibleTo(orgId), isNotNull(venue.plan), onlyVenueId ? eq(venue.id, onlyVenueId) : undefined))
     .orderBy(asc(venue.name));
@@ -1044,12 +1044,16 @@ async function createReferralCodeLocked(tx: Tx, org: Org, venueId: string, guest
     .from(referralCode)
     .where(and(eq(referralCode.orgId, org.id), gt(referralCode.createdAt, monthStart())));
   if (referralLeft(quota, Number(given?.n ?? 0)) === 0) return { error: "Ya diste todos los códigos de este mes." as const };
+  // Una cuenta de salón solo da códigos para sus propios salones ya publicados (la administración, para cualquiera).
+  const ownOnly = ownVenuesOnly(org) && !(await adminOrgIds()).includes(org.id);
   const [place] = await tx
     .select({ id: venue.id, name: venue.name })
     .from(venue)
-    .where(and(eq(venue.id, venueId), venueVisibleTo(org.id), isNotNull(venue.plan)))
+    .where(and(eq(venue.id, venueId), venueVisibleTo(org.id), isNotNull(venue.plan), ownOnly ? and(eq(venue.ownerOrgId, org.id), published) : undefined))
     .limit(1);
-  if (!place) return { error: "Ese lugar no está disponible para tu cuenta." as const };
+  if (!place) {
+    return { error: (ownOnly ? "Tus códigos son para tu salón y se activan cuando esté publicado en Plantea." : "Ese lugar no está disponible para tu cuenta.") as string };
+  }
   // Si el código generado ya existe (muy raro), se intenta otra vez.
   for (let i = 0; i < 5; i++) {
     const code = newReferralCode(place.name, (n) => new Uint8Array(randomBytes(n)));
