@@ -1,0 +1,48 @@
+# Vigilancia de plantea.com.mx cada 10 minutos (gratis: el repositorio es público). Revisa la portada, el catálogo
+# (si no trae al Salón Demostración, la base no está contestando) y el servidor de cuentas. Si algo falla, espera un
+# minuto y vuelve a revisar; si sigue fallando, el trabajo falla y GitHub manda un correo a la cuenta que hizo el último
+# cambio a este archivo (Settings → Notifications → Actions: «Send notifications for failed workflows only»).
+# Ojo: GitHub apaga las tareas programadas de un repositorio público después de 60 días sin commits.
+name: Vigilancia
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: vigilancia
+  cancel-in-progress: false
+
+jobs:
+  plantea:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Revisar plantea.com.mx
+        shell: bash
+        run: |
+          revisar() {
+            local fallas="" codigo cuerpo
+            for ruta in / /salones /api/auth/ok; do
+              codigo=$(curl -sS -o /tmp/respuesta -w '%{http_code}' -m 20 -A 'PlanteaVigilancia/1.0' "https://plantea.com.mx$ruta" 2>/dev/null) || codigo="sin respuesta"
+              [ "$codigo" = "200" ] || fallas="$fallas $ruta=$codigo"
+              if [ "$ruta" = "/salones" ] && [ "$codigo" = "200" ] && ! grep -q 'Salón Demostración' /tmp/respuesta; then
+                fallas="$fallas /salones=sin-datos-de-la-base"
+              fi
+            done
+            echo "$fallas"
+          }
+          fallas=$(revisar)
+          if [ -n "$fallas" ]; then
+            echo "Primer intento:$fallas. Se revisa otra vez en un minuto."
+            sleep 60
+            fallas=$(revisar)
+          fi
+          if [ -n "$fallas" ]; then
+            echo "::error title=plantea.com.mx no responde bien::$fallas"
+            exit 1
+          fi
+          echo "plantea.com.mx responde bien: portada, catálogo con datos y servidor de cuentas."
