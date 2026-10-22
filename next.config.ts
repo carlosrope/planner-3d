@@ -26,11 +26,13 @@ const nextConfig: NextConfig = {
     ];
   },
   // La dirección vieja de Railway pasa a plantea.com.mx con la misma ruta (los enlaces y QR que circulan siguen
-  // sirviendo y Google no ve dos sitios iguales). La API se queda para no cortar sesiones abiertas.
+  // sirviendo y Google no ve dos sitios iguales). También la API (desde el 22 oct): por esa dirección se llegaba sin
+  // pasar por Cloudflare y se podía inventar la IP de los límites de intentos. Las páginas ya se iban a plantea.com.mx
+  // desde el 15 oct, así que ya nadie tiene sesión abierta allá.
   async redirects() {
     return [
       {
-        source: "/:path((?!api/).*)",
+        source: "/:path(.*)",
         has: [{ type: "host", value: LEGACY_HOST }],
         destination: `${SITE_URL}/:path`,
         permanent: true,

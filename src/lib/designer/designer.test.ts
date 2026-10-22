@@ -122,6 +122,25 @@ describe("documento del diseño", () => {
     expect(designDocSchema.safeParse(bad).success).toBe(false);
   });
 
+  it("rechaza ids, tipos, materiales y medidas que podrían meter código en la página del diseñador", () => {
+    const table = { id: "t1", type: "rtable", name: "Mesa 1", cx: 0, cy: 0, w: 2900, d: 2900, rot: 0, color: "#f4efe6" };
+    const ok = (state: object) => designDocSchema.safeParse({ v: 1, levels: { salon: { furniture: [table], ...state } } }).success;
+    const xss = `a"><img src=x onerror=alert(1)>`;
+    expect(ok({})).toBe(true);
+    expect(designDocSchema.safeParse({ v: 1, levels: { salon: { furniture: [{ ...table, id: xss }] } } }).success).toBe(false);
+    expect(designDocSchema.safeParse({ v: 1, levels: { salon: { furniture: [{ ...table, type: "rtable x" }] } } }).success).toBe(false);
+    expect(designDocSchema.safeParse({ v: 1, levels: { [xss]: { furniture: [] } } }).success).toBe(false);
+    expect(ok({ rooms: { sala: { name: "Sala <b>", mat: "wood" } } })).toBe(true); // el nombre se escapa al pintarlo
+    expect(ok({ rooms: { sala: { name: "Sala", mat: 'x)" onclick="alert(1)' } } })).toBe(false);
+    expect(ok({ rooms: { [xss]: { name: "Sala", mat: "wood" } } })).toBe(false);
+    expect(ok({ measures: [{ a: { x: 0, y: 0 }, b: { x: 1000, y: 0 } }] })).toBe(true);
+    expect(ok({ measures: [{ a: { x: '0"/><script>', y: 0 }, b: { x: 1000, y: 0 } }] })).toBe(false);
+    expect(ok({ demolished: ["w3"] })).toBe(true);
+    expect(ok({ demolished: [xss.slice(0, 16)] })).toBe(false);
+    expect(ok({ guestList: [{ id: "g1", name: "Ana", table: "t1" }] })).toBe(true);
+    expect(ok({ guestList: [{ id: xss, name: "Ana" }] })).toBe(false);
+  });
+
   const vendor = { id: "v1", type: "vendor", name: "DJ Beto", cx: 0, cy: 0, w: 700, d: 700, rot: 0, color: "#6d3fa0", kind: "dj",
     contact: "Beto", phone: "6681234567", arrive: "15:00", setupFrom: "15:00", setupTo: "17:00", power: 2000,
     load: "Acceso de servicio", notes: "Trae su planta", items: ["d1"] };

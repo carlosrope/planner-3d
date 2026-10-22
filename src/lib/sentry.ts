@@ -42,7 +42,16 @@ export function stackFrames(stack: string | undefined) {
   return frames.length ? frames.reverse() : undefined;
 }
 
-export function buildEnvelope(report: ErrorReport, dsn: Dsn, now = new Date(), environment = process.env.NODE_ENV ?? "development") {
+/**
+ * Tapa lo que sirve para entrar antes de mandarlo a Sentry: el token del enlace del cliente (/v/…) y de la revisión
+ * (/revisar/…), y parámetros como ?r=, ?token= o ?codigo=. Pasa en la dirección, en el mensaje y en la pila (los
+ * scripts del diseñador van dentro de la página, así que la pila trae la dirección completa).
+ */
+export const redact = (text: string) =>
+  text.replace(/(\/(?:v|revisar)\/)[A-Za-z0-9_-]+/g, "$1[token]").replace(/([?&](?:r|token|codigo|code)=)[^&#\s"')]+/gi, "$1[oculto]");
+
+export function buildEnvelope(raw: ErrorReport, dsn: Dsn, now = new Date(), environment = process.env.NODE_ENV ?? "development") {
+  const report = { ...raw, message: redact(raw.message), url: raw.url && redact(raw.url), stack: raw.stack && redact(raw.stack) };
   const eventId = hex(16);
   const event = {
     event_id: eventId,

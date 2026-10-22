@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { isAdmin, requireUser } from "@/lib/dal";
+import { isAdmin, isAdminEmail, requireUser } from "@/lib/dal";
 
 // A dónde llega cada quien al entrar: la administración a su panel, los demás a sus proyectos.
 export default function InicioPage() {
@@ -13,5 +13,5 @@ export default function InicioPage() {
 
 async function Destino(): Promise<null> {
   const user = await requireUser("/inicio");
-  redirect(isAdmin(user) ? "/admin" : "/eventos");
+  redirect(isAdmin(user) ? "/admin" : isAdminEmail(user) ? "/verificar-correo" : "/eventos");
 }

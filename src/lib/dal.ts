@@ -59,7 +59,7 @@ export const newToken = (length = 20) => Array.from(randomBytes(length), (b) => 
 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
 
-export type CurrentUser = { id: string; name: string; email: string };
+export type CurrentUser = { id: string; name: string; email: string; emailVerified?: boolean };
 
 /** Quién hizo un cambio que queda en el rastro: un usuario con sesión, o una descripción (p. ej. el dueño con su enlace). */
 export type Actor = CurrentUser | { label: string };
@@ -103,7 +103,7 @@ async function audit(
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const s = await auth.api.getSession({ headers: await headers() });
-  return s ? { id: s.user.id, name: s.user.name, email: s.user.email } : null;
+  return s ? { id: s.user.id, name: s.user.name, email: s.user.email, emailVerified: Boolean(s.user.emailVerified) } : null;
 }
 
 export async function requireUser(next?: string): Promise<CurrentUser> {
@@ -118,10 +118,18 @@ const adminEmails = () =>
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-export const isAdmin = (user: CurrentUser) => adminEmails().includes(user.email.trim().toLowerCase());
+/** El correo de la cuenta está en ADMIN_EMAILS (todavía sin saber si es de verdad suyo). */
+export const isAdminEmail = (user: CurrentUser) => adminEmails().includes(user.email.trim().toLowerCase());
+/**
+ * Administración: el correo está en ADMIN_EMAILS **y ya se verificó** (con el enlace por correo o entrando con Google).
+ * Sin verificar, cualquiera podría crear una cuenta con un correo de la lista que aún no tuviera cuenta y quedar como
+ * administrador.
+ */
+export const isAdmin = (user: CurrentUser) => user.emailVerified === true && isAdminEmail(user);
 
 export async function requireAdmin(): Promise<CurrentUser> {
   const user = await requireUser("/admin");
+  if (isAdminEmail(user) && !user.emailVerified) redirect("/verificar-correo");
   if (!isAdmin(user)) redirect("/eventos");
   return user;
 }
@@ -590,13 +598,24 @@ export async function listVenuePhotos(venueId: string) {
     .orderBy(asc(venueFile.position), asc(venueFile.createdAt));
 }
 
-/** Foto de un lugar (las fotos son públicas salvo en un lugar retirado). */
-export async function getVenuePhoto(slugOrId: string, fileId: string) {
+/**
+ * Foto de un lugar. Las de un lugar publicado son públicas; las de uno que todavía no se publica solo las ve la
+ * administración, su dueño o quien trae su enlace de revisión (?r=…).
+ */
+export async function getVenuePhoto(slugOrId: string, fileId: string, access: { user?: CurrentUser | null; reviewToken?: string | null } = {}) {
+  const { user, reviewToken } = access;
+  const canSee = user && isAdmin(user)
+    ? sql`true`
+    : or(
+        published,
+        reviewToken ? and(eq(venue.reviewToken, reviewToken), venueAlive) : undefined,
+        user ? and(venueAlive, sql`exists (select 1 from membership m where m.org_id = venue.owner_org_id and m.user_id = ${user.id})`) : undefined,
+      );
   const [row] = await db
-    .select({ mimeType: venueFile.mimeType, data: venueFile.data })
+    .select({ mimeType: venueFile.mimeType, data: venueFile.data, status: venue.status })
     .from(venueFile)
     .innerJoin(venue, eq(venue.id, venueFile.venueId))
-    .where(and(eq(venueFile.id, fileId), bySlugOrId(slugOrId), sql`${venueFile.kind} in ('foto', 'render')`, sql`${venue.status} <> 'retirado'`))
+    .where(and(eq(venueFile.id, fileId), bySlugOrId(slugOrId), sql`${venueFile.kind} in ('foto', 'render')`, canSee))
     .limit(1);
   return row ?? null;
 }

@@ -331,7 +331,7 @@
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${tables.map(x => {
           const other = !mine.has(x.id) && waiterOf(state, x.id);
           return `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);flex-direction:row">
-            <input type="checkbox" style="width:auto;margin:0" data-wtable="${x.id}" ${mine.has(x.id) ? 'checked' : ''}>${esc(x.name.replace(/^Mesa /, ''))}${other ? `<span class="sw" style="background:${other.color};margin:0 0 0 4px"></span>` : ''}</label>`;
+            <input type="checkbox" style="width:auto;margin:0" data-wtable="${esc(x.id)}" ${mine.has(x.id) ? 'checked' : ''}>${esc(x.name.replace(/^Mesa /, ''))}${other ? `<span class="sw" style="background:${other.color};margin:0 0 0 4px"></span>` : ''}</label>`;
         }).join('')}</div>
         <div class="muted" style="margin-top:4px">${t('A colored dot means another waiter has it.', 'El punto de color indica que la atiende otro mesero.')}</div></div>`;
     }
@@ -436,7 +436,7 @@
     const shown = all.filter(g => (ui2.filter === 'all' || (ui2.filter === 'free') !== isSeated(state, g))
       && (!q || [g.name, g.group, g.diet, tableName(g.table)].some(v => (v || '').toLowerCase().includes(q))));
     const opts = g => `<option value="">${t('No table', 'Sin mesa')}</option>` + tables.map(f =>
-      `<option value="${f.id}" ${g.table === f.id ? 'selected' : ''}>${esc(f.name)} · ${seatedAt(state, f.id).length}/${seats(f)}</option>`).join('');
+      `<option value="${esc(f.id)}" ${g.table === f.id ? 'selected' : ''}>${esc(f.name)} · ${seatedAt(state, f.id).length}/${seats(f)}</option>`).join('');
     const inp = 'style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:16px;background:#fff"';
     const chip = (k, txt) => `<button class="btn chip ${ui2.filter === k ? 'on' : ''}" data-gfilter="${k}">${txt}</button>`;
     const rows = shown.map(g => ui2.editing === g.id
@@ -444,12 +444,12 @@
           <label class="full">${t('Name', 'Nombre')}<input id="geName" value="${esc(g.name)}" maxlength="80"></label>
           <label>${t('Group', 'Grupo')}<input id="geGroup" value="${esc(g.group || '')}" maxlength="60"></label>
           <label>${t('Diet / allergy', 'Dieta / alergia')}<input id="geDiet" value="${esc(g.diet || '')}" maxlength="80"></label></div>
-          <div class="actions"><button class="btn primary" data-gsave="${g.id}">${t('Save', 'Guardar')}</button>
-          <button class="btn danger" data-gdel="${g.id}">${t('Delete', 'Eliminar')}</button>
+          <div class="actions"><button class="btn primary" data-gsave="${esc(g.id)}">${t('Save', 'Guardar')}</button>
+          <button class="btn danger" data-gdel="${esc(g.id)}">${t('Delete', 'Eliminar')}</button>
           <button class="btn" data-gcancel>${t('Cancel', 'Cancelar')}</button></div></td></tr>`
-      : `<tr><td class="click" data-gedit="${g.id}"><b style="font-weight:500">${esc(g.name)}</b>
+      : `<tr><td class="click" data-gedit="${esc(g.id)}"><b style="font-weight:500">${esc(g.name)}</b>
           ${g.group || g.diet ? `<br><small class="muted">${esc([g.group, g.diet].filter(Boolean).join(' · '))}</small>` : ''}</td>
-        <td class="r"><select data-gtable="${g.id}" style="max-width:11em;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff">${opts(g)}</select></td></tr>`).join('');
+        <td class="r"><select data-gtable="${esc(g.id)}" style="max-width:11em;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff">${opts(g)}</select></td></tr>`).join('');
     return `<section><h3>${t('Guest list', 'Lista de invitados')} <small>${all.length} · ${seated} ${t('seated', 'sentados')}</small></h3>
       <div class="actions"><button class="btn ${ui2.adding ? 'on' : ''}" id="gAddToggle">＋ ${t('Add', 'Agregar')}</button>
         <button class="btn" id="gAuto" ${all.length ? '' : 'disabled'}>${t('Seat automatically', 'Acomodar automáticamente')}</button></div>

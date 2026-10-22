@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildEnvelope, parseDsn, stackFrames } from "./sentry";
+import { buildEnvelope, parseDsn, redact, stackFrames } from "./sentry";
 
 describe("sentry", () => {
   it("lee el DSN", () => {
@@ -24,5 +24,18 @@ describe("sentry", () => {
     const frames = stackFrames("Error: x\n    at save (https://a/app.js:10:5)\n    at https://a/b.js:3:1");
     expect(frames?.at(-1)).toEqual({ function: "save", filename: "https://a/app.js", lineno: 10, colno: 5 });
     expect(stackFrames(undefined)).toBeUndefined();
+  });
+
+  it("no manda a Sentry los tokens que sirven para entrar", () => {
+    expect(redact("https://plantea.com.mx/v/k7m2qz9x4w8p3n5r?visita=1")).toBe("https://plantea.com.mx/v/[token]?visita=1");
+    expect(redact("https://plantea.com.mx/lugares/salon/3d?r=abc123def456")).toBe("https://plantea.com.mx/lugares/salon/3d?r=[oculto]");
+    expect(redact("/revisar/abcdefghijklmnopqrstuvwx")).toBe("/revisar/[token]");
+    expect(redact("/restablecer?token=XYZ&next=/admin")).toBe("/restablecer?token=[oculto]&next=/admin");
+    const dsn = parseDsn("https://clave@o1.ingest.us.sentry.io/2")!;
+    const { body } = buildEnvelope(
+      { message: "falló en https://plantea.com.mx/v/k7m2qz9x4w8p3n5r", source: "browser", url: "https://plantea.com.mx/v/k7m2qz9x4w8p3n5r", stack: "at f (https://plantea.com.mx/v/k7m2qz9x4w8p3n5r:10:5)" },
+      dsn,
+    );
+    expect(body).not.toContain("k7m2qz9x4w8p3n5r");
   });
 });

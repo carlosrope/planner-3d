@@ -1,4 +1,6 @@
 import { expect, type Page } from "@playwright/test";
+import { Client } from "pg";
+import { E2E } from "../playwright.config";
 
 /** Abre una página y espera a que termine de cargar (el formulario de espera de <Suspense> ya se reemplazó). */
 export async function open(page: Page, path: string) {
@@ -80,3 +82,14 @@ export const rotationOf = (page: Page, id: string) => page.evaluate(`state.furni
 
 /** Espera a que el diseñador deje la copia de lo no guardado en el dispositivo (se escribe 0.8 s después del cambio). */
 export const deviceBackup = (page: Page) => page.waitForFunction(() => Object.keys(localStorage).some((k) => k.startsWith("plantea-respaldo-")));
+
+/** Marca el correo de una cuenta como verificado, como si hubiera abierto el enlace del correo (la base es de prueba). */
+export async function verifyEmailInDb(email: string) {
+  const db = new Client({ connectionString: E2E.databaseUrl });
+  await db.connect();
+  try {
+    await db.query(`update "user" set email_verified = true where email = $1`, [email]);
+  } finally {
+    await db.end();
+  }
+}

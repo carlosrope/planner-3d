@@ -12,9 +12,15 @@ export const emailConfigured = () => Boolean(process.env.RESEND_API_KEY);
 export async function sendEmail(mail: Email): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
+    // En producción solo se anota a quién iba: el cuerpo trae enlaces que sirven para entrar (contraseña, verificación)
+    // y no deben quedar en los registros. En local se imprime completo para poder probar.
+    if (process.env.NODE_ENV === "production") {
+      console.error(`[correo · sin RESEND_API_KEY] No se mandó «${mail.subject}» a ${mail.to}`);
+      return { ok: false, error: "Correo no configurado" };
+    }
     const line = "─".repeat(60);
     console.log(`\n${line}\n[correo · sin RESEND_API_KEY] Para: ${mail.to}\nAsunto: ${mail.subject}\n\n${mail.text}\n${line}\n`);
-    return process.env.NODE_ENV === "production" ? { ok: false, error: "Correo no configurado" } : { ok: true };
+    return { ok: true };
   }
   const from = process.env.EMAIL_FROM || "Plantea <onboarding@resend.dev>";
   // Respuestas a un buzón real (un remitente que no recibe correo es señal de spam para Hotmail y Gmail).
@@ -81,4 +87,28 @@ Plantea · México`;
     "Recibes este correo porque alguien pidió cambiar la contraseña de esta cuenta de Plantea.",
   );
   return { to, subject: "Tu enlace para crear una contraseña nueva en Plantea", text, html };
+}
+
+/** Correo para verificar la cuenta (hoy solo lo pide la administración de Plantea). */
+export function verifyEmailEmail(to: string, name: string, url: string): Email {
+  const first = name.trim().split(/\s+/)[0] || "";
+  const hello = first ? `Hola, ${first}.` : "Hola.";
+  const text = `${hello}
+
+Para confirmar que ${to} es tu correo y entrar a la administración de Plantea, abre este enlace en el mismo navegador; sirve durante una hora:
+
+${url}
+
+Si no lo pediste tú, ignora este correo.
+
+Plantea · México`;
+  const html = layout(
+    `<p style="margin:0 0 16px">${escape(hello)}</p>
+<p style="margin:0 0 20px">Para confirmar que <strong>${escape(to)}</strong> es tu correo y entrar a la administración de Plantea, usa este botón en el mismo navegador.</p>
+<p style="margin:0 0 24px"><a href="${escape(url)}" style="display:inline-block;background:#1c1917;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:12px">Confirmar mi correo</a></p>
+<p style="margin:0 0 16px;font-size:14px;color:#57534e">El botón sirve durante una hora. Si no funciona, copia este enlace en tu navegador:<br><a href="${escape(url)}" style="color:#57534e;word-break:break-all">${escape(url)}</a></p>
+<p style="margin:0;font-size:14px;color:#57534e">Si no lo pediste tú, ignora este correo.</p>`,
+    "Recibes este correo porque alguien pidió confirmar este correo en Plantea.",
+  );
+  return { to, subject: "Confirma tu correo para entrar a la administración de Plantea", text, html };
 }

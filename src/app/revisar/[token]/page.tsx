@@ -38,7 +38,7 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
       postUrl={`/api/lugares/${v.id}/portada`}
       token={token}
       auto={renders.length === 0}
-      previews={renders.map((f) => ({ src: `/lugares/${slug}/foto/${f.id}`, label: f.name.startsWith("vista-3d") ? "Vista 3D" : "Plano 2D" }))}
+      previews={renders.map((f) => ({ src: `/lugares/${slug}/foto/${f.id}?r=${token}`, label: f.name.startsWith("vista-3d") ? "Vista 3D" : "Plano 2D" }))}
     />
   );
 
@@ -55,7 +55,7 @@ async function Revision({ params }: { params: PageProps<"/revisar/[token]">["par
           {fotos.map((p) => (
             <li key={p.id} className="shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-              <img src={`/lugares/${slug}/foto/${p.id}`} alt="" className="h-24 w-32 rounded-xl object-cover" />
+              <img src={`/lugares/${slug}/foto/${p.id}?r=${token}`} alt="" className="h-24 w-32 rounded-xl object-cover" />
             </li>
           ))}
         </ul>

@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { E2E } from "../playwright.config";
-import { PASSWORD, field, open, signUp, uniqueEmail } from "./helpers";
+import { PASSWORD, field, open, signUp, uniqueEmail, verifyEmailInDb } from "./helpers";
 
 // Códigos de mes gratis: la administración los genera en /admin/codigos; un salón entra con uno y su mes empieza al
 // publicarse su salón; una cuenta sin plan lo canjea en Mi negocio; uno desactivado ya no sirve.
@@ -17,11 +17,15 @@ async function adminPage(browser: Browser): Promise<Page> {
   await field(page, "password").fill(PASSWORD);
   await page.getByRole("button", { name: "Entrar", exact: true }).locator("visible=true").click();
   try {
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 8_000 });
+    await expect(page).toHaveURL(/\/(admin|verificar-correo)$/, { timeout: 8_000 });
   } catch {
     await signUp(page, { name: "Admin E2E", email: E2E.adminEmail, code: E2E.code });
-    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page).toHaveURL(/\/verificar-correo$/);
   }
+  // La administración solo abre con el correo verificado.
+  await verifyEmailInDb(E2E.adminEmail);
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/admin$/);
   return page;
 }
 

@@ -8,6 +8,21 @@ export const SITE_URL = (process.env.SITE_URL || "https://plantea.com.mx").repla
 /** Dirección vieja de Railway: se redirige a SITE_URL (los enlaces y QR que ya circulan siguen funcionando). */
 export const LEGACY_HOST = "planner-3d-production.up.railway.app";
 
+/**
+ * A dónde volver después de entrar (?next=…): solo una ruta de la propia app. Se descarta todo lo que el navegador
+ * convertiría en otro sitio: «//otro.com», «/\otro.com» (la barra invertida se vuelve «//»), esquemas y saltos de línea.
+ */
+export function safeNextPath(next: unknown): string | undefined {
+  if (typeof next !== "string" || !next.startsWith("/") || next.length > 500) return undefined;
+  if (/[\\\s]/.test(next) || next.startsWith("//")) return undefined;
+  try {
+    const url = new URL(next, "https://plantea.invalid");
+    return url.origin === "https://plantea.invalid" ? next : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Imagen para la vista previa al compartir cuando el lugar o el evento no tiene foto propia (medidas reales del archivo). */
 export const SHARE_IMAGE = {
   salon: { url: `${SITE_URL}/portada/espacios-salon-3d.jpg`, width: 800, height: 575 },
@@ -15,7 +30,7 @@ export const SHARE_IMAGE = {
 };
 
 /** Rutas que no deben aparecer en buscadores: cuentas, paneles, enlaces privados y la API. */
-export const PRIVATE_PATHS = ["/admin", "/api", "/inicio", "/eventos", "/negocio", "/lugares/*/panel", "/revisar", "/v/", "/olvide", "/restablecer", "/alta/gracias"];
+export const PRIVATE_PATHS = ["/admin", "/api", "/inicio", "/eventos", "/negocio", "/lugares/*/panel", "/revisar", "/v/", "/olvide", "/restablecer", "/alta/gracias", "/verificar-correo"];
 
 /** Datos estructurados (schema.org) de la marca, para la portada. */
 export const organizationJsonLd = (extra: { sameAs?: string[] } = {}) => ({

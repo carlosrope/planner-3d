@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { venue } from "../src/lib/db/schema";
 import type { DesignerPlan } from "../src/lib/designer/types";
+import { slugify } from "../src/lib/slug";
 
 // Plano del diseñador de cada lugar (generado por tools/designer y tools/cad-import).
 const plan = (file: string) => JSON.parse(readFileSync(new URL(`../src/designer/${file}`, import.meta.url), "utf8")) as DesignerPlan;
@@ -19,13 +20,15 @@ async function main() {
     { name: "Casa Chardonnay", city: "Los Mochis", kind: "casa" as const, plan: plan("casas/chardonnay.json") },
   ];
   for (const v of places) {
-    const [existing] = await db.select({ id: venue.id }).from(venue).where(eq(venue.name, v.name));
+    // Con su dirección de siempre (/lugares/salon-demostracion), igual que en producción.
+    const slug = slugify(v.name);
+    const [existing] = await db.select({ id: venue.id, slug: venue.slug }).from(venue).where(eq(venue.name, v.name));
     if (existing) {
-      await db.update(venue).set({ kind: v.kind, plan: v.plan, city: v.city }).where(eq(venue.id, existing.id));
+      await db.update(venue).set({ kind: v.kind, plan: v.plan, city: v.city, ...(existing.slug ? {} : { slug }) }).where(eq(venue.id, existing.id));
       console.log(`Actualizado: ${v.name}`);
     } else {
       // spec ya no se usa (era del editor anterior); la columna es obligatoria
-      await db.insert(venue).values({ name: v.name, kind: v.kind, city: v.city, isPublic: true, spec: {}, plan: v.plan });
+      await db.insert(venue).values({ name: v.name, slug, kind: v.kind, city: v.city, isPublic: true, spec: {}, plan: v.plan });
       console.log(`Creado: ${v.name}`);
     }
   }

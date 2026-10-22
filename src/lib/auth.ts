@@ -10,7 +10,7 @@ import { activeModules, sectionOf } from "./domain";
 import { FREE_ACCOUNT, FULL_ACCESS, orgValuesFor, parseInvites, referralInvite, trialInvite, type Invite } from "./invites";
 import { referralCodeCandidates } from "./referrals";
 import { lanOrigins } from "./lan";
-import { passwordResetEmail, sendEmail } from "./email";
+import { passwordResetEmail, sendEmail, verifyEmailEmail } from "./email";
 import { googleEnabled } from "./google";
 import { reportError } from "./sentry";
 
@@ -115,6 +115,20 @@ export const auth = betterAuth({
     // Al cambiarla se cierran las demás sesiones abiertas.
     revokeSessionsOnPasswordReset: true,
   },
+  // Verificar el correo: por ahora solo lo pide la administración (ADMIN_EMAILS), para que nadie se vuelva administrador
+  // creando una cuenta con un correo de la lista. Entrar con Google del mismo correo también lo verifica.
+  emailVerification: {
+    sendOnSignUp: false,
+    autoSignInAfterVerification: true,
+    expiresIn: 60 * 60,
+    sendVerificationEmail: async ({ user, url }) => {
+      const sent = await sendEmail(verifyEmailEmail(user.email, user.name, url));
+      if (!sent.ok) {
+        console.error(`[auth] No se mandó el correo para verificar la cuenta: ${sent.error}`);
+        void reportError({ message: `Correo de verificación no enviado: ${sent.error}`, source: "server" });
+      }
+    },
+  },
   // Límite de intentos por IP (Better Auth ya trae uno; aquí quedan explícitos los valores). En memoria: basta con
   // un solo servidor en Railway; se reinicia al desplegar. Activo en producción, o en local con AUTH_RATE_LIMIT=1.
   rateLimit: {
@@ -127,8 +141,13 @@ export const auth = betterAuth({
       "/sign-up/email": { window: 60 * 60, max: 10 },
       "/request-password-reset": { window: 60 * 60, max: 5 },
       "/reset-password": { window: 15 * 60, max: 10 },
+      "/send-verification-email": { window: 60 * 60, max: 5 },
     },
   },
+  // La IP de cada quien para esos límites la manda Cloudflare en cf-connecting-ip. Sin esto, Better Auth solo confía en
+  // un x-forwarded-for de un solo valor; detrás de Cloudflare y Railway trae varias, y todos compartían un mismo
+  // contador: diez intentos fallidos de cualquiera dejaban sin entrar a todos por 15 minutos.
+  advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] } },
   hooks: {
     // Con SIGNUP_CODES o SIGNUP_CODE definidos, crear cuenta pide un código de invitación; el código decide
     // el tipo de negocio, el plan, los módulos y, en una prueba, cuándo vence.

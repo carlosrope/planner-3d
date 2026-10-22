@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { googleEnabled } from "@/lib/google";
+import { safeNextPath } from "@/lib/site";
 import { AuthForm } from "../AuthForm";
 
 export const metadata: Metadata = { title: "Entrar" };
@@ -16,7 +17,7 @@ export default function EntrarPage({ searchParams }: PageProps<"/entrar">) {
 /** ?next=/ruta: a dónde volver después de entrar (solo rutas de la propia app). */
 async function Entrar({ searchParams }: { searchParams: PageProps<"/entrar">["searchParams"] }) {
   const { next, error } = await searchParams;
-  const safe = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : undefined;
+  const safe = safeNextPath(next);
   // Al volver de Google sin cuenta en Plantea (Entrar no crea cuentas): se explica cómo crearla.
   // account_not_linked: el correo ya tiene cuenta con contraseña (sin correo verificado, Google no se une solo).
   const notice = typeof error === "string"
