@@ -30,7 +30,7 @@ export const SHARE_IMAGE = {
 };
 
 /** Rutas que no deben aparecer en buscadores: cuentas, paneles, enlaces privados y la API. */
-export const PRIVATE_PATHS = ["/admin", "/api", "/inicio", "/eventos", "/negocio", "/lugares/*/panel", "/revisar", "/v/", "/olvide", "/restablecer", "/alta/gracias", "/verificar-correo"];
+export const PRIVATE_PATHS = ["/admin", "/api", "/inicio", "/eventos", "/negocio", "/lugares/*/panel", "/revisar", "/v/", "/olvide", "/restablecer", "/alta/gracias"];
 
 /** Datos estructurados (schema.org) de la marca, para la portada. */
 export const organizationJsonLd = (extra: { sameAs?: string[] } = {}) => ({

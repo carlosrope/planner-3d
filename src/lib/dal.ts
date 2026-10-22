@@ -59,7 +59,7 @@ export const newToken = (length = 20) => Array.from(randomBytes(length), (b) => 
 
 // Capa de acceso a datos: toda lectura o escritura verifica aquí la sesión y los permisos.
 
-export type CurrentUser = { id: string; name: string; email: string; emailVerified?: boolean };
+export type CurrentUser = { id: string; name: string; email: string };
 
 /** Quién hizo un cambio que queda en el rastro: un usuario con sesión, o una descripción (p. ej. el dueño con su enlace). */
 export type Actor = CurrentUser | { label: string };
@@ -103,7 +103,7 @@ async function audit(
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const s = await auth.api.getSession({ headers: await headers() });
-  return s ? { id: s.user.id, name: s.user.name, email: s.user.email, emailVerified: Boolean(s.user.emailVerified) } : null;
+  return s ? { id: s.user.id, name: s.user.name, email: s.user.email } : null;
 }
 
 export async function requireUser(next?: string): Promise<CurrentUser> {
@@ -118,18 +118,13 @@ const adminEmails = () =>
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-/** El correo de la cuenta está en ADMIN_EMAILS (todavía sin saber si es de verdad suyo). */
-export const isAdminEmail = (user: CurrentUser) => adminEmails().includes(user.email.trim().toLowerCase());
-/**
- * Administración: el correo está en ADMIN_EMAILS **y ya se verificó** (con el enlace por correo o entrando con Google).
- * Sin verificar, cualquiera podría crear una cuenta con un correo de la lista que aún no tuviera cuenta y quedar como
- * administrador.
- */
-export const isAdmin = (user: CurrentUser) => user.emailVerified === true && isAdminEmail(user);
+// Ojo: el correo no se verifica (decisión del usuario, 22 oct: confirmar el correo complica el registro). Por eso
+// ADMIN_EMAILS solo debe llevar correos que YA tienen cuenta en Plantea: un correo de la lista sin cuenta lo podría
+// registrar cualquiera y quedar como administrador.
+export const isAdmin = (user: CurrentUser) => adminEmails().includes(user.email.trim().toLowerCase());
 
 export async function requireAdmin(): Promise<CurrentUser> {
   const user = await requireUser("/admin");
-  if (isAdminEmail(user) && !user.emailVerified) redirect("/verificar-correo");
   if (!isAdmin(user)) redirect("/eventos");
   return user;
 }

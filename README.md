@@ -43,8 +43,6 @@ npm run dev
 
 **Recorrido de botones** (`npm run test:recorrido`, unos 25 minutos, aparte de las pruebas de siempre): presiona cada botón de cada página como visitante, planner, salón y administración, en computadora y en un iPhone (WebKit), y deja en `test-results/recorrido-botones.jsonl` los errores de JavaScript, respuestas fallidas, enlaces rotos y controles que no hicieron nada. Lo que anota se revisa a mano: un formulario vacío o una opción ya elegida también salen como «sin efecto».
 
-**Administración:** además de estar en `ADMIN_EMAILS`, el correo de la cuenta tiene que estar verificado (enlace por correo en `/verificar-correo`, o entrar con Google del mismo correo).
-
 **Prueba de carga** (`scripts/carga.ts`): crea N cuentas de prueba con su evento, las pone a guardar cambios cada 1–2 s junto con visitantes anónimos y reporta latencias; corre contra un servidor de producción local (`npm run build`, `BETTER_AUTH_URL=http://localhost:3001 npx next start -p 3001`, `npx tsx --env-file=.env.local scripts/carga.ts 100 60`). Resultado del 13 de octubre en esta Mac: 300 personas editando + 60 visitantes, 212 peticiones/s, 0 fallas, guardar p95 11 ms.
 
 **Plan y cobro** (`/negocio` → *Tu plan*): plan, módulos y fecha de fin; datos de SPEI (`SPEI_BANK`, `SPEI_CLABE`, `SPEI_HOLDER`) y subida del comprobante; ProLink lo confirma en `/admin/pagos` y el plan se alarga un mes o un año. Los precios no se muestran en la app: viven en prolink365.com.mx.

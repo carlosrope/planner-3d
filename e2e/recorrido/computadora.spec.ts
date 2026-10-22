@@ -3,7 +3,7 @@
 import { expect, test } from "@playwright/test";
 import { Pool } from "pg";
 import { E2E } from "../../playwright.config";
-import { createEvent, signIn, signUp, uniqueEmail, verifyEmailInDb } from "../helpers";
+import { createEvent, signIn, signUp, uniqueEmail } from "../helpers";
 import { at, checkLinks, dismissOverlays, note, pressAll, watch } from "./lib";
 
 test.use({ actionTimeout: 10_000, navigationTimeout: 45_000 });
@@ -94,10 +94,7 @@ test("administración", async ({ page, request }) => {
   watch(page);
   at("(registro de la administración)");
   await signUp(page, { name: "Admin Botones", email: E2E.adminEmail, code: E2E.code }).catch(() => {});
-  if (!/\/(eventos|inicio|admin|verificar-correo)/.test(page.url())) await signIn(page, E2E.adminEmail).catch(() => {});
-  // La administración solo abre con el correo verificado: primero se ve esa pantalla, luego se verifica.
-  await pressAll(page, "/verificar-correo", { skip: /mandarme el enlace/i });
-  await verifyEmailInDb(E2E.adminEmail);
+  if (!/\/(eventos|inicio|admin)/.test(page.url())) await signIn(page, E2E.adminEmail).catch(() => {});
   const venue = await db.query<{ id: string }>("select id from venue where name = 'Salón Demostración'");
   const paths = ["/admin", "/admin/lugares", `/admin/lugares/${venue.rows[0].id}`, "/admin/cuentas", "/admin/pagos", "/admin/codigos", "/admin/rastro", "/admin/actividad", "/admin/papelera", "/admin/sugerencias", "/admin/piloto"];
   for (const path of paths) {

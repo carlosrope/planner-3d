@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { E2E } from "../playwright.config";
-import { signIn, signUp, uniqueEmail, verifyEmailInDb } from "./helpers";
+import { signIn, signUp, uniqueEmail } from "./helpers";
 
 // Los tres flujos que cobran: registro con código, evento con enlace para el cliente y pago por SPEI.
 test.describe.configure({ mode: "serial" });
@@ -71,14 +71,7 @@ test("pago por SPEI con comprobante y confirmación en /admin", async ({ page, b
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   await signUp(admin, { name: "Admin E2E", email: E2E.adminEmail, code: E2E.code });
-  // Con el correo sin verificar, la administración no abre: pide confirmar el correo.
-  await expect(admin).toHaveURL(/\/verificar-correo$/);
-  await expect(admin.getByRole("button", { name: "Mandarme el enlace" })).toBeVisible();
-  await admin.goto("/admin/pagos");
-  await expect(admin).toHaveURL(/\/verificar-correo$/);
-  // Ya verificado (como si hubiera abierto el enlace), entra directo a su panel.
-  await verifyEmailInDb(E2E.adminEmail);
-  await admin.goto("/inicio");
+  // La administración entra directo a su panel.
   await expect(admin).toHaveURL(/\/admin$/);
   await admin.goto("/admin/pagos");
   const card = admin.locator("li", { hasText: planner.name });

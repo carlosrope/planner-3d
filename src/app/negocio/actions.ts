@@ -163,15 +163,11 @@ const cardBody = z.object({
   period: z.enum(["mes", "anio"]),
 });
 
-// Cada intento crea un cobro en Mercado Pago: 10 por hora por cuenta, para que nadie los genere en serie.
-const cardTries = makeLimiter(10, 60 * 60 * 1000);
-
 /** Arranca el pago con tarjeta: mensual = suscripción que se cobra sola; anual = un pago. Manda a Mercado Pago. */
 export async function startCardPayment(_prev: CardState, formData: FormData): Promise<CardState> {
   const user = await requireUser("/negocio");
   const org = await requireOrg(user);
   if (!mpEnabled()) return { error: "El pago con tarjeta todavía no está disponible. Paga por transferencia." };
-  if (!cardTries(org.id)) return { error: "Ya abriste varios pagos en la última hora. Espera un rato o escríbenos por WhatsApp." };
   const [plan, tier, period] = String(formData.get("option") ?? "").split("|");
   const parsed = cardBody.safeParse({ plan, tier, period });
   if (!parsed.success) return { error: "Elige el plan que quieres pagar." };
