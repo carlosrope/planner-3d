@@ -4,6 +4,9 @@ import { PageLink } from "@/components/PageLink";
 import { listCatalog, listCatalogCities, type CatalogVenue } from "@/lib/dal";
 import type { VenueKind } from "@/lib/domain";
 import { cityFromSlug } from "@/lib/slug";
+import { capacityFact, shownCapacities } from "@/lib/designer/capacity";
+import { banquetRange, cityMeta } from "@/lib/seo-text";
+import { breadcrumbJsonLd, itemListJsonLd, jsonLd } from "@/lib/site";
 
 const COPY: Record<VenueKind, { title: string; intro: string; empty: string; base: string; cta: string }> = {
   salon: {
@@ -27,14 +30,24 @@ export async function Catalogo({ kind, citySlug }: { kind: VenueKind; citySlug?:
   const copy = COPY[kind];
   const [venues, cities] = await Promise.all([listCatalog(kind, citySlug), listCatalogCities(kind)]);
   const cityName = citySlug ? (cities.find((c) => c.slug === citySlug)?.city ?? cityFromSlug(citySlug)) : null;
+  const shown = venues.map((v) => ({ v, caps: shownCapacities(v.capacityAuto, v.capacityManual, v.capacity) }));
+  // En la página de una ciudad, un párrafo propio (cuántos hay y de cuántos invitados) y los datos para buscadores.
+  const city = cityName ? cityMeta(kind, cityName, venues.length, banquetRange(shown.map((x) => x.caps.find((c) => c.template === "redondas")?.value))) : null;
+  const title = `${copy.title}${cityName ? ` en ${cityName}` : ""}`;
+  const ld = [
+    itemListJsonLd(title, venues.map((v) => ({ name: v.name, slug: v.slug ?? v.id }))),
+    breadcrumbJsonLd([
+      { name: "Plantea", path: "/" },
+      { name: kind === "salon" ? "Salones" : "Modelos de casa", path: copy.base },
+      ...(cityName && citySlug ? [{ name: cityName, path: `${copy.base}/${citySlug}` }] : []),
+    ]),
+  ];
   return (
     <main className="mx-auto max-w-4xl px-4 pb-16 pt-6">
+      {venues.length > 0 && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ld) }} />}
       <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">Plantea</p>
-      <h1 className="mt-1 text-2xl font-semibold">
-        {copy.title}
-        {cityName ? ` en ${cityName}` : ""}
-      </h1>
-      <p className="mt-2 text-stone-600">{copy.intro}</p>
+      <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
+      <p className="mt-2 text-stone-600">{city?.intro || copy.intro}</p>
 
       {cities.length > 1 && (
         <nav className="mt-4 flex gap-2 overflow-x-auto no-scrollbar" aria-label="Ciudades">
@@ -79,7 +92,7 @@ export async function Catalogo({ kind, citySlug }: { kind: VenueKind; citySlug?:
 export function Tarjeta({ v }: { v: CatalogVenue }) {
   const slug = v.slug ?? v.id;
   const facts = [
-    v.kind === "salon" && v.capacity ? `${v.capacity} personas` : null,
+    v.kind === "salon" ? capacityFact(shownCapacities(v.capacityAuto, v.capacityManual, v.capacity), v.capacity) : null,
     v.kind === "casa" && v.areaM2 ? `${v.areaM2} m²` : null,
     v.city,
   ].filter(Boolean);

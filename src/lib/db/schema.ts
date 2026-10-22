@@ -30,6 +30,7 @@ import type {
 } from "../domain";
 import type { DesignDoc, DesignerPlan, PropertyDetails } from "../designer/types";
 import type { TrialCodeKind } from "../trial-codes";
+import type { SetupCapacities } from "../designer/capacity";
 
 const id = () =>
   text("id")
@@ -236,6 +237,12 @@ export const venue = pgTable("venue", {
   isPublic: boolean("is_public").notNull().default(false),
   /** Ficha pública: aforo (salones), m² construidos (casas), dirección y descripción. */
   capacity: integer("capacity"),
+  /**
+   * Aforo por montaje (src/lib/designer/capacity.ts): el calculado del plano (se rehace al cargar un plano nuevo) y el
+   * que corrige la administración. Llaves: redondas, imperial, coctel, auditorio, escuela.
+   */
+  capacityAuto: jsonb("capacity_auto").$type<SetupCapacities>(),
+  capacityManual: jsonb("capacity_manual").$type<Partial<SetupCapacities>>(),
   areaM2: real("area_m2"),
   address: text("address"),
   description: text("description"),

@@ -25,6 +25,7 @@ import {
   venueInquiry,
 } from "./db/schema";
 import type { DesignerPlan } from "./designer/types";
+import { setupCapacities, type SetupCapacities } from "./designer/capacity";
 import {
   ALL_SECTIONS,
   activeModules,
@@ -462,6 +463,8 @@ const catalogFields = {
   status: venue.status,
   isPublic: venue.isPublic,
   capacity: venue.capacity,
+  capacityAuto: venue.capacityAuto,
+  capacityManual: venue.capacityManual,
   areaM2: venue.areaM2,
   address: venue.address,
   description: venue.description,
@@ -478,6 +481,23 @@ const catalogFields = {
 };
 export type CatalogVenue = Awaited<ReturnType<typeof listCatalog>>[number];
 
+/**
+ * Aforo por montaje de los salones que todavía no lo tienen calculado (los que se cargaron antes de que existiera, el
+ * 22 de octubre de 2026): se calcula una sola vez desde su plano, se guarda y se completa en las filas recibidas.
+ */
+async function ensureCapacityAuto<T extends { id: string; kind: string; hasPlan: boolean; capacityAuto: SetupCapacities | null }>(rows: T[]) {
+  const missing = rows.filter((r) => r.kind === "salon" && r.hasPlan && !r.capacityAuto);
+  if (!missing.length) return rows;
+  const plans = await db.select({ id: venue.id, plan: venue.plan }).from(venue).where(inArray(venue.id, missing.map((r) => r.id)));
+  for (const { id, plan } of plans) {
+    const auto = plan ? setupCapacities(plan) : null;
+    if (!auto) continue;
+    await db.update(venue).set({ capacityAuto: auto }).where(eq(venue.id, id));
+    for (const r of missing) if (r.id === id) r.capacityAuto = auto;
+  }
+  return rows;
+}
+
 /** Lugares publicados y abiertos a todos, de un tipo; con ciudad (slug) se filtra por ella. */
 export async function listCatalog(kind: VenueKind, citySlug?: string) {
   const rows = await db
@@ -485,7 +505,7 @@ export async function listCatalog(kind: VenueKind, citySlug?: string) {
     .from(venue)
     .where(and(eq(venue.kind, kind), published, eq(venue.isPublic, true), isNotNull(venue.plan)))
     .orderBy(asc(venue.city), asc(venue.name));
-  return citySlug ? rows.filter((v) => slugify(v.city) === citySlug) : rows;
+  return ensureCapacityAuto(citySlug ? rows.filter((v) => slugify(v.city) === citySlug) : rows);
 }
 
 /** Ciudades con lugares publicados de un tipo, con cuántos hay en cada una. */
@@ -529,7 +549,7 @@ export async function getPublicVenue(slugOrId: string) {
     .where(and(bySlugOrId(slugOrId), published))
     .limit(1);
   if (!row) return null;
-  const photos = await listVenuePhotos(row.venue.id);
+  const [photos] = await Promise.all([listVenuePhotos(row.venue.id), ensureCapacityAuto([row.venue])]);
   return { ...row.venue, owner: row.owner?.name ? row.owner : null, photos };
 }
 
@@ -567,10 +587,24 @@ export async function getVenuePhoto(slugOrId: string, fileId: string) {
 /** Lo mínimo de un lugar en cualquier estado (página de gracias del alta, QR). */
 export async function getVenueBasics(slugOrId: string) {
   const [row] = await db
-    .select({ id: venue.id, slug: venue.slug, name: venue.name, kind: venue.kind, status: venue.status, hasPlan: sql<boolean>`(${venue.plan} is not null)`, cover: coverOf, outside: sideOf("fuera") })
+    .select({
+      id: venue.id,
+      slug: venue.slug,
+      name: venue.name,
+      kind: venue.kind,
+      city: venue.city,
+      status: venue.status,
+      capacity: venue.capacity,
+      capacityAuto: venue.capacityAuto,
+      capacityManual: venue.capacityManual,
+      hasPlan: sql<boolean>`(${venue.plan} is not null)`,
+      cover: coverOf,
+      outside: sideOf("fuera"),
+    })
     .from(venue)
     .where(bySlugOrId(slugOrId))
     .limit(1);
+  if (row) await ensureCapacityAuto([row]);
   return row ?? null;
 }
 
@@ -1312,6 +1346,7 @@ export async function adminGetVenue(id: string) {
     .where(eq(venue.id, id))
     .limit(1);
   if (!found) return null;
+  await ensureCapacityAuto([found]);
   const files = await db
     .select({ id: venueFile.id, kind: venueFile.kind, name: venueFile.name, size: venueFile.size, mimeType: venueFile.mimeType, side: venueFile.side, illustrative: venueFile.illustrative })
     .from(venueFile)
@@ -1367,12 +1402,20 @@ export async function adminUpdateVenue(id: string, patch: AdminVenuePatch, actor
   });
 }
 
+/** La administración corrige el aforo de algún montaje (vacío = el calculado del plano). */
+export async function adminSetVenueCapacities(id: string, manual: Partial<SetupCapacities>) {
+  const clean = Object.fromEntries(Object.entries(manual).filter(([, n]) => typeof n === "number" && n > 0));
+  await db.update(venue).set({ capacityManual: Object.keys(clean).length ? clean : null }).where(eq(venue.id, id));
+}
+
 /** La administración carga el plano del diseñador (JSON de tools/cad-import): el lugar pasa a "por confirmar". */
 export async function adminSetVenuePlan(id: string, plan: DesignerPlan) {
   const [row] = await db
     .update(venue)
     .set({
       plan,
+      // El aforo por montaje sale del plano: se rehace con cada plano nuevo (lo que corrigió la administración se queda).
+      capacityAuto: setupCapacities(plan),
       // Sin tipo en el JSON se queda el que tenía (una casa no pasa a salón).
       kind: plan.kind === "casa" ? "casa" : plan.kind === "salon" ? "salon" : sql`${venue.kind}`,
       // Publicado y retirado se quedan como están; lo demás pasa a "por confirmar".

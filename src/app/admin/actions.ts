@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   adminAddVenueFiles,
+  adminSetVenueCapacities,
   adminCreateTrialCodes,
   adminSetTrialCodeDisabled,
   adminMarkSuggestion,
@@ -25,6 +26,7 @@ import { isPhoto, isPlanFile, storedType } from "@/lib/uploads";
 import { normalizeWhatsapp } from "@/lib/whatsapp";
 import { endOfDay } from "@/lib/dates";
 import { TRIAL_CODE_BATCH_MAX, TRIAL_CODE_DAYS, TRIAL_CODE_KINDS } from "@/lib/trial-codes";
+import { TEMPLATES } from "@/lib/designer/starter";
 
 // Acciones de la administración de Plantea. Todas piden requireAdmin.
 
@@ -271,4 +273,18 @@ export async function toggleTrialCode(formData: FormData): Promise<void> {
   await adminSetTrialCodeDisabled(parsed.data.codeId, parsed.data.disabled === "1", admin);
   revalidatePath("/admin/codigos");
   revalidatePath("/admin/rastro");
+}
+
+/** Aforo por montaje que corrige la administración (vacío = el calculado del plano). */
+export async function updateVenueCapacities(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const venueId = id.safeParse(formData.get("venueId"));
+  if (!venueId.success) return;
+  const manual: Record<string, number> = {};
+  for (const t of TEMPLATES) {
+    const n = z.coerce.number().int().min(0).max(5000).safeParse(formData.get(t) || 0);
+    if (n.success && n.data > 0) manual[t] = n.data;
+  }
+  await adminSetVenueCapacities(venueId.data, manual);
+  revalidate(venueId.data);
 }

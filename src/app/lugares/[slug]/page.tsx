@@ -3,20 +3,25 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CodeInput } from "@/components/CodeInput";
+import { Capacidades } from "@/components/Capacidades";
 import { CompareSlider } from "@/components/CompareSlider";
 import { PageLink } from "@/components/PageLink";
 import { getPublicVenue, getVenueBasics } from "@/lib/dal";
 import { sectionOf } from "@/lib/domain";
+import { shownCapacities } from "@/lib/designer/capacity";
 import { waLink } from "@/lib/whatsapp";
 import { InquiryForm } from "./InquiryForm";
-import { SHARE_IMAGE, SITE_URL, jsonLd, venueJsonLd } from "@/lib/site";
+import { SHARE_IMAGE, SITE_URL, breadcrumbJsonLd, jsonLd, venueJsonLd } from "@/lib/site";
+import { venueMeta } from "@/lib/seo-text";
+import { slugify } from "@/lib/slug";
 
 export async function generateMetadata({ params }: PageProps<"/lugares/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const v = await getVenueBasics(slug);
   if (!v || v.status !== "publicado") return { title: "Lugar no encontrado" };
-  const title = `${v.name} en 3D`;
-  const description = v.kind === "salon" ? `Recorre ${v.name} en 3D y prueba el montaje de tu evento.` : `Recorre ${v.name} en 3D y cámbiale muebles y pisos.`;
+  // Título y descripción con la ciudad y cuántos caben en banquete (src/lib/seo-text.ts).
+  const banquet = v.kind === "salon" ? (shownCapacities(v.capacityAuto, v.capacityManual, v.capacity).find((c) => c.template === "redondas")?.value ?? null) : null;
+  const { title, description } = venueMeta({ kind: v.kind, name: v.name, city: v.city, capacity: v.capacity, banquet });
   const key = v.slug ?? v.id;
   // Vista previa al compartir el enlace o el QR por WhatsApp: la foto de fuera, la portada (foto o vista 3D automática)
   // o, si todavía no tiene, la imagen general de Plantea (de esa sí se saben las medidas).
@@ -56,6 +61,7 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
     v.address ? v.address : null,
     v.city,
   ].filter((f): f is string => Boolean(f));
+  const capacities = salon ? shownCapacities(v.capacityAuto, v.capacityManual, v.capacity) : [];
   const outside = v.photos.find((p) => p.kind === "foto" && p.side === "fuera");
   const inside = v.photos.find((p) => p.kind === "foto" && p.side === "dentro");
   const pair = outside && inside ? [outside, inside] : null;
@@ -69,18 +75,28 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
     city: v.city,
     address: v.address,
     description: v.description,
-    capacity: v.capacity,
+    capacity: v.capacity ?? (capacities.length ? Math.max(...capacities.map((c) => c.value)) : null),
     image: (outside ?? cover) ? `${SITE_URL}/lugares/${slug}/foto/${(outside ?? cover)!.id}` : null,
   });
+  const base = salon ? "/salones" : "/casas";
+  const crumbs = breadcrumbJsonLd([
+    { name: "Plantea", path: "/" },
+    { name: salon ? "Salones" : "Modelos de casa", path: base },
+    { name: v.city, path: `${base}/${slugify(v.city)}` },
+    { name: v.name, path: `/lugares/${slug}` },
+  ]);
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ld) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd([ld, crumbs]) }} />
       <p className="text-sm text-stone-500">
-        <Link href={salon ? "/salones" : "/casas"} className="underline">
+        <Link href={base} className="underline">
           {salon ? "Salones" : "Modelos de casa"}
         </Link>{" "}
-        · {v.city}
+        ·{" "}
+        <Link href={`${base}/${slugify(v.city)}`} className="underline">
+          {v.city}
+        </Link>
       </p>
       <h1 className="mt-1 text-2xl font-semibold">{v.name}</h1>
       <p className="text-stone-500">{facts.join(" · ")}</p>
@@ -146,6 +162,8 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
           ? "En el 3D puedes mover las mesas para probar ideas; para guardar tu montaje, acomodar invitados y compartirlo necesitas una cuenta."
           : "En el 3D puedes cambiar muebles y pisos; para guardar tus propuestas y compartirlas necesitas una cuenta."}
       </p>
+
+      <Capacidades items={capacities} aforo={v.capacity} />
 
       {salon && (
         <form action="/registro" method="get" className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-4">

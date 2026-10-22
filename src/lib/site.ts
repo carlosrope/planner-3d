@@ -65,5 +65,21 @@ export function venueJsonLd(v: {
   };
 }
 
+/** Migas de pan para buscadores (Plantea › Salones › Guasave › Salón X); `path` desde la raíz del sitio. */
+export const breadcrumbJsonLd = (items: { name: string; path: string }[]) => ({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name, item: `${SITE_URL}${it.path}` })),
+});
+
+/** Los lugares de una página del catálogo, en orden, para buscadores. */
+export const itemListJsonLd = (name: string, places: { name: string; slug: string }[]) => ({
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name,
+  numberOfItems: places.length,
+  itemListElement: places.map((p, i) => ({ "@type": "ListItem", position: i + 1, name: p.name, url: `${SITE_URL}/lugares/${p.slug}` })),
+});
+
 /** JSON-LD listo para <script>: sin "<" para que no cierre la etiqueta. */
 export const jsonLd = (data: unknown) => JSON.stringify(data).replace(/</g, "\\u003c");

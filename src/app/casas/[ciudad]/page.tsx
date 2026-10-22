@@ -2,14 +2,23 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Catalogo } from "@/components/Catalogo";
 import { cityFromSlug } from "@/lib/slug";
+import { listCatalog, listCatalogCities } from "@/lib/dal";
+import { shownCapacities } from "@/lib/designer/capacity";
+import { banquetRange, cityMeta } from "@/lib/seo-text";
 
 export async function generateMetadata({ params }: PageProps<"/casas/[ciudad]">): Promise<Metadata> {
   const { ciudad } = await params;
-  const city = cityFromSlug(ciudad);
+  // Título, descripción y si se indexa salen de los lugares publicados en esa ciudad (src/lib/seo-text.ts).
+  const [venues, cities] = await Promise.all([listCatalog("casa", ciudad), listCatalogCities("casa")]);
+  const city = cities.find((c) => c.slug === ciudad)?.city ?? cityFromSlug(ciudad);
+  const range = banquetRange(venues.map((v) => shownCapacities(v.capacityAuto, v.capacityManual, v.capacity).find((c) => c.template === "redondas")?.value));
+  const { title, description } = cityMeta("casa", city, venues.length, range);
   return {
-    title: `Modelos de casa en ${city} en 3D`,
-    description: `Recorre los modelos de casa de ${city} en 3D y pide informes a la desarrolladora.`,
+    title,
+    description,
     alternates: { canonical: `/casas/${ciudad}` },
+    // Una ciudad sin lugares publicados no se indexa (página casi vacía).
+    ...(venues.length ? {} : { robots: { index: false, follow: true } }),
   };
 }
 

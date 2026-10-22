@@ -11,7 +11,8 @@ import { formatWhatsapp, waLink } from "@/lib/whatsapp";
 import { AdminNav } from "../../AdminNav";
 import { PhotoUpload } from "./PhotoUpload";
 import { SaveButton } from "../../SaveButton";
-import { addFiles, deleteFile, setFileView, trashVenue, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
+import { addFiles, deleteFile, setFileView, trashVenue, updateVenueCapacities, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
+import { CAPACITY_SETUPS, shownCapacities } from "@/lib/designer/capacity";
 import { CopyField } from "@/app/lugares/[slug]/panel/CopyField";
 
 export const metadata: Metadata = { title: "Administración · Lugar" };
@@ -272,6 +273,43 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
           <SaveButton className={`${btn} sm:col-span-2`}>Guardar ficha</SaveButton>
         </form>
       </section>
+
+      {v.kind === "salon" && (
+        <section className="mt-4 rounded-2xl border border-stone-200 bg-white p-4">
+          <h2 className="font-semibold">5. Aforo por montaje</h2>
+          <p className="mt-1 text-sm text-stone-500">
+            Calculado del plano con el montaje del diseñador (con pista, escenario y barra). En la ficha sale redondeado hacia
+            abajo y nunca más que el aforo{v.capacity ? ` (${v.capacity})` : ""}. Si el salón te da otro número, escríbelo; vacío = el calculado.
+          </p>
+          {!v.capacityAuto && <p className="mt-2 text-sm text-amber-800">Sin calcular: el plano no trae sus lugares fijos (escenario, pista, zona de mesas).</p>}
+          <form action={updateVenueCapacities} className="mt-3 grid gap-3 sm:grid-cols-5">
+            <input type="hidden" name="venueId" value={v.id} />
+            {CAPACITY_SETUPS.map((s) => (
+              <label key={s.template} className="space-y-1">
+                <span className="text-sm text-stone-600">{s.short}</span>
+                <input
+                  name={s.template}
+                  type="number"
+                  min={0}
+                  max={5000}
+                  defaultValue={v.capacityManual?.[s.template] ?? ""}
+                  placeholder={v.capacityAuto ? String(v.capacityAuto[s.template]) : "—"}
+                  className={field}
+                />
+              </label>
+            ))}
+            <SaveButton className={`${btn} sm:col-span-5`}>Guardar aforo por montaje</SaveButton>
+          </form>
+          {(() => {
+            const shown = shownCapacities(v.capacityAuto, v.capacityManual, v.capacity);
+            return shown.length ? (
+              <p className="mt-2 text-sm text-stone-600">
+                En la ficha: {shown.map((c) => `${c.short} ${c.value}${c.capped ? " (aforo)" : ""}`).join(" · ")}
+              </p>
+            ) : null;
+          })()}
+        </section>
+      )}
       {!v.deletedAt && (
         <section className="mt-8 rounded-2xl border border-red-200 p-4">
           <h2 className="text-lg font-semibold text-red-800">Mandar a la papelera</h2>

@@ -28,6 +28,8 @@ const item = (name: string) => {
   return found;
 };
 
+/** En cóctel (de pie): una periquera por cada 6 invitados. Lo usa también el aforo por montaje (capacity.ts). */
+export const GUESTS_PER_PERIQUERA = 6;
 /** Pasillo entre respaldos de sillas de mesas vecinas. */
 const AISLE = 700;
 /** Distancia libre alrededor de los fijos y las columnas. */
@@ -221,7 +223,7 @@ export function starterFurniture(
   } else if (template === "coctel") {
     // De pie: una periquera por cada 6 invitados y una sala lounge por cada 60 (máximo 4).
     fill({ name: "Sala lounge", count: Math.min(4, Math.ceil(guests / 60)), gapX: 1500, gapY: 1500, numbered: false });
-    fill({ name: "Periquera", count: Math.ceil(guests / 6), gapX: 1700, gapY: 1700, numbered: false });
+    fill({ name: "Periquera", count: Math.ceil(guests / GUESTS_PER_PERIQUERA), gapX: 1700, gapY: 1700, numbered: false });
   } else {
     const name = template === "imperial" ? "Mesa imperial 4.80 m" : "Mesa redonda 1.80 m";
     const seats = item(name).seats ?? 10;

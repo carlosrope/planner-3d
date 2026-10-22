@@ -169,6 +169,13 @@
       "when": 1792602698355,
       "tag": "0023_codigos-de-mes-gratis",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792689747918,
+      "tag": "0024_aforo-por-montaje",
+      "breakpoints": true
     }
   ]
 }
