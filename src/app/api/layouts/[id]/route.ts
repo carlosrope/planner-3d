@@ -55,7 +55,7 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/layouts/[id]
 
   if (!saved) {
     const [current] = await db.select({ revision: layout.revision }).from(layout).where(eq(layout.id, id));
-    return NextResponse.json({ error: "Otra persona guardó cambios.", revision: current?.revision }, { status: 409 });
+    return NextResponse.json({ error: "Se guardaron cambios en otra pestaña o por otra persona.", revision: current?.revision }, { status: 409 });
   }
   return NextResponse.json({ revision: saved.revision });
 }

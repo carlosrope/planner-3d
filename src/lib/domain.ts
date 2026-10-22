@@ -1,4 +1,4 @@
-import { addDays, addMonths, endOfDay, today } from "./dates";
+import { addDays, addMonths, dayOf, endOfDay, today } from "./dates";
 
 // Catálogos del negocio compartidos por la base de datos, el servidor y la interfaz.
 
@@ -112,12 +112,13 @@ export const isVenueStatus = (value: unknown): value is VenueStatus =>
   typeof value === "string" && (VENUE_STATUSES as readonly string[]).includes(value);
 
 /** Un pago por transferencia: el cliente sube el comprobante y la administración lo confirma o lo rechaza. */
-export const PAYMENT_STATUSES = ["pendiente", "confirmado", "rechazado"] as const;
+export const PAYMENT_STATUSES = ["pendiente", "confirmado", "rechazado", "devuelto"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   pendiente: "Por revisar",
   confirmado: "Confirmado",
   rechazado: "Rechazado",
+  devuelto: "Devuelto",
 };
 /** Periodo que cubre un pago. */
 export const PAYMENT_PERIODS = ["mes", "anio"] as const;
@@ -134,6 +135,21 @@ export function planDaysLeft(planEndsAt: Date | null, now = new Date()): number 
 export function planEndAfterPayment(current: Date | null, period: PaymentPeriod, now = new Date()): Date {
   const from = current && current.getTime() > now.getTime() ? current : now;
   return addMonths(from, period === "anio" ? 12 : 1);
+}
+
+/** Días de gracia después del próximo cobro de una suscripción (Mercado Pago reintenta un cobro que falla). */
+export const SUBSCRIPTION_GRACE_DAYS = 3;
+
+/**
+ * Fin del plan después de un cobro de la suscripción mensual: un mes más, pero nunca antes del día del próximo cobro que
+ * dice Mercado Pago más los días de gracia. Con solo sumar meses, una suscripción del 31 se recorría al 28
+ * (31 ene → 28 feb → 28 mar) y la cuenta vencía antes de que Mercado Pago volviera a cobrar.
+ */
+export function subscriptionPlanEnd(current: Date | null, nextPayment: Date | null, now = new Date()): Date {
+  const byMonth = planEndAfterPayment(current, "mes", now);
+  if (!nextPayment || Number.isNaN(nextPayment.getTime())) return byMonth;
+  const byCharge = endOfDay(addDays(dayOf(nextPayment), SUBSCRIPTION_GRACE_DAYS));
+  return byCharge.getTime() > byMonth.getTime() ? byCharge : byMonth;
 }
 
 /** Capas del plano que puede ver cada enlace compartido (según su rol). */
@@ -170,6 +186,7 @@ export type ShareRole = (typeof SHARE_ROLES)[number];
 export const AUDIT_ACTIONS = [
   "pago_confirmado",
   "pago_rechazado",
+  "pago_devuelto",
   "plan_cambiado",
   "lugar_estado",
   "lugar_publicado",
@@ -187,6 +204,7 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   pago_confirmado: "Confirmó un pago",
   pago_rechazado: "Rechazó un pago",
+  pago_devuelto: "Pago devuelto o con contracargo",
   plan_cambiado: "Cambió el plan",
   lugar_estado: "Cambió el estado del lugar",
   lugar_publicado: "Publicó el lugar",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRASH_DAYS, planEndAfterPayment, trashDaysLeft, trashPurgeAt } from "./domain";
+import { SUBSCRIPTION_GRACE_DAYS, TRASH_DAYS, planEndAfterPayment, subscriptionPlanEnd, trashDaysLeft, trashPurgeAt } from "./domain";
 import { dayOf, endOfDay } from "./dates";
 
 describe("papelera", () => {
@@ -68,5 +68,35 @@ describe("fin del plan después de un pago", () => {
     const now = new Date("2026-01-10T12:00:00Z");
     const first = planEndAfterPayment(endOfDay("2026-01-31"), "mes", now);
     expect(dayOf(planEndAfterPayment(first, "mes", now))).toBe("2026-03-28");
+  });
+});
+
+describe("fin del plan con suscripción mensual", () => {
+  // Mercado Pago dice el día del próximo cobro; el plan llega hasta ese día más los días de gracia.
+  const charge = (day: string) => new Date(`${day}T12:00:00Z`);
+
+  it("llega hasta el próximo cobro más 3 días de gracia", () => {
+    expect(SUBSCRIPTION_GRACE_DAYS).toBe(3);
+    const end = subscriptionPlanEnd(null, charge("2026-11-15"), new Date("2026-10-15T18:00:00Z"));
+    expect(end).toEqual(endOfDay("2026-11-18"));
+  });
+
+  it("una suscripción del 31 ya no se recorre al 28: queda siempre 3 días después del cobro", () => {
+    // Cobros el 31 ene, 28 feb y 31 mar (Mercado Pago cobra en el último día del mes corto).
+    const first = subscriptionPlanEnd(null, charge("2027-02-28"), new Date("2027-02-01T03:00:00Z"));
+    expect(dayOf(first)).toBe("2027-03-03");
+    const second = subscriptionPlanEnd(first, charge("2027-03-31"), new Date("2027-02-28T18:00:00Z"));
+    expect(dayOf(second)).toBe("2027-04-03");
+    const third = subscriptionPlanEnd(second, charge("2027-04-30"), new Date("2027-03-31T18:00:00Z"));
+    expect(dayOf(third)).toBe("2027-05-03");
+  });
+
+  it("no le quita tiempo a quien ya tenía plan: si un mes más llega más lejos, gana ese", () => {
+    expect(dayOf(subscriptionPlanEnd(endOfDay("2026-12-20"), charge("2026-11-22"), new Date("2026-10-22T18:00:00Z")))).toBe("2027-01-20");
+  });
+
+  it("sin la fecha del próximo cobro, suma un mes como antes", () => {
+    expect(subscriptionPlanEnd(endOfDay("2026-11-30"), null, new Date("2026-11-20T18:00:00Z"))).toEqual(endOfDay("2026-12-30"));
+    expect(subscriptionPlanEnd(endOfDay("2026-11-30"), new Date("no es fecha"), new Date("2026-11-20T18:00:00Z"))).toEqual(endOfDay("2026-12-30"));
   });
 });

@@ -234,7 +234,7 @@ export async function PlanSection({ org, wanted, result }: { org: Org; wanted?: 
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    p.status === "confirmado" ? "bg-emerald-100 text-emerald-900" : p.status === "rechazado" ? "bg-red-100 text-red-900" : "bg-amber-100 text-amber-900"
+                    p.status === "confirmado" ? "bg-emerald-100 text-emerald-900" : p.status === "rechazado" || p.status === "devuelto" ? "bg-red-100 text-red-900" : "bg-amber-100 text-amber-900"
                   }`}
                 >
                   {PAYMENT_STATUS_LABELS[p.status]}

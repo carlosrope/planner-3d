@@ -66,6 +66,8 @@ export type MpPreapproval = {
   external_reference?: string | null;
   preapproval_plan_id?: string | null;
   reason?: string;
+  /** Día del próximo cobro mensual (ISO). */
+  next_payment_date?: string | null;
 };
 
 export type MpAuthorizedPayment = {

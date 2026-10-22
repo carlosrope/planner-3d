@@ -36,6 +36,7 @@ import {
   PLAN_MODULES,
   planEndAfterPayment,
   referralQuota,
+  subscriptionPlanEnd,
   sectionOf,
   type OrgKind,
   type PaymentPeriod,
@@ -52,7 +53,7 @@ import { TRIAL_CODE_KIND_LABELS, TRIAL_CODE_MODULES, canRedeemTrial, newTrialCod
 import { slugify, uniqueSlug } from "./slug";
 
 import { TOKEN_CHARS } from "./tokens";
-import { monthOf } from "./dates";
+import { addMonths, monthOf } from "./dates";
 import type { Suggestion } from "./suggestion";
 export const newToken = (length = 20) => Array.from(randomBytes(length), (b) => TOKEN_CHARS[b % TOKEN_CHARS.length]).join("");
 
@@ -940,9 +941,10 @@ export async function listCardCheckouts(orgId: string) {
 
 /**
  * Registra un pago aprobado de Mercado Pago (una sola vez por id de pago) y alarga el plan del negocio con el plan, el
- * nivel y el periodo del intento. Devuelve true si es nuevo.
+ * nivel y el periodo del intento. En una suscripción, `nextPayment` (el día del próximo cobro según Mercado Pago) marca
+ * hasta cuándo llega el plan, con días de gracia. Devuelve true si es nuevo.
  */
-export async function applyCardPayment(checkout: CardCheckout, mpPaymentId: string) {
+export async function applyCardPayment(checkout: CardCheckout, mpPaymentId: string, nextPayment: Date | null = null) {
   return db.transaction(async (tx) => {
     const [created] = await tx
       .insert(payment)
@@ -963,7 +965,8 @@ export async function applyCardPayment(checkout: CardCheckout, mpPaymentId: stri
       .returning({ id: payment.id });
     if (!created) return false;
     const org = await lockOrgPlan(tx, checkout.orgId);
-    const planEndsAt = planEndAfterPayment(org?.planEndsAt ?? null, checkout.period);
+    const planEndsAt =
+      checkout.kind === "suscripcion" ? subscriptionPlanEnd(org?.planEndsAt ?? null, nextPayment) : planEndAfterPayment(org?.planEndsAt ?? null, checkout.period);
     await tx
       .update(organization)
       .set({
@@ -985,6 +988,43 @@ export async function applyCardPayment(checkout: CardCheckout, mpPaymentId: stri
       negocio: org?.name,
       mercadoPago: mpPaymentId,
       finDespues: planEndsAt.toISOString(),
+    });
+    return true;
+  });
+}
+
+/**
+ * Un pago con tarjeta que Mercado Pago devolvió (reembolso) o que el banco retiró (contracargo) deja de contar: queda como
+ * «Devuelto» y se le quita al plan el periodo que había sumado (un mes o un año, desde su fin actual; si ya pasó, la
+ * cuenta queda vencida). Una sola vez por pago. Devuelve true si lo quitó ahora.
+ */
+export async function reverseCardPayment(mpPaymentId: string, reason: "refunded" | "charged_back") {
+  return db.transaction(async (tx) => {
+    const why = reason === "charged_back" ? "contracargo" : "devuelto por Mercado Pago";
+    const [p] = await tx
+      .update(payment)
+      .set({ status: "devuelto", note: sql`coalesce(${payment.note} || ' · ', '') || ${why}`, resolvedAt: new Date() })
+      .where(and(eq(payment.mpPaymentId, mpPaymentId), eq(payment.status, "confirmado")))
+      .returning({ id: payment.id, orgId: payment.orgId, period: payment.period, amount: payment.amount, checkoutId: payment.checkoutId });
+    if (!p) return false;
+    const org = await lockOrgPlan(tx, p.orgId);
+    const before = org?.planEndsAt ?? null;
+    const planEndsAt = before ? addMonths(before, p.period === "anio" ? -12 : -1) : null;
+    if (planEndsAt) await tx.update(organization).set({ planEndsAt }).where(eq(organization.id, p.orgId));
+    if (p.checkoutId) {
+      await tx
+        .update(cardCheckout)
+        .set({ status: "devuelto" })
+        .where(and(eq(cardCheckout.id, p.checkoutId), eq(cardCheckout.kind, "pago")));
+    }
+    await audit(tx, { label: "Mercado Pago (tarjeta)" }, "pago_devuelto", { type: "payment", id: p.id, label: org?.name ?? p.orgId }, {
+      monto: p.amount,
+      periodo: p.period,
+      motivo: why,
+      negocio: org?.name,
+      mercadoPago: mpPaymentId,
+      finAntes: before?.toISOString() ?? null,
+      finDespues: planEndsAt?.toISOString() ?? null,
     });
     return true;
   });

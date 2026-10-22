@@ -3,7 +3,7 @@
 // antes del diseñador. Datos: window.__HOST_DATA__ (src/lib/designer/page.ts → HostData).
 //
 // - Carga el estado de cada planta desde la distribución activa y guarda los cambios
-//   (PUT /api/layouts/[id] con la revisión; si otra persona guardó antes, se detiene).
+//   (PUT /api/layouts/[id] con la revisión; si otra pestaña u otra persona guardó antes, se detiene).
 // - Pestañas A/B/C: cambiar sin recargar, crear (copia de la actual), renombrar,
 //   descripción, recomendada, duplicar y eliminar.
 // - Compartir: enlace de solo vista (copiar, WhatsApp o el menú de compartir del teléfono).
@@ -186,9 +186,9 @@
             'Este evento ya no está disponible (lo mandaron a la papelera o ya no tienes acceso). El último cambio no se guardó.'));
         } else if (e.status === 409) {
           conflict = true;
-          setStatus('error', t('someone else saved this layout', 'otra persona guardó esta distribución'));
-          window.plAlert(t('Someone else saved this layout. Reload the page to see the latest version.',
-            'Otra persona guardó cambios en esta distribución. Recarga la página para ver la versión más reciente.'));
+          setStatus('error', t('saved in another tab or by someone else', 'se guardó en otra pestaña o por otra persona'));
+          window.plAlert(t('This layout was saved in another tab or by someone else, so this change was not saved. Reload the page to see the latest version; your change stays on this device and you can recover it.',
+            'Esta distribución se guardó en otra pestaña o por otra persona, así que este cambio no se guardó. Recarga la página para ver la versión más reciente; tu cambio queda en este dispositivo y podrás recuperarlo.'));
         } else {
           pending = true;
           failed = true;

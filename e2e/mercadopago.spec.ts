@@ -2,8 +2,8 @@ import { createHmac, randomUUID } from "node:crypto";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { Pool } from "pg";
 import { E2E } from "../playwright.config";
-import { addDays, endOfDay, today } from "../src/lib/dates";
-import { planEndAfterPayment } from "../src/lib/domain";
+import { addDays, addMonths, dayOf, endOfDay, today } from "../src/lib/dates";
+import { SUBSCRIPTION_GRACE_DAYS, planEndAfterPayment } from "../src/lib/domain";
 
 // Avisos de Mercado Pago contra un Mercado Pago falso (e2e/mercadopago-falso.ts): repetidos, a la vez, fuera de orden,
 // con su API caída y con firma falsa. Lo que cuenta es lo que queda en la base: pagos registrados y fin del plan.
@@ -134,20 +134,49 @@ test("un pago rechazado que llega después del aprobado no quita nada, y un mont
   expect(status.rows[0].status).toBe("pagado");
 });
 
-test("suscripción: el cobro mensual llega antes que el aviso de la suscripción y cuenta una sola vez", async ({ request }) => {
+test("suscripción: el cobro mensual llega antes que el aviso de la suscripción, cuenta una sola vez y llega hasta el próximo cobro", async ({ request }) => {
   const org = await newOrg();
   const planId = `plan-e2e-${newId()}`;
   const checkout = await newCheckout(org.id, "suscripcion", planId);
   const [pre, ap, pay] = [`pre-e2e-${newId()}`, newId(), newId()];
+  // El próximo cobro cae después de «un mes más»: el plan llega hasta ese día más los días de gracia.
+  const nextCharge = addDays(dayOf(months(org.endsAt, 1)), 5);
   await falso("/__estado", {
-    preapprovals: [{ id: pre, status: "authorized", external_reference: checkout.ref, preapproval_plan_id: planId }],
+    preapprovals: [{ id: pre, status: "authorized", external_reference: checkout.ref, preapproval_plan_id: planId, next_payment_date: `${nextCharge}T12:00:00.000-07:00` }],
     authorized: [{ id: ap, preapproval_id: pre, status: "processed", transaction_amount: 790, currency_id: "MXN", payment: { id: pay, status: "approved" } }],
   });
 
   expect(await notify(request, "subscription_authorized_payment", ap)).toBe(200);
   expect(await notify(request, "subscription_preapproval", pre)).toBe(200);
   expect(await notify(request, "subscription_authorized_payment", ap)).toBe(200);
-  expect(await state(org.id)).toEqual({ endsAt: months(org.endsAt, 1), payments: 1 });
+  expect(await state(org.id)).toEqual({ endsAt: endOfDay(addDays(nextCharge, SUBSCRIPTION_GRACE_DAYS)), payments: 1 });
   const row = await db.query<{ status: string; mp_subscription_id: string }>("select status, mp_subscription_id from card_checkout where id = $1", [checkout.id]);
   expect(row.rows[0]).toEqual({ status: "activa", mp_subscription_id: pre });
+});
+
+test("un pago devuelto o con contracargo deja de contar: se quita su mes una sola vez", async ({ request }) => {
+  const org = await newOrg();
+  const [a, b] = [await newCheckout(org.id), await newCheckout(org.id)];
+  const [payA, payB] = [newId(), newId()];
+  await falso("/__estado", { payments: [approved(payA, a.ref), approved(payB, b.ref)] });
+  expect(await notify(request, "payment", payA)).toBe(200);
+  expect(await notify(request, "payment", payB)).toBe(200);
+  const paid = months(org.endsAt, 2);
+  expect(await state(org.id)).toEqual({ endsAt: paid, payments: 2 });
+
+  // Mercado Pago devuelve el primero y el banco retira el segundo: cada uno quita un mes, aunque el aviso se repita.
+  await falso("/__estado", { payments: [{ ...approved(payA, a.ref), status: "refunded" }, { ...approved(payB, b.ref), status: "charged_back" }] });
+  expect(await notify(request, "payment", payA)).toBe(200);
+  expect(await notify(request, "payment", payA)).toBe(200);
+  expect((await state(org.id)).endsAt).toEqual(addMonths(paid, -1));
+  expect(await notify(request, "payment", payB)).toBe(200);
+  expect((await state(org.id)).endsAt).toEqual(addMonths(addMonths(paid, -1), -1));
+
+  const rows = await db.query<{ status: string; note: string }>("select status, note from payment where org_id = $1 order by note", [org.id]);
+  expect(rows.rows.map((r) => r.status)).toEqual(["devuelto", "devuelto"]);
+  expect(rows.rows.map((r) => r.note).join(" | ")).toMatch(/contracargo.*devuelto por Mercado Pago|devuelto por Mercado Pago.*contracargo/);
+  const checkout = await db.query<{ status: string }>("select status from card_checkout where id = $1", [a.id]);
+  expect(checkout.rows[0].status).toBe("devuelto");
+  const audit = await db.query<{ n: string }>("select count(*) as n from audit_log where action = 'pago_devuelto' and details->>'negocio' like $1", [`Negocio MP ${org.id.slice(0, 6)}%`]);
+  expect(Number(audit.rows[0].n)).toBe(2);
 });

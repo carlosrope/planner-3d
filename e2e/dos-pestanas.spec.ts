@@ -22,7 +22,7 @@ test("dos pestañas con el mismo evento: el segundo guardado se rechaza y no pis
   // La primera pestaña todavía tiene la versión anterior: su guardado se rechaza y lo avisa.
   const second = await rotateFurniture(page, 1);
   expect(second.response.status()).toBe(409);
-  await expect(page.getByText("Otra persona guardó cambios en esta distribución.")).toBeVisible();
+  await expect(page.getByText(/Esta distribución se guardó en otra pestaña o por otra persona/)).toBeVisible();
 
   // Al recargar, lo de la otra pestaña sigue ahí y lo que no se guardó se ofrece desde el dispositivo.
   await deviceBackup(page);

@@ -44,7 +44,14 @@ export async function POST(request: Request) {
           : type === "subscription_preapproval"
             ? await processPreapproval(dataId)
             : null;
-    console.info(`${tag}: ${!result ? "tipo que no se usa, se ignora" : result.applied ? "plan activado o alargado" : "sin cambios"} (200)`);
+    const outcome = !result
+      ? "tipo que no se usa, se ignora"
+      : result.applied
+        ? "plan activado o alargado"
+        : "reversed" in result && result.reversed
+          ? "pago devuelto o con contracargo: se quitó del plan"
+          : "sin cambios";
+    console.info(`${tag}: ${outcome} (200)`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     // Un id que no existe (como el de «Simular notificación») se ignora con 200 para que Mercado Pago no reintente.

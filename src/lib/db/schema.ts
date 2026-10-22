@@ -368,7 +368,7 @@ export const cardCheckout = pgTable(
     mpId: text("mp_id").unique(),
     /** Id de la suscripción (preapproval) cuando el cliente ya se suscribió al plan. */
     mpSubscriptionId: text("mp_subscription_id").unique(),
-    /** pendiente · pagado (pago único) · activa, pausada o cancelada (suscripción) · fallida. */
+    /** pendiente · pagado o devuelto (pago único) · activa, pausada o cancelada (suscripción) · fallida. */
     status: text("status").notNull().default("pendiente"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
