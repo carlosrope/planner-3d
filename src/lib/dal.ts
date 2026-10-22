@@ -65,6 +65,22 @@ export type Actor = CurrentUser | { label: string };
 type Db = typeof db;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
+/**
+ * Lee el plan de una cuenta y aparta su fila hasta que termine la transacción. Todo lo que alarga o cambia el plan a
+ * partir del fin que ya tenía pasa por aquí: si llegan dos pagos (o un pago y un canje) a la vez, el segundo espera al
+ * primero y suma sobre su fin, en lugar de pisarlo y perder un mes. Es FOR NO KEY UPDATE y no FOR UPDATE: guardar el
+ * pago (que apunta a la cuenta) ya aparta la fila en modo compartido, y con FOR UPDATE dos pagos se esperaban entre sí.
+ */
+async function lockOrgPlan(tx: Tx, orgId: string) {
+  const [org] = await tx
+    .select({ name: organization.name, kind: organization.kind, plan: organization.plan, modules: organization.modules, planEndsAt: organization.planEndsAt })
+    .from(organization)
+    .where(eq(organization.id, orgId))
+    .limit(1)
+    .for("no key update");
+  return org ?? null;
+}
+
 /** Agrega una línea al rastro (audit_log). Va dentro de la misma transacción que el cambio cuando la hay. */
 async function audit(
   conn: Db | Tx,
@@ -946,7 +962,7 @@ export async function applyCardPayment(checkout: CardCheckout, mpPaymentId: stri
       .onConflictDoNothing({ target: payment.mpPaymentId })
       .returning({ id: payment.id });
     if (!created) return false;
-    const [org] = await tx.select({ name: organization.name, planEndsAt: organization.planEndsAt }).from(organization).where(eq(organization.id, checkout.orgId)).limit(1);
+    const org = await lockOrgPlan(tx, checkout.orgId);
     const planEndsAt = planEndAfterPayment(org?.planEndsAt ?? null, checkout.period);
     await tx
       .update(organization)
@@ -1185,11 +1201,7 @@ async function startVenueTrial(tx: Tx, orgId: string | null, actor: Actor) {
     .orderBy(desc(trialCode.usedAt))
     .limit(1);
   if (!code || !(await ownsPublishedVenue(tx, orgId))) return;
-  const [org] = await tx
-    .select({ name: organization.name, plan: organization.plan, modules: organization.modules, planEndsAt: organization.planEndsAt })
-    .from(organization)
-    .where(eq(organization.id, orgId))
-    .limit(1);
+  const org = await lockOrgPlan(tx, orgId);
   if (!org) return;
   const now = new Date();
   const endsAt = org.plan === "prueba" ? trialEnd(code.days, now) : null;
@@ -1219,11 +1231,7 @@ export async function redeemTrialCode(user: CurrentUser, org: Org, raw: string):
       .where(usableTrialCode(codes))
       .returning({ id: trialCode.id, code: trialCode.code, kind: trialCode.kind, days: trialCode.days });
     if (!code) return { ok: false as const, error: "Ese código ya se usó o no es válido. Revisa que esté bien escrito." };
-    const [before] = await tx
-      .select({ name: organization.name, kind: organization.kind, plan: organization.plan, modules: organization.modules, planEndsAt: organization.planEndsAt })
-      .from(organization)
-      .where(eq(organization.id, org.id))
-      .limit(1);
+    const before = await lockOrgPlan(tx, org.id);
     if (!before) throw new Error("La cuenta no existe.");
     const values = redeemValues(before, code, now);
     await tx.update(organization).set(values).where(eq(organization.id, org.id));
@@ -1550,11 +1558,7 @@ export async function adminResolvePayment(paymentId: string, status: "confirmado
       .where(and(eq(payment.id, paymentId), eq(payment.status, "pendiente")))
       .returning({ orgId: payment.orgId, plan: payment.plan, tier: payment.tier, period: payment.period, amount: payment.amount });
     if (!p) return null;
-    const [org] = await tx
-      .select({ name: organization.name, plan: organization.plan, planEndsAt: organization.planEndsAt })
-      .from(organization)
-      .where(eq(organization.id, p.orgId))
-      .limit(1);
+    const org = await lockOrgPlan(tx, p.orgId);
     const details: Record<string, unknown> = { monto: p.amount, plan: p.plan, nivel: p.tier, periodo: p.period, nota: note, negocio: org?.name };
     if (status === "confirmado") {
       const planEndsAt = planEndAfterPayment(org?.planEndsAt ?? null, p.period);

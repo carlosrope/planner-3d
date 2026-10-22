@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Pruebas de punta a punta de los tres flujos que cobran (e2e/*.spec.ts). Usan su propia base
- * (planner3d_prueba, se borra y se vuelve a crear en cada corrida) y su propio servidor en el puerto 3100,
- * así que no tocan la base local de desarrollo. Uso: npm run test:e2e
+ * Pruebas de punta a punta (e2e/*.spec.ts): los flujos que cobran, los códigos, los avisos de Mercado Pago (contra un
+ * Mercado Pago falso en el puerto 3101), dos pestañas con el mismo evento y el plan que vence con el evento abierto.
+ * Usan su propia base (planner3d_prueba, se borra y se vuelve a crear en cada corrida) y su propio servidor en el puerto
+ * 3100, así que no tocan la base local de desarrollo. Uso: npm run test:e2e
  */
 const localUrl = (() => {
   if (process.env.E2E_DATABASE_URL) return process.env.E2E_DATABASE_URL;
@@ -17,6 +18,9 @@ export const E2E = {
   databaseUrl: localUrl,
   adminEmail: "admin-e2e@planner3d.test",
   code: "E2E7",
+  // Mercado Pago falso (e2e/mercadopago-falso.ts) y la clave con la que se firman sus avisos. No son reales.
+  mpPort: 3101,
+  mpSecret: "e2e-clave-de-avisos-no-es-secreta",
 };
 process.env.E2E_DATABASE_URL = localUrl;
 
@@ -36,25 +40,36 @@ export default defineConfig({
     trace: "retain-on-failure",
     ...devices["Desktop Chrome"],
   },
-  webServer: {
-    command: `npx next dev -p ${E2E.port}`,
-    url: `http://localhost:${E2E.port}/entrar`,
-    timeout: 180_000,
-    reuseExistingServer: false,
-    env: {
-      NEXT_DIST_DIR: ".next-e2e",
-      DATABASE_URL: localUrl,
-      BETTER_AUTH_URL: `http://localhost:${E2E.port}`,
-      BETTER_AUTH_SECRET: "e2e-solo-para-pruebas-no-es-secreto-0000",
-      SIGNUP_CODES: JSON.stringify({ [E2E.code]: { kind: "planner", plan: "prueba", modules: ["salones"], days: 7 } }),
-      ADMIN_EMAILS: E2E.adminEmail,
-      // Datos de pago de EJEMPLO (no son reales).
-      SPEI_BANK: "Banco de prueba",
-      SPEI_CLABE: "000000000000000000",
-      SPEI_HOLDER: "Titular de prueba",
-      AUTH_RATE_LIMIT: "0",
-      SENTRY_DSN: "",
-      RESEND_API_KEY: "",
+  webServer: [
+    {
+      command: "npx tsx e2e/mercadopago-falso.ts",
+      url: `http://localhost:${E2E.mpPort}/__salud`,
+      env: { MP_FALSO_PORT: String(E2E.mpPort) },
+      reuseExistingServer: false,
     },
-  },
+    {
+      command: `npx next dev -p ${E2E.port}`,
+      url: `http://localhost:${E2E.port}/entrar`,
+      timeout: 180_000,
+      reuseExistingServer: false,
+      env: {
+        NEXT_DIST_DIR: ".next-e2e",
+        DATABASE_URL: localUrl,
+        BETTER_AUTH_URL: `http://localhost:${E2E.port}`,
+        BETTER_AUTH_SECRET: "e2e-solo-para-pruebas-no-es-secreto-0000",
+        SIGNUP_CODES: JSON.stringify({ [E2E.code]: { kind: "planner", plan: "prueba", modules: ["salones"], days: 7 } }),
+        ADMIN_EMAILS: E2E.adminEmail,
+        // Datos de pago de EJEMPLO (no son reales).
+        SPEI_BANK: "Banco de prueba",
+        SPEI_CLABE: "000000000000000000",
+        SPEI_HOLDER: "Titular de prueba",
+        AUTH_RATE_LIMIT: "0",
+        SENTRY_DSN: "",
+        RESEND_API_KEY: "",
+        MP_API_URL: `http://localhost:${E2E.mpPort}`,
+        MP_ACCESS_TOKEN: "TEST-e2e-no-es-real",
+        MP_WEBHOOK_SECRET: E2E.mpSecret,
+      },
+    },
+  ],
 });

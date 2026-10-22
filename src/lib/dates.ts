@@ -77,3 +77,20 @@ export const startOfDay = (day: string) => new Date(`${day}T00:00:00${MX_OFFSET}
 
 /** "AAAA-MM" del mes en que cae ese instante en Los Mochis. */
 export const monthOf = (d: Date) => dayOf(d).slice(0, 7);
+
+const MX_OFFSET_MS = (MX_OFFSET.startsWith("-") ? -1 : 1) * (Number(MX_OFFSET.slice(1, 3)) * 60 + Number(MX_OFFSET.slice(4, 6))) * 60_000;
+
+/**
+ * Suma meses a un instante contando en el calendario de Los Mochis, con la misma hora: del 31 de enero, un mes es el
+ * 28 (o 29) de febrero, no el 3 de marzo. Se cuenta en Los Mochis y no en UTC porque "hasta el 30 de enero" se guarda
+ * como el 31 a las 06:59 UTC: en UTC, un mes después caía el 27 de febrero.
+ */
+export function addMonths(d: Date, months: number): Date {
+  const local = new Date(d.getTime() + MX_OFFSET_MS); // sus campos UTC son la hora de Los Mochis
+  const day = local.getUTCDate();
+  local.setUTCDate(1);
+  local.setUTCMonth(local.getUTCMonth() + months);
+  const last = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() + 1, 0)).getUTCDate();
+  local.setUTCDate(Math.min(day, last));
+  return new Date(local.getTime() - MX_OFFSET_MS);
+}

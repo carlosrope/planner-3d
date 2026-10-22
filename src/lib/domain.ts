@@ -1,4 +1,4 @@
-import { addDays, endOfDay, today } from "./dates";
+import { addDays, addMonths, endOfDay, today } from "./dates";
 
 // Catálogos del negocio compartidos por la base de datos, el servidor y la interfaz.
 
@@ -132,14 +132,8 @@ export function planDaysLeft(planEndsAt: Date | null, now = new Date()): number 
 
 /** Fin del plan después de un pago: se suma al fin vigente si todavía no llega, o a hoy si ya venció. */
 export function planEndAfterPayment(current: Date | null, period: PaymentPeriod, now = new Date()): Date {
-  const from = current && current.getTime() > now.getTime() ? new Date(current) : new Date(now);
-  // Sin desbordar el mes: del 31 de enero, un mes es el 28 (o 29) de febrero, no el 3 de marzo.
-  const day = from.getUTCDate();
-  from.setUTCDate(1);
-  from.setUTCMonth(from.getUTCMonth() + (period === "anio" ? 12 : 1));
-  const last = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 0)).getUTCDate();
-  from.setUTCDate(Math.min(day, last));
-  return from;
+  const from = current && current.getTime() > now.getTime() ? current : now;
+  return addMonths(from, period === "anio" ? 12 : 1);
 }
 
 /** Capas del plano que puede ver cada enlace compartido (según su rol). */

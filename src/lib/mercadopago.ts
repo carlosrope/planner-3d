@@ -8,7 +8,9 @@ import { checkoutRef } from "./card";
  * Mi negocio; sin él, solo hay SPEI. En local se usan las credenciales de un vendedor de prueba y se paga entrando con el
  * comprador de prueba en la página de Mercado Pago.
  */
-const API = "https://api.mercadopago.com";
+// Las pruebas de punta a punta apuntan MP_API_URL a un Mercado Pago falso (e2e/mercadopago-falso.ts); en producción
+// siempre es la API real.
+const API = (process.env.NODE_ENV !== "production" && process.env.MP_API_URL) || "https://api.mercadopago.com";
 
 export const mpEnabled = () => Boolean(process.env.MP_ACCESS_TOKEN?.trim());
 

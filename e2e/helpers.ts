@@ -50,3 +50,33 @@ export async function signIn(page: Page, email: string) {
     await expect(page).toHaveURL(/\/eventos/);
   }
 }
+
+/** Crea un evento en el Salón Demostración desde Proyectos y espera a que abra el diseñador (sin la guía). */
+export async function createEvent(page: Page, title: string) {
+  await page.waitForLoadState("networkidle");
+  await page.locator('input[name="title"]').fill(title);
+  await page.locator('select[name="venueId"]').selectOption({ label: "Salón Demostración · Los Mochis" });
+  await page.locator('input[name="guestCount"]').fill("120");
+  await page.getByRole("button", { name: "Crear evento con plano inicial" }).click();
+  await expect(page).toHaveURL(/\/eventos\/[0-9a-f-]{36}/);
+  await page.waitForLoadState("networkidle");
+  await skipGuide(page);
+}
+
+/** La guía de la primera vez tapa la barra: se cierra si aparece. */
+export async function skipGuide(page: Page) {
+  const skip = page.getByRole("button", { name: "Saltar" });
+  if (await skip.isVisible().catch(() => false)) await skip.click();
+}
+
+/** Gira 90° un mueble desde el diseñador (sus funciones son globales de la página) y espera la respuesta del guardado. */
+export async function rotateFurniture(page: Page, index: number) {
+  const saved = page.waitForResponse((r) => r.request().method() === "PUT" && /\/api\/layouts\/[^/]+$/.test(r.url()));
+  const id = await page.evaluate(`(() => { const f = state.furniture[${index}]; select({ kind: 'furn', id: f.id }); rotateSel(90); return f.id; })()`);
+  return { id: String(id), response: await saved };
+}
+
+export const rotationOf = (page: Page, id: string) => page.evaluate(`state.furniture.find(f => f.id === ${JSON.stringify(id)}).rot`);
+
+/** Espera a que el diseñador deje la copia de lo no guardado en el dispositivo (se escribe 0.8 s después del cambio). */
+export const deviceBackup = (page: Page) => page.waitForFunction(() => Object.keys(localStorage).some((k) => k.startsWith("plantea-respaldo-")));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dayOf, endOfDay, formatDay, formatInstant, isRealDay, monthOf, startOfDay, today } from "./dates";
+import { addDays, addMonths, dayOf, endOfDay, formatDay, formatInstant, isRealDay, monthOf, startOfDay, today } from "./dates";
 
 describe("fechas en America/Mazatlan", () => {
   it("un día de calendario no cambia de día", () => {
@@ -23,6 +23,14 @@ describe("fechas en America/Mazatlan", () => {
   });
   it("suma días de calendario", () => {
     expect(addDays("2026-12-30", 3)).toBe("2027-01-02");
+  });
+  it("suma meses en el calendario de Los Mochis, con la misma hora", () => {
+    // 30 de enero a las 23:59 de Los Mochis es el 31 a las 06:59 UTC: un mes después es el 28 de febrero, no el 27.
+    expect(addMonths(endOfDay("2027-01-30"), 1)).toEqual(endOfDay("2027-02-28"));
+    expect(addMonths(endOfDay("2026-11-30"), 1)).toEqual(endOfDay("2026-12-30"));
+    expect(addMonths(endOfDay("2028-02-29"), 12)).toEqual(endOfDay("2029-02-28"));
+    // 8 p.m. del 15 de marzo en Los Mochis → 8 p.m. del 15 de abril.
+    expect(addMonths(new Date("2027-03-16T03:00:00Z"), 1).toISOString()).toBe("2027-04-16T03:00:00.000Z");
   });
 });
 
