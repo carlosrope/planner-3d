@@ -47,7 +47,8 @@ export const PLAN_MODULES: Record<Exclude<Plan, "prueba" | "invitado" | "libre">
   eventos: ["salones"],
   casas: ["casas"],
   ambos: ["salones", "casas"],
-  personal: ["salones"],
+  // Personal sirve igual para una fiesta en un salón del catálogo que para amueblar una casa del catálogo (23 oct 2026).
+  personal: ["salones", "casas"],
 };
 /**
  * Nivel del plan: Pro (con un tope de códigos de referido al mes) o Ilimitado (códigos sin tope).

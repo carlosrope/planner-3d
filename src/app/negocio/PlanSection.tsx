@@ -7,7 +7,7 @@ import { PRICES_URL, CONTACT_WHATSAPP, spei } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 import { cancelSubscriptionAction, syncCardPaymentsAction } from "./actions";
 import { PlanPicker, type PlanCardData } from "./PlanPicker";
-import { PERSONAL_PROFILE, PROFILES } from "@/lib/plans";
+import { CASAS_QUOTE_MESSAGE, PERSONAL_PROFILE, PROFILES } from "@/lib/plans";
 import { PaymentForm } from "./PaymentForm";
 import { TrialRedeemForm } from "./TrialRedeemForm";
 import { canRedeemTrial } from "@/lib/trial-codes";
@@ -29,7 +29,8 @@ const CARD_STATUS: Record<string, string> = { activa: "Cobro mensual activo", pa
 function pointsFor(plan: string, tier: string, kind: Org["kind"]): string[] {
   const profile = (id: string) => PROFILES.find((p) => p.id === id);
   if (plan === "personal") return PERSONAL_PROFILE.plans[0].points;
-  if (plan === "casas") return profile("casas")?.plans[kind === "developer" ? 1 : 0].points ?? [];
+  // Casas: la primera tarjeta es la desarrolladora; la segunda, la inmobiliaria o asesor.
+  if (plan === "casas") return profile("casas")?.plans[kind === "agency" ? 1 : 0].points ?? [];
   return profile(kind === "venue" ? "salon" : "planner")?.plans[tier === "ilimitado" ? 1 : 0].points ?? [];
 }
 
@@ -105,7 +106,15 @@ export async function PlanSection({ org, wanted, result }: { org: Org; wanted?: 
           {!isLitePlan(org.plan) && org.plan !== "prueba" && !free ? ` ${TIER_LABELS[org.tier]}` : ""}
         </p>
         {free ? (
-          cardsShown ? (
+          org.kind === "agency" || org.kind === "developer" ? (
+            <p className="text-sm text-stone-600">
+              El plan de Casas se cotiza por proyecto (tus modelos y sus plantas) o casa por casa.{" "}
+              <a href={waLink(CONTACT_WHATSAPP, CASAS_QUOTE_MESSAGE)} target="_blank" rel="noopener" className="underline">
+                Pide tu propuesta por WhatsApp
+              </a>
+              .
+            </p>
+          ) : cardsShown ? (
             <p className="text-sm text-stone-600">Elige tu plan aquí abajo para crear tus proyectos.</p>
           ) : (
             <p className="text-sm text-stone-600">

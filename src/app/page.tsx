@@ -45,10 +45,10 @@ const QUIEN = [
     ],
   },
   {
-    t: "Inmobiliarias y desarrolladoras",
-    p: "Cada modelo de casa amueblado, con pisos y recorrido guiado, para mostrarlo con tu marca.",
-    href: "/casas",
-    cta: "Ver modelos",
+    t: "Casas: inmobiliarias, desarrolladoras y dueños",
+    p: "Tu casa en 3D desde su plano, para enseñarla, venderla o amueblarla. El que va a vivir ahí la ve como va a quedar, no vacía.",
+    href: "/planes#casas",
+    cta: "Ver el plan de Casas",
     img: [{ src: "/portada/quien-inmobiliarias.webp", alt: "Asesora inmobiliaria enseñando un recorrido en su tablet a una pareja frente a una casa modelo" }],
   },
 ];
@@ -67,7 +67,7 @@ export default function Home() {
               Plantea tu evento o tu casa <span className="text-[#a4552d]">en 3D antes de vivirlo.</span>
             </h1>
             <p className="mt-4 max-w-lg text-lg text-stone-600">
-              Acomoda las mesas sobre el salón real, sienta a tus invitados y recórrelo desde el celular. Para salones, planners, familias e inmobiliarias de México.
+              Acomoda las mesas sobre el salón real, sienta a tus invitados y recórrelo desde el celular. Para salones, planners y familias, y para quien vende, construye o amuebla una casa en México.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <PageLink href="/disenador/salon-demo" className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white shadow-lg shadow-[#b5653a]/25 hover:bg-[#8f4a26]">
@@ -114,7 +114,7 @@ export default function Home() {
       <section className="bg-[#f3ece2]">
         <div className="mx-auto max-w-5xl px-4 py-10 md:py-14">
           <h2 className="text-2xl font-bold text-stone-900 sm:text-3xl">Para quién es Plantea</h2>
-          <p className="mt-2 max-w-2xl text-stone-600">Para todos los que organizan: el dueño del salón, la planner, la familia que ya apartó la fecha y quien vende casas.</p>
+          <p className="mt-2 max-w-2xl text-stone-600">Para todos los que organizan: el dueño del salón, la planner, la familia que ya apartó la fecha y quien vende, construye o amuebla una casa.</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {QUIEN.map((q) => (
               <article key={q.t} className="group flex flex-col overflow-hidden rounded-[25px] border border-stone-200/70 bg-white">
@@ -167,8 +167,8 @@ export default function Home() {
         </div>
         <div className="mt-6 flex flex-col items-start gap-3 rounded-2xl bg-stone-900 p-6 text-white sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-xl font-semibold">¿Tienes un salón o vendes casas?</h3>
-            <p className="mt-1 text-stone-300">Mándanos el plano o un croquis con medidas y en 7 días está en 3D, con su enlace y su QR. Empezar no tiene costo.</p>
+            <h3 className="text-xl font-semibold">¿Tienes un salón?</h3>
+            <p className="mt-1 text-stone-300">Mándanos el plano o un croquis con medidas y en 7 días está en 3D, con su enlace y su QR. Empezar no tiene costo. Si vendes o construyes casas, mira el plan de Casas.</p>
           </div>
           <Link href="/alta" className="inline-flex h-12 shrink-0 items-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white hover:bg-[#8f4a26]">
             Registrar mi lugar

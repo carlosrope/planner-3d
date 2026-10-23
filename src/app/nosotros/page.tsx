@@ -110,7 +110,7 @@ export default function NosotrosPage() {
           {[
             ["Pruébalo sin pagar.", "La demostración del salón y de la casa funciona completa, sin cuenta y sin dar datos."],
             ["Habla con nosotros.", "Escríbenos por WhatsApp o a hola@plantea.com.mx; te contestamos directamente."],
-            ["Paga cuando ya lo viste.", "Si tienes un salón o una casa, primero la convertimos a 3D y la revisas. El pago es con tarjeta por Mercado Pago o por SPEI a nombre del responsable, con factura."],
+            ["Paga cuando ya lo viste.", "Si tienes un salón, primero lo convertimos a 3D y lo revisas; las casas se cotizan por proyecto o casa por casa. El pago es con tarjeta por Mercado Pago o por SPEI a nombre del responsable, con factura."],
             ["Lee nuestras reglas.", "El aviso de privacidad y los términos de servicio dicen quién es el responsable y qué incluye cada plan."],
           ].map(([t1, t2], i) => (
             <li key={t1} className="flex gap-4 rounded-2xl border border-stone-200 bg-white p-4">

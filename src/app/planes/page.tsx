@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
-import { PROFILES } from "@/lib/plans";
+import { CASAS_QUOTE_MESSAGE, PROFILES } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "Planes y precios",
-  description: "Planes de Plantea para planners, salones de eventos, inmobiliarias y desarrolladoras. Precios en pesos con IVA incluido. La demo es gratis.",
+  description: "Planes de Plantea para planners y salones de eventos, con precios en pesos e IVA incluido, y el plan de Casas para desarrolladoras, inmobiliarias y dueños de casa. La demo es gratis.",
   alternates: { canonical: "/planes" },
 };
 
@@ -15,6 +15,10 @@ const FAQ = [
   { q: "¿Mi cliente necesita crear una cuenta?", a: "No. Recibe un enlace de solo vista con tu marca y puede dejarte comentarios." },
   { q: "¿Qué necesitan de mi salón o de mis casas?", a: "El plano (CAD o PDF) o un croquis con medidas y fotos. Lo convertimos a 3D y lo revisas antes de publicarlo." },
   { q: "¿Los precios incluyen IVA?", a: "Sí, todos los precios son en pesos con IVA incluido. Te damos factura." },
+  {
+    q: "¿Cuánto cuesta poner una casa en 3D?",
+    a: "Si construyes casas nuevas, se cotiza por proyecto según cuántos modelos tienes y de cuántas plantas son; los convertimos nosotros desde tu AutoCAD. Si vendes o rentas casas, por casa, con su plano o sus medidas (en Los Mochis la medimos; fuera, se cotiza). Si es tu casa y es un modelo que ya está en Plantea, pídele tu código a la desarrolladora; si no, mándanos su plano y te decimos cuánto cuesta.",
+  },
   { q: "¿Cómo sé que Plantea es real?", a: "En plantea.com.mx/nosotros están quién es el responsable, cómo contactarnos y cómo comprobarlo antes de pagar. La demo es gratis y sin cuenta." },
   {
     q: "¿Cómo pago?",
@@ -27,7 +31,7 @@ export default function PlanesPage() {
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-8">
       <p className="text-sm font-medium uppercase tracking-wider text-[#a4552d]">Planes y precios</p>
       <h1 className="mt-2 text-3xl font-semibold">La demo es gratis. Tu espacio real va con plan.</h1>
-      <p className="mt-2 text-stone-600">Precios al mes, en pesos, con IVA incluido.</p>
+      <p className="mt-2 text-stone-600">Precios al mes, en pesos, con IVA incluido. Las casas se cotizan por proyecto o por casa.</p>
 
       <nav aria-label="Elige tu perfil" className="mt-6 grid grid-cols-3 gap-1.5 sm:flex sm:gap-2">
         {PROFILES.map((p) => (
@@ -40,7 +44,8 @@ export default function PlanesPage() {
       {PROFILES.map((p) => (
         <section key={p.id} id={p.id} className="scroll-mt-20 pt-8">
           <h2 className="text-xl font-semibold">{p.title}</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {p.intro && <p className="mt-1 text-stone-600">{p.intro}</p>}
+          <div className={`mt-4 grid gap-4 ${p.plans.length > 2 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}>
             {p.plans.map((plan) => (
               <div key={plan.name} className={`relative flex flex-col rounded-2xl border bg-white p-5 ${plan.featured ? "border-[#b5653a] ring-1 ring-[#b5653a]" : "border-stone-200"}`}>
                 {plan.featured && plan.name === "Ilimitado" && (
@@ -48,7 +53,8 @@ export default function PlanesPage() {
                 )}
                 <p className="font-semibold">{plan.name}</p>
                 <p className="mt-1">
-                  <span className="text-3xl font-semibold">{plan.price}</span> <span className="text-sm text-stone-500">al mes</span>
+                  <span className={plan.quote ? "text-2xl font-semibold" : "text-3xl font-semibold"}>{plan.price}</span>
+                  {!plan.quote && <span className="text-sm text-stone-500"> al mes</span>}
                 </p>
                 <ul className="mt-3 space-y-1.5 text-sm text-stone-700">
                   {plan.points.map((pt) => (
@@ -63,6 +69,16 @@ export default function PlanesPage() {
               </div>
             ))}
           </div>
+          {p.plans.some((plan) => plan.quote) && (
+            <a
+              href={waLink(CONTACT_WHATSAPP, CASAS_QUOTE_MESSAGE)}
+              target="_blank"
+              rel="noopener"
+              className="mt-4 inline-flex h-12 items-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white hover:bg-[#8f4a26]"
+            >
+              Pedir una propuesta con mis planos
+            </a>
+          )}
           <details className="mt-3 rounded-xl bg-white/60 px-4 py-3 text-sm text-stone-600">
             <summary className="cursor-pointer font-medium text-stone-800">Ver detalles</summary>
             <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -75,8 +91,7 @@ export default function PlanesPage() {
       ))}
 
       <p className="mt-8 rounded-xl bg-stone-100 p-4 text-sm text-stone-700">
-        <b>Eventos y Casas juntos:</b> 20% de descuento sobre la suma. <b>Plan Personal, $250 al mes:</b> para quien organiza su propia fiesta sin
-        código de un salón; un evento activo a la vez.
+        <b>Plan Personal, $250 al mes:</b> para quien organiza su propia fiesta sin código de un salón; un evento activo a la vez.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">

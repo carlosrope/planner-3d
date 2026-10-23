@@ -11,7 +11,8 @@ const PROFILE_LIST: Profile[] = [...PROFILES.filter((p) => p.id === "salon"), ..
  * casas o fiesta propia), con el precio y el paso que le toca a cada uno. `openAtStart`: se abre sola (por ejemplo,
  * al llegar desde "Planear mi evento aquí" del catálogo).
  */
-export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: { openAtStart?: boolean; label?: string }) {
+/** `quoteHref`: a dónde lleva "Pedir propuesta" en los planes sin precio publicado (WhatsApp de Plantea). */
+export function PlanChooser({ openAtStart = false, label = "Crear proyecto", quoteHref = "/planes#casas" }: { openAtStart?: boolean; label?: string; quoteHref?: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [tab, setTab] = useState(PROFILE_LIST[0].id);
   useEffect(() => {
@@ -23,6 +24,9 @@ export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: {
   }, [openAtStart]);
   const profile = PROFILE_LIST.find((p) => p.id === tab) ?? PROFILE_LIST[0];
   const pay = `/negocio?plan=${PAY_PLAN[profile.id] ?? "eventos"}#pagar`;
+  const quote = profile.plans.some((plan) => plan.quote);
+  // Casas trae también el plan Personal (dueño de casa): se paga como cualquier plan Personal.
+  const alsoPersonal = quote && profile.plans.some((plan) => !plan.quote);
 
   return (
     <>
@@ -86,7 +90,8 @@ export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: {
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="font-semibold">{plan.name}</p>
                   <p>
-                    <span className="text-2xl font-semibold">{plan.price}</span> <span className="text-sm text-stone-500">al mes</span>
+                    <span className={plan.quote ? "text-base font-semibold" : "text-2xl font-semibold"}>{plan.price}</span>
+                    {!plan.quote && <span className="text-sm text-stone-500"> al mes</span>}
                   </p>
                 </div>
                 <ul className="mt-2 space-y-1 text-sm text-stone-700">
@@ -111,6 +116,18 @@ export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: {
                   Registrar mi salón
                 </Link>
                 <p className="text-center text-xs text-stone-500">Mandas tu plano, en 7 días lo tienes en 3D y lo revisas antes de pagar.</p>
+              </>
+            ) : quote ? (
+              <>
+                <a href={quoteHref} target="_blank" rel="noopener" className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] font-medium text-white active:bg-[#9c5430]">
+                  Pedir una propuesta
+                </a>
+                <p className="text-center text-xs text-stone-500">Mándanos el plano o las medidas y te preparamos la propuesta.</p>
+                {alsoPersonal && (
+                  <Link href="/negocio?plan=personal#pagar" className="flex h-12 items-center justify-center rounded-xl border border-stone-900 bg-white font-medium text-stone-900 active:bg-stone-100">
+                    Es mi casa: activar plan Personal
+                  </Link>
+                )}
               </>
             ) : (
               <Link href={pay} className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] font-medium text-white active:bg-[#9c5430]">

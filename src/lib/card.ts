@@ -4,6 +4,7 @@
  *
  * Mensual = suscripción que Mercado Pago cobra sola cada mes; anual = un solo pago con Checkout Pro.
  * Precios confirmados por el usuario (15 de octubre de 2026), en pesos con IVA incluido; los mismos de /planes.
+ * El plan de Casas no tiene precio público (23 de octubre de 2026): se cotiza por proyecto y se arregla fuera de la tarjeta.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { OrgKind, PaymentPeriod, Plan, Tier } from "./domain";
@@ -15,7 +16,6 @@ export type CardPriceInput = { plan: Plan; tier: Tier; period: PaymentPeriod; or
 /** Monto y descripción del cobro, o null si ese plan no se paga con tarjeta (se arregla por SPEI o WhatsApp). */
 export function cardPrice({ plan, tier, period, orgKind, extraVenues = 0 }: CardPriceInput): { amount: number; title: string } | null {
   const extra = Math.max(0, Math.floor(extraVenues));
-  const per = period === "mes" ? "mensual" : "anual";
   if (plan === "personal") return period === "mes" ? { amount: 250, title: "Plantea · Personal · mensual" } : null;
   if (plan === "eventos") {
     const who = orgKind === "venue" ? "Salón" : "Planner";
@@ -25,13 +25,8 @@ export function cardPrice({ plan, tier, period, orgKind, extraVenues = 0 }: Card
     if (period === "anio") return extras ? null : { amount: 7900, title: `Plantea · ${who} Pro · anual` };
     return { amount: 790 + EXTRA_VENUE_PRICE * extras, title: `Plantea · ${who} Pro${plus} · mensual` };
   }
-  if (plan === "casas") {
-    if (tier !== "pro") return null;
-    const dev = orgKind === "developer";
-    const amount = dev ? (period === "mes" ? 790 : 7900) : period === "mes" ? 690 : 6900;
-    return { amount, title: `Plantea · ${dev ? "Desarrolladora" : "Inmobiliaria"} · ${per}` };
-  }
-  return null; // "ambos" (con descuento) y los planes sin pago: por SPEI o WhatsApp.
+  // Casas (desarrolladoras) se cotiza por proyecto desde el 23 de octubre de 2026: sin precio público ni cobro con tarjeta.
+  return null; // "casas", "ambos" y los planes sin pago: por propuesta, SPEI o WhatsApp.
 }
 
 /** Referencia que viaja a Mercado Pago y regresa en cada pago: identifica el intento guardado en Plantea. */

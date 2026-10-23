@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PlanChooser } from "@/components/PlanChooser";
+import { CASAS_QUOTE_MESSAGE } from "@/lib/plans";
 import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { getReferralOrigin, isAdmin, listEvents, listTrashedEvents, listVenues, requireOrg, requireUser } from "@/lib/dal";
@@ -87,7 +88,7 @@ async function EventosContent({ searchParams }: { searchParams: PageProps<"/even
             Ya puedes ver el catálogo de salones y casas y probar las demos. Para crear tus propios proyectos, elige el plan de tu perfil.
           </p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <PlanChooser openAtStart={typeof lugar === "string"} />
+            <PlanChooser openAtStart={typeof lugar === "string"} quoteHref={waLink(CONTACT_WHATSAPP, CASAS_QUOTE_MESSAGE)} />
             <Link
               href="/disenador/salon-demo"
               className="flex h-12 items-center justify-center rounded-xl border border-stone-300 font-medium active:bg-stone-100"

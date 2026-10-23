@@ -22,7 +22,7 @@ const COPY: Record<VenueKind, { title: string; intro: string; empty: string; bas
     intro: "Recorre cada modelo en 3D, cámbiale muebles y pisos, y pide informes a la desarrolladora.",
     empty: "Todavía no hay modelos publicados en esta ciudad.",
     base: "/casas",
-    cta: "¿Vendes casas? Registra tus modelos y los ponemos en 3D.",
+    cta: "¿Vendes o construyes casas? Regístralas y las ponemos en 3D.",
   },
 };
 

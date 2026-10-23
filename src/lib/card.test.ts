@@ -7,8 +7,9 @@ describe("pago con tarjeta", () => {
     expect(cardPrice({ plan: "eventos", tier: "pro", period: "mes", orgKind: "venue" })).toEqual({ amount: 790, title: "Plantea · Salón Pro · mensual" });
     expect(cardPrice({ plan: "eventos", tier: "pro", period: "anio", orgKind: "planner" })?.amount).toBe(7900);
     expect(cardPrice({ plan: "eventos", tier: "ilimitado", period: "mes", orgKind: "planner" })?.amount).toBe(999);
-    expect(cardPrice({ plan: "casas", tier: "pro", period: "mes", orgKind: "agency" })?.amount).toBe(690);
-    expect(cardPrice({ plan: "casas", tier: "pro", period: "anio", orgKind: "developer" })?.amount).toBe(7900);
+    // Casas se cotiza por proyecto: no se paga con tarjeta.
+    expect(cardPrice({ plan: "casas", tier: "pro", period: "mes", orgKind: "agency" })).toBeNull();
+    expect(cardPrice({ plan: "casas", tier: "pro", period: "anio", orgKind: "developer" })).toBeNull();
     expect(cardPrice({ plan: "personal", tier: "pro", period: "mes", orgKind: "planner" })?.amount).toBe(250);
   });
 

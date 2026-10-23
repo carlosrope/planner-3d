@@ -3,8 +3,12 @@
  * Cada plan dice a qué plan del pago corresponde (`pay`) y, para un salón, que primero se registra el lugar.
  */
 // Precios confirmados por el usuario el 15 de octubre de 2026: en pesos, con IVA incluido.
-export type PlanCard = { name: string; price: string; points: string[]; featured?: boolean };
-export type Profile = { id: string; tab: string; title: string; plans: PlanCard[]; details: string[] };
+// 23 de octubre de 2026: Casas es una sola oferta con tres puertas: desarrolladoras por proyecto, inmobiliarias casa por
+// casa (las dos sin precio público) y dueños de casa con el plan Personal.
+/** `quote`: sin precio publicado; se pide una propuesta por WhatsApp (el texto de `price` se muestra en lugar del monto). */
+export type PlanCard = { name: string; price: string; points: string[]; featured?: boolean; quote?: boolean };
+/** `intro`: una frase debajo del título del perfil (Casas: para quién y qué gana). */
+export type Profile = { id: string; tab: string; title: string; intro?: string; plans: PlanCard[]; details: string[] };
 
 export const PROFILES: Profile[] = [
   {
@@ -37,18 +41,47 @@ export const PROFILES: Profile[] = [
   },
   {
     id: "casas",
-    tab: "Vendo casas",
-    title: "Inmobiliarias y desarrolladoras",
+    tab: "Casas",
+    title: "Casas: tu casa en 3D, desde su plano",
+    intro: "Para enseñarla, venderla o amueblarla desde el celular. El que va a comprar o a vivir ahí la ve como va a quedar, no vacía.",
     plans: [
       {
-        name: "Inmobiliaria o asesor",
-        price: "$690",
+        name: "Construyes casas nuevas",
+        price: "Precio por proyecto",
+        quote: true,
         featured: true,
-        points: ["Las casas del catálogo con tu marca", "Amuebladas o sin muebles, pisos con precio y recorrido", "Enlace para tu cliente con tu WhatsApp"],
+        points: [
+          "Tus modelos en 3D desde tu AutoCAD, para que el comprador los recorra antes de que existan",
+          "Amueblados o sin muebles, con pisos con precio y recorrido desde el celular",
+          "Enlace con tu marca para asesores y compradores; en el catálogo con QR y solicitudes a tu WhatsApp",
+          "Códigos para que cada comprador arme su casa sin pagar",
+        ],
       },
-      { name: "Desarrolladora o constructora", price: "$790", points: ["Tu modelo de casa en 3D desde tu CAD", "En el catálogo, con enlaces para tus asesores y compradores"] },
+      {
+        name: "Vendes o rentas casas",
+        price: "Precio por casa",
+        quote: true,
+        points: [
+          "Casa por casa: tu cliente la ve amueblada antes de ir a visitarla",
+          "Con el plano de la casa o sus medidas; en Los Mochis la medimos, fuera se cotiza",
+          "Enlace con tu marca y tu WhatsApp para cada casa, y la casa en el catálogo",
+        ],
+      },
+      {
+        name: "Es tu casa · Personal",
+        price: "$250",
+        points: [
+          "Amuebla tu casa, pruébale muebles y pisos y recórrela desde el celular",
+          "Un proyecto activo a la vez y enlace para compartirlo con tu familia",
+          "Si tu casa es un modelo que ya está en Plantea, empiezas hoy",
+        ],
+      },
     ],
-    details: ["Al año: inmobiliaria $6,900 · desarrolladora $7,900.", "Casa propia desde plano (inmobiliaria): $250 cada una.", "Cada modelo adicional (desarrolladora): $250 al mes."],
+    details: [
+      "Construyes casas nuevas: lo convertimos nosotros desde tu AutoCAD; el precio depende del número de modelos y de plantas.",
+      "Vendes o rentas casas: cada casa necesita su plano o sus medidas; con eso te decimos el precio por casa.",
+      "Es tu casa y la compraste a una desarrolladora que está en Plantea: pídele tu código y no pagas. Si no está, mándanos su plano y te decimos cuánto cuesta ponerla en 3D.",
+    ],
   },
 ];
 
@@ -64,3 +97,6 @@ export const PERSONAL_PROFILE: Profile = {
 
 /** Plan que se paga en Mi negocio según el perfil elegido. */
 export const PAY_PLAN: Record<string, "eventos" | "casas" | "personal"> = { planner: "eventos", salon: "eventos", casas: "casas", personal: "personal" };
+
+/** Mensaje de WhatsApp para pedir la propuesta del plan de Casas. */
+export const CASAS_QUOTE_MESSAGE = "Hola, quiero una propuesta de Plantea para poner casas en 3D.";
