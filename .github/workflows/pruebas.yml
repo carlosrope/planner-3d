@@ -61,7 +61,7 @@ jobs:
           BETTER_AUTH_URL: https://plantea.com.mx
       - name: Rastros de Playwright si algo falla
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-rastros
           path: test-results/
