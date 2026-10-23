@@ -16,7 +16,8 @@ const onCoarse = (cb: () => void) => {
  * src/designer/embed.js). Gira solo hasta que la persona lo toca; se gira arrastrando, se acerca con la rueda (tras
  * un clic) o pellizcando, y cambia entre el plano 2D y el 3D con los botones de arriba. Mientras carga se ve una foto
  * del 3D. En pantallas táctiles el primer toque «activa» el 3D (antes, deslizar el dedo baja la página) y «Listo»
- * lo suelta otra vez.
+ * lo suelta otra vez. Solo se mira: los muebles no se seleccionan ni se mueven; para editar está el botón de abrirlo
+ * en grande.
  */
 export function Hero3D() {
   const frame = useRef<HTMLIFrameElement>(null);

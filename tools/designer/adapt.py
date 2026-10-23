@@ -2301,6 +2301,27 @@ sub(
     "  spin: on => { if (!orbit) return; orbit.autoRotate = !!on; orbit.autoRotateSpeed = .7;\n"
     "    if (on) orbit.addEventListener('start', () => { orbit.autoRotate = false; }, {once: true}); }};",
 )
+# En la portada solo se mira: se gira, se acerca y se recorre el plano, pero no se selecciona, mueve, gira ni borra
+# nada, no se abren puertas y no responden las teclas. Para editar está el diseñador en grande (/disenador/salon-demo).
+sub(
+    "function select(sel){ ui.sel = sel; renderSel(); renderPanel(); }\n",
+    "const viewOnly = () => document.documentElement.classList.contains('embed');   // portada (src/designer/embed.js)\n"
+    "function select(sel){ if (viewOnly()) sel = null; ui.sel = sel; renderSel(); renderPanel(); }\n",
+)
+sub(
+    "  const p = toMM(e), t = e.target;\n  if (ui.tool === 'measure'){\n",
+    "  const p = toMM(e), t = e.target;\n"
+    "  if (viewOnly()){ drag = {kind:'pan', sx:e.clientX, sy:e.clientY, x0:view.x0, y0:view.y0, room:null, moved:false}; svg.setPointerCapture(e.pointerId); return; }\n"
+    "  if (ui.tool === 'measure'){\n",
+)
+sub(
+    "document.addEventListener('keydown', e => {\n  if (e.target.matches('input,select,textarea')) return;\n",
+    "document.addEventListener('keydown', e => {\n  if (viewOnly() || e.target.matches('input,select,textarea')) return;\n",
+)
+sub(
+    "    if (anim || opt.mode !== 'orbit' || !tap) return;\n    const h = pick(e);\n",
+    "    if (anim || opt.mode !== 'orbit' || !tap || viewOnly()) return;\n    const h = pick(e);\n",
+)
 
 # Pantalla completa: solo el ícono (el texto ocupaba media barra); el nombre queda en el título y para lectores de pantalla.
 sub(

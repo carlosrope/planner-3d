@@ -1,7 +1,8 @@
 // Diseñador incrustado en la portada de plantea.com.mx (/disenador/[lugar]?embed=1&vista=3d, lo abre
 // src/components/Hero3D.tsx): solo el lugar, sin barras ni paneles. La página de afuera cambia entre 2D y 3D con
 // postMessage. La rueda del mouse no acerca hasta que la persona hace clic adentro: así, al bajar por la portada,
-// la página sigue bajando en lugar de quedarse acercando el 3D.
+// la página sigue bajando en lugar de quedarse acercando el 3D. Solo se mira: con la clase «embed» el diseñador no
+// deja seleccionar, mover ni borrar nada, ni abrir puertas (tools/designer/adapt.py, «viewOnly»).
 (function () {
   document.documentElement.classList.add('embed');
   const css = document.createElement('style');

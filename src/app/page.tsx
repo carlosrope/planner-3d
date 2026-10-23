@@ -173,7 +173,19 @@ export default function Home() {
             Registrar mi lugar
           </Link>
         </div>
-        <p className="mt-6 text-center text-sm text-stone-500">
+        {/* En el celular, cada enlace en su renglón y con espacio para el dedo; en computadora, una sola línea */}
+        <div className="mt-6 flex flex-col items-center text-center sm:hidden">
+          <Link href="/planes" className="inline-block py-2 font-semibold text-[#b5653a] underline underline-offset-4">
+            Ver planes y precios
+          </Link>
+          <p className="text-sm text-stone-500">
+            ¿Ya tienes cuenta?{" "}
+            <Link href="/entrar" className="inline-block py-2 font-semibold text-stone-900 underline underline-offset-4">
+              Entrar
+            </Link>
+          </p>
+        </div>
+        <p className="mt-6 text-center text-sm text-stone-500 max-sm:hidden">
           Planes y precios en{" "}
           <Link href="/planes" className="underline">
             plantea.com.mx/planes

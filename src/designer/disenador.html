@@ -1205,7 +1205,8 @@ function bindFurnPanel(f){
 }
 
 /* ======================= 操作 ======================= */
-function select(sel){ ui.sel = sel; renderSel(); renderPanel(); }
+const viewOnly = () => document.documentElement.classList.contains('embed');   // portada (src/designer/embed.js)
+function select(sel){ if (viewOnly()) sel = null; ui.sel = sel; renderSel(); renderPanel(); }
 function rotateSel(d){ if (ui.sel?.kind==='furn') mutate(() => { const f = getF(ui.sel.id); f.rot = norm(f.rot + d); }); }
 function deleteSel(){ if (ui.sel?.kind==='furn'){ const id = ui.sel.id; ui.sel = null; mutate(() => state.furniture = state.furniture.filter(f => f.id !== id)); } }
 function duplicateSel(){
@@ -1356,6 +1357,7 @@ svg.addEventListener('pointerdown', e => {
   }
   if (pinch) return;
   const p = toMM(e), t = e.target;
+  if (viewOnly()){ drag = {kind:'pan', sx:e.clientX, sy:e.clientY, x0:view.x0, y0:view.y0, room:null, moved:false}; svg.setPointerCapture(e.pointerId); return; }
   if (ui.tool === 'measure'){
     const q = snapPoint(p, e.shiftKey);
     if (!ui.mA){ ui.mA = q; ui.mCur = q; drag = {kind:'measure', sx:e.clientX, sy:e.clientY, moved:false}; svg.setPointerCapture(e.pointerId); }
@@ -1444,7 +1446,7 @@ svg.addEventListener('contextmenu', e => { if (ui.tool==='measure'){ e.preventDe
 
 /* ======================= 键盘 ======================= */
 document.addEventListener('keydown', e => {
-  if (e.target.matches('input,select,textarea')) return;
+  if (viewOnly() || e.target.matches('input,select,textarea')) return;
   if (window.View3D?.walking()) return;
   const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
   if (mod && k === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
@@ -1855,7 +1857,7 @@ function init(){
       if (tap){ const h = pick(e), d = h?.door || h?.slide; if (d && h.dist < (h.slide ? 6 : 3.5)) d.open = !d.open; else walkTap(e); }   // 漫游时点门开关
       return;
     }
-    if (anim || opt.mode !== 'orbit' || !tap) return;
+    if (anim || opt.mode !== 'orbit' || !tap || viewOnly()) return;
     const h = pick(e);
     if (h?.door || h?.slide){ const d = h.door || h.slide; d.open = !d.open; }
     else if (h?.fid) window.select({kind:'furn', id:h.fid});
