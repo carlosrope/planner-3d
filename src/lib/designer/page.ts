@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { CONTACT_WHATSAPP } from "../brand";
 import { SHARE_IMAGE } from "../site";
+import type { Facade } from "./facade";
 import { withoutVendors, type DesignerPlan, type PropertyDetails } from "./types";
 import { EVENT_KIND_LABELS, SALON_EVENT_KINDS } from "../domain";
 
@@ -22,14 +23,24 @@ const cache = new Map<string, string>();
 async function file(rel: string) {
   // En desarrollo se relee para ver los cambios de adapt.py sin reiniciar.
   if (process.env.NODE_ENV === "production" && cache.has(rel)) return cache.get(rel)!;
-  const text = await readFile(path.join(DIR, rel), "utf8");
+  // En producción, la copia minificada que deja «npm run build» (tools/designer/minificar.mjs), si existe.
+  const min = process.env.NODE_ENV === "production" ? await readFile(path.join(DIR, ".min", rel), "utf8").catch(() => null) : null;
+  const text = min ?? (await readFile(path.join(DIR, rel), "utf8"));
   cache.set(rel, text);
   return text;
 }
 
+/** Fachada de los lugares de demostración, según su foto de «por fuera» (los JSON los generan scripts: no se editan). */
+const DEMO_FACADES: Record<string, Facade> = {
+  chardonnay: { color: "#f2eee6", material: "aplanado", plinth: "#e9e5de", trees: "mixto", around: "casas" },
+  "salon-demo": { color: "#eadfcd", material: "aplanado", plinth: "#e9e5de", trees: "palmeras", around: "ciudad", parking: "derecha" },
+};
+
 export async function demoPlan(slug: string): Promise<DesignerPlan | null> {
   const rel = DEMO_PLANS[slug];
-  return rel ? (JSON.parse(await file(rel)) as DesignerPlan) : null;
+  if (!rel) return null;
+  const plan = JSON.parse(await file(rel)) as DesignerPlan;
+  return DEMO_FACADES[slug] && !plan.facade ? { ...plan, facade: DEMO_FACADES[slug] } : plan;
 }
 
 /** Lo que necesita src/designer/host.js para guardar y compartir. */

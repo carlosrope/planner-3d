@@ -2,6 +2,8 @@
 // rotación en grados (sentido horario). Lo generan tools/cad-import/to_designer.py (casas)
 // y tools/designer/salon_demo.py (salón de demostración).
 
+import type { Facade } from "./facade";
+
 export type Rect = [number, number, number, number];
 
 /** "b" de carga · "n" se puede quitar · "e" barda · "low" muro bajo. */
@@ -52,6 +54,8 @@ export type DesignerPlan = {
   levels: DesignerLevel[];
   /** Invitados de la demostración (en un evento vienen del evento). */
   guests?: number;
+  /** Fachada y entorno del 3D, según la foto de «por fuera» (facade.ts; lo captura la administración). */
+  facade?: Facade;
   /** Solo salones: zona libre para mesas y lugares de los fijos (starter.ts). */
   setup?: {
     tables: Rect;

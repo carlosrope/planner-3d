@@ -23,14 +23,14 @@ const QUIEN = [
     p: "Tu salón en el catálogo con su enlace y QR; tus clientes arman su fiesta ahí con un código tuyo.",
     href: "/para-salones",
     cta: "Así funciona para tu salón",
-    img: [{ src: "/portada/quien-salones.jpg", alt: "Dueño de un salón de eventos con una tablet en su salón montado para una boda" }],
+    img: [{ src: "/portada/quien-salones.webp", alt: "Dueño de un salón de eventos con una tablet en su salón montado para una boda" }],
   },
   {
     t: "Planners y organizadores",
     p: "Todos tus eventos en cualquier salón: distribuciones A, B y C, hojas para imprimir y el enlace con tu marca.",
     href: "/planes#planner",
     cta: "Ver planes para planners",
-    img: [{ src: "/portada/quien-planners.jpg", alt: "Organizadora de eventos revisando un montaje en su tablet junto a muestras de manteles" }],
+    img: [{ src: "/portada/quien-planners.webp", alt: "Organizadora de eventos revisando un montaje en su tablet junto a muestras de manteles" }],
   },
   {
     t: "Novios, quinceañeras y familias",
@@ -38,9 +38,9 @@ const QUIEN = [
     href: "/salones",
     cta: "Buscar mi salón",
     img: [
-      { src: "/portada/quien-novios.jpg", alt: "Una pareja de novios viendo en el celular cómo quedará su boda" },
-      { src: "/portada/quien-quinceanera.jpg", alt: "Una quinceañera y su mamá planeando su fiesta en una tablet" },
-      { src: "/portada/quien-familia.jpg", alt: "Una familia viendo en el celular cómo quedará su fiesta" },
+      { src: "/portada/quien-novios.webp", alt: "Una pareja de novios viendo en el celular cómo quedará su boda" },
+      { src: "/portada/quien-quinceanera.webp", alt: "Una quinceañera y su mamá planeando su fiesta en una tablet" },
+      { src: "/portada/quien-familia.webp", alt: "Una familia viendo en el celular cómo quedará su fiesta" },
     ],
   },
   {
@@ -48,7 +48,7 @@ const QUIEN = [
     p: "Cada modelo de casa amueblado, con pisos y recorrido guiado, para mostrarlo con tu marca.",
     href: "/casas",
     cta: "Ver modelos",
-    img: [{ src: "/portada/quien-inmobiliarias.jpg", alt: "Asesora inmobiliaria enseñando un recorrido en su tablet a una pareja frente a una casa modelo" }],
+    img: [{ src: "/portada/quien-inmobiliarias.webp", alt: "Asesora inmobiliaria enseñando un recorrido en su tablet a una pareja frente a una casa modelo" }],
   },
 ];
 

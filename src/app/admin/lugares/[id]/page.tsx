@@ -11,8 +11,21 @@ import { formatWhatsapp, waLink } from "@/lib/whatsapp";
 import { AdminNav } from "../../AdminNav";
 import { PhotoUpload } from "./PhotoUpload";
 import { SaveButton } from "../../SaveButton";
-import { addFiles, deleteFile, setFileView, trashVenue, updateVenueCapacities, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
+import { addFiles, deleteFile, setFileView, trashVenue, updateVenueCapacities, updateVenueData, updateVenueFacade, updateVenueState, uploadVenuePlan } from "../../actions";
 import { CAPACITY_SETUPS, shownCapacities } from "@/lib/designer/capacity";
+import {
+  FACADE_AROUND,
+  FACADE_AROUND_LABELS,
+  FACADE_COLORS,
+  FACADE_MATERIALS,
+  FACADE_MATERIAL_LABELS,
+  FACADE_PARKING,
+  FACADE_PARKING_LABELS,
+  FACADE_STREETS,
+  FACADE_STREET_LABELS,
+  FACADE_TREES,
+  FACADE_TREE_LABELS,
+} from "@/lib/designer/facade";
 import { CopyField } from "@/app/lugares/[slug]/panel/CopyField";
 
 export const metadata: Metadata = { title: "Administración · Lugar" };
@@ -42,6 +55,8 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
   const planos = v.files.filter((f) => f.kind === "plano");
   const fotos = v.files.filter((f) => f.kind === "foto");
   const renders = v.files.filter((f) => f.kind === "render");
+  const fuera = fotos.find((f) => f.side === "fuera");
+  const facade = v.facade;
   const aviso = reviewUrl
     ? `Hola${v.contactName ? ` ${v.contactName}` : ""}, ya está ${v.name} en 3D. Revísalo y confírmalo aquí: ${reviewUrl}`
     : "";
@@ -310,6 +325,127 @@ async function Lugar({ params }: { params: PageProps<"/admin/lugares/[id]">["par
           })()}
         </section>
       )}
+      <section className="mt-4 rounded-2xl border border-stone-200 bg-white p-4">
+        <h2 className="font-semibold">{v.kind === "salon" ? 6 : 5}. Fachada y entorno del 3D</h2>
+        <p className="mt-1 text-sm text-stone-500">
+          Mírala en la foto «Por fuera» y captúrala aquí: el 3D pinta los muros de afuera y pone la calle, los vecinos, los árboles y, en los
+          salones, el estacionamiento y el letrero del toldo. Lo que se quede en «Automático» usa lo de siempre.
+          {v.hasPlan ? "" : " Primero carga el plano (sección 2)."}
+        </p>
+        {fuera && (
+          /* eslint-disable-next-line @next/next/no-img-element -- foto guardada en la base */
+          <img src={`/admin/archivos/${fuera.id}`} alt="Foto por fuera del lugar" className="mt-3 max-h-56 rounded-xl border border-stone-200" />
+        )}
+        <form action={updateVenueFacade} className="mt-3 grid gap-3 sm:grid-cols-2">
+          <input type="hidden" name="venueId" value={v.id} />
+          <fieldset className="sm:col-span-2">
+            <legend className="text-sm text-stone-600">Color de los muros por fuera</legend>
+            <div className="mt-1.5 flex flex-wrap gap-2 text-sm">
+              <label className="flex h-9 items-center gap-1.5 rounded-lg border border-stone-300 px-2.5">
+                <input type="radio" name="color" value="" defaultChecked={!facade?.color} /> Automático
+              </label>
+              {FACADE_COLORS.map((c) => (
+                <label key={c.hex} className="flex h-9 items-center gap-1.5 rounded-lg border border-stone-300 px-2.5">
+                  <input type="radio" name="color" value={c.hex} defaultChecked={facade?.color === c.hex} />
+                  <span className="h-5 w-5 rounded-full border border-stone-300" style={{ background: c.hex }} />
+                  {c.name}
+                </label>
+              ))}
+              <label className="flex h-9 items-center gap-1.5 rounded-lg border border-stone-300 px-2.5">
+                <input type="radio" name="color" value="otro" defaultChecked={!!facade?.color && !FACADE_COLORS.some((c) => c.hex === facade.color)} />
+                Otro
+                <input type="color" name="colorOtro" defaultValue={facade?.color ?? "#e6e2db"} aria-label="Otro color" className="h-6 w-8" />
+              </label>
+            </div>
+          </fieldset>
+          <label className="space-y-1">
+            <span className="text-sm text-stone-600">Acabado</span>
+            <select name="material" defaultValue={facade?.material ?? ""} className={field}>
+              <option value="">Automático (aplanado)</option>
+              {FACADE_MATERIALS.map((m) => (
+                <option key={m} value={m}>
+                  {FACADE_MATERIAL_LABELS[m]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="text-sm text-stone-600">Zoclo (la franja de abajo)</span>
+            <select name="plinth" defaultValue={facade?.plinth ?? ""} className={field}>
+              <option value="">Automático (gris)</option>
+              <option value="#6f6a63">Gris oscuro</option>
+              <option value="#6b4f3a">Café</option>
+              <option value="#c9805a">Terracota</option>
+              <option value="#e9e5de">Claro (casi sin zoclo)</option>
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="text-sm text-stone-600">Lado de la calle</span>
+            <select name="street" defaultValue={facade?.street ?? "auto"} className={field}>
+              {FACADE_STREETS.map((st) => (
+                <option key={st} value={st}>
+                  {FACADE_STREET_LABELS[st]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="text-sm text-stone-600">Alrededor</span>
+            <select name="around" defaultValue={facade?.around ?? ""} className={field}>
+              <option value="">Automático</option>
+              {FACADE_AROUND.map((a) => (
+                <option key={a} value={a}>
+                  {FACADE_AROUND_LABELS[a]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="text-sm text-stone-600">Árboles</span>
+            <select name="trees" defaultValue={facade?.trees ?? ""} className={field}>
+              <option value="">Automático</option>
+              {FACADE_TREES.map((t) => (
+                <option key={t} value={t}>
+                  {FACADE_TREE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+          </label>
+          {v.kind === "salon" && (
+            <>
+              <label className="space-y-1">
+                <span className="text-sm text-stone-600">Estacionamiento</span>
+                <select name="parking" defaultValue={facade?.parking ?? ""} className={field}>
+                  <option value="">Automático (a la derecha)</option>
+                  {FACADE_PARKING.map((pk) => (
+                    <option key={pk} value={pk}>
+                      {FACADE_PARKING_LABELS[pk]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm text-stone-600">Letrero del toldo</span>
+                <input name="sign" defaultValue={facade?.sign ?? ""} placeholder={v.name} maxLength={40} className={field} />
+                <span className="block text-xs text-stone-500">Vacío = el nombre del salón; «-» = sin letrero.</span>
+              </label>
+            </>
+          )}
+          <SaveButton className={`${btn} sm:col-span-2`}>Guardar fachada</SaveButton>
+        </form>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+          <Link href={`/lugares/${slug}/3d`} target="_blank" className="underline">
+            Ver el 3D
+          </Link>
+          {facade && (
+            <form action={updateVenueFacade}>
+              <input type="hidden" name="venueId" value={v.id} />
+              <input type="hidden" name="clear" value="1" />
+              <SaveButton className="h-9 rounded-lg border border-stone-300 px-3 text-stone-700">Quitar la fachada</SaveButton>
+            </form>
+          )}
+        </div>
+      </section>
       {!v.deletedAt && (
         <section className="mt-8 rounded-2xl border border-red-200 p-4">
           <h2 className="text-lg font-semibold text-red-800">Mandar a la papelera</h2>

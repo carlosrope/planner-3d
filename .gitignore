@@ -58,3 +58,6 @@ respaldos/
 /test-results/
 /playwright-report/
 /.next-build/
+
+# copia minificada del diseñador (la hace tools/designer/minificar.mjs en «npm run build»)
+/src/designer/.min/

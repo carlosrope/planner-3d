@@ -21,6 +21,9 @@ test("el salón de la portada solo se mira: no se mueve ni se borra nada", async
 
   // 2D: arrastrar un mueble mueve la vista, no el mueble; doble clic no lo gira
   await page.evaluate(() => (document.querySelector('[data-view="2d"]') as HTMLElement).click());
+  // El plano se acomoda al terminar el cambio a 2D: se mide después, para que ese ajuste no borre el arrastre
+  await page.waitForFunction(() => !document.getElementById("stage")?.classList.contains("is3d"));
+  await page.waitForTimeout(800);
   const piece = page.locator("svg [data-fid]").first();
   await expect(piece).toBeVisible();
   const p = (await piece.boundingBox())!;

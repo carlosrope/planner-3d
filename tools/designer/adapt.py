@@ -2643,6 +2643,148 @@ sub(
 """,
 )
 
+# Árboles y coches mejor modelados (sin archivos: geometría de three.js). Árboles: de sombra (copa de varias masas) y
+# palmeras (tronco alto y hojas que caen). Coches: sedán y pickup con carrocería, cabina de cristal, techo, postes,
+# ruedas con rin y calaveras. Cada parte se dibuja junta para todas sus copias (instancias): 20 coches cuestan ~10
+# dibujos y 90 árboles, 4.
+sub(
+    """  const N = 90, trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(.12, .17, 2.4, 6), new THREE.MeshStandardMaterial({color: 0x6d5844, roughness: 1}), N);
+  const crown = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.7, 1), new THREE.MeshStandardMaterial({color: 0xffffff, roughness: .95, flatShading: true}), N);
+  const o = new THREE.Object3D(), col = new THREE.Color(); let n = 0;
+  const tree = (u, v, s) => { if (n >= N) return;
+    o.position.set(u, 1.2*s, v); o.scale.setScalar(s); o.rotation.set(0, rnd()*6, 0); o.updateMatrix(); trunk.setMatrixAt(n, o.matrix);
+    o.position.set(u, 3.5*s, v); o.scale.set(s*(.9 + rnd()*.3), s*(.8 + rnd()*.4), s*(.9 + rnd()*.3)); o.updateMatrix(); crown.setMatrixAt(n, o.matrix);
+    crown.setColorAt(n, col.setHSL(.24 + rnd()*.07, .32 + rnd()*.16, .28 + rnd()*.12)); n++; };
+  for (let u = -L + 4; u < L; u += 8 + rnd()*3){
+    if (Math.abs(u - eu) > 5 && !(PARK && u > pu + 4 && u < pu + PARK - 4)) tree(u, front + .6, .85 + rnd()*.4);
+    if (rnd() < .7) tree(u + 3, front + 2*WALK + ROAD - .6, .85 + rnd()*.4);
+  }
+  for (let k = 0; k < 14; k++) tree((rnd() < .5 ? -1 : 1)*(hu + 6 + rnd()*40), -hv - 2 - rnd()*3, .8 + rnd()*.5);
+  trunk.count = crown.count = n; trunk.castShadow = crown.castShadow = true; if (crown.instanceColor) crown.instanceColor.needsUpdate = true;
+  g.add(trunk, crown);
+""",
+    """  const trees = [];   // [u, v, escala, palmera]
+  const tree = (u, v, s, palm = false) => trees.push([u, v, s, palm]);
+  for (let u = -L + 4; u < L; u += 8 + rnd()*3){
+    if (Math.abs(u - eu) > 5 && !(PARK && u > pu + 4 && u < pu + PARK - 4)) tree(u, front + .6, .85 + rnd()*.4, !casa || rnd() < .3);
+    if (rnd() < .7) tree(u + 3, front + 2*WALK + ROAD - .6, .85 + rnd()*.4, rnd() < .25);
+  }
+  for (let k = 0; k < 14; k++) tree((rnd() < .5 ? -1 : 1)*(hu + 6 + rnd()*40), -hv - 2 - rnd()*3, .8 + rnd()*.5, rnd() < .3);
+  if (PARK) for (let v = -hv + 3; v < front - 4; v += 9) tree(pu + PARK + 1.2, v, .9 + rnd()*.25, true);
+  buildTrees(g, trees, rnd);
+""",
+)
+sub(
+    """  const CARS = [0xb5653a, 0x2f4858, 0xd9d4ca, 0x3d3a34, 0x8a9ba8, 0x6f2f2a, 0xe8e6e1];
+  const glass = new THREE.MeshStandardMaterial({color: 0x2b3238, roughness: .2, metalness: .3}), tyre = new THREE.MeshStandardMaterial({color: 0x222222, roughness: .9});
+  for (let k = 0; k < 7; k++){
+    let u = -L*.5 + rnd()*L; if (Math.abs(u - eu) < 6) u += 14;
+    const car = new THREE.Group(), far = rnd() < .5;
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.3, .72, 1.8), new THREE.MeshStandardMaterial({color: CARS[k % CARS.length], roughness: .45, metalness: .2})); body.position.y = .62;
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.3, .58, 1.62), glass); cab.position.set(-.2, 1.27, 0);
+    const wh = new THREE.Mesh(new THREE.BoxGeometry(3.4, .5, 1.7), tyre); wh.position.y = .25;
+    car.add(body, cab, wh); car.traverse(q => { q.castShadow = true; });
+    car.position.set(u, 0, front + WALK + (far ? ROAD - 1.4 : 1.4)); if (far) car.rotation.y = Math.PI; g.add(car);
+  }
+  const carAt = (u, v, rot, color) => { const car = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.3, .72, 1.8), new THREE.MeshStandardMaterial({color, roughness: .45, metalness: .2})); body.position.y = .62;
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.3, .58, 1.62), glass); cab.position.set(-.2, 1.27, 0);
+    const wh = new THREE.Mesh(new THREE.BoxGeometry(3.4, .5, 1.7), tyre); wh.position.y = .25;
+    car.add(body, cab, wh); car.traverse(q => { q.castShadow = true; }); car.position.set(u, 0, v); car.rotation.y = rot; g.add(car); };
+""",
+    """  const CARS = [0xb5653a, 0x2f4858, 0xd9d4ca, 0x3d3a34, 0x8a9ba8, 0x6f2f2a, 0xe8e6e1, 0x1f3a5f, 0xc9c6bf];
+  const fleet = [];   // [u, v, giro, color, pickup]
+  const carAt = (u, v, rot, color) => fleet.push([u, v, rot, color, rnd() < .3]);
+  for (let k = 0; k < 7; k++){
+    let u = -L*.5 + rnd()*L; if (Math.abs(u - eu) < 6) u += 14;
+    const far = rnd() < .5; carAt(u, front + WALK + (far ? ROAD - 1.4 : 1.4), far ? Math.PI : 0, CARS[k % CARS.length]);
+  }
+""",
+)
+sub(
+    "  // Toldo en la entrada del salón, con su nombre en el frente (de noche se ilumina)\n",
+    "  buildCars(g, fleet);\n  // Toldo en la entrada del salón, con su nombre en el frente (de noche se ilumina)\n",
+)
+sub(
+    "function buildEnv(){\n",
+    r"""// Árboles: de sombra (tronco y copa de cinco masas) y palmeras (tronco alto y nueve hojas que caen)
+function buildTrees(g, list, rnd){
+  if (!list.length) return;
+  const bark = new THREE.MeshStandardMaterial({color: 0x6d5844, roughness: 1}), leaf = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: .95, flatShading: true});
+  const blob = (r, x, y, z) => new THREE.IcosahedronGeometry(r, 1).translate(x, y, z);
+  const canopy = mergeGeometries([blob(1.45, 0, 0, 0), blob(1.1, .95, -.25, .35), blob(1.15, -.85, -.15, -.4), blob(1, .2, .75, -.5), blob(.95, -.3, .55, .85)]);
+  const shadeTrunk = new THREE.CylinderGeometry(.11, .2, 2.7, 7).translate(0, 1.35, 0);
+  const fronds = mergeGeometries(Array.from({length: 9}, (_, i) => new THREE.BoxGeometry(2.5, .03, .4).translate(1.25, 0, 0)
+    .rotateZ(-.45 - (i % 3)*.12).rotateY(i*Math.PI*2/9 + (i % 2)*.2)));
+  const palmTrunk = new THREE.CylinderGeometry(.13, .2, 6.2, 7, 3).translate(0, 3.1, 0);
+  const make = (geo, mat, rows, place) => { if (!rows.length) return;
+    const m = new THREE.InstancedMesh(geo, mat, rows.length), o = new THREE.Object3D(), c = new THREE.Color();
+    rows.forEach((t, i) => { place(o, t); o.updateMatrix(); m.setMatrixAt(i, o.matrix); if (mat === leaf) m.setColorAt(i, c.setHSL(.23 + rnd()*.08, .3 + rnd()*.18, .26 + rnd()*.12)); });
+    m.castShadow = true; m.receiveShadow = true; g.add(m); };
+  const shade = list.filter(t => !t[3]), palms = list.filter(t => t[3]);
+  make(shadeTrunk, bark, shade, (o, [u, v, s]) => { o.position.set(u, 0, v); o.rotation.set(0, rnd()*6, 0); o.scale.setScalar(s); });
+  make(canopy, leaf, shade, (o, [u, v, s]) => { o.position.set(u, 3.6*s, v); o.rotation.set(0, rnd()*6, 0); o.scale.set(s*(.9 + rnd()*.25), s*(.85 + rnd()*.3), s*(.9 + rnd()*.25)); });
+  make(palmTrunk, bark, palms, (o, [u, v, s]) => { o.position.set(u, 0, v); o.rotation.set((rnd() - .5)*.08, 0, (rnd() - .5)*.08); o.scale.set(s, s*(.85 + rnd()*.35), s); });
+  make(fronds, leaf, palms, (o, [u, v, s]) => { o.position.set(u, 6.2*s*(.95 + rnd()*.1), v); o.rotation.set(0, rnd()*6, 0); o.scale.setScalar(s*(.9 + rnd()*.2)); });
+}
+// Coches: sedán y pickup. Carrocería baja (silueta extruida), cabina de cristal, techo y postes, ruedas con rin y
+// calaveras (blancas adelante, rojas atrás). Todas las copias de cada parte van en una sola instancia.
+function buildCars(g, fleet){
+  if (!fleet.length) return;
+  const shape = pts => { const s = new THREE.Shape(); pts.forEach(([x, y], i) => s[i ? 'lineTo' : 'moveTo'](x, y)); return s; };
+  const ext = (pts, w) => new THREE.ExtrudeGeometry(shape(pts), {depth: w, bevelEnabled: false}).translate(0, 0, -w/2);
+  const tint = (geo, hex) => { const c = new THREE.Color(hex), n = geo.attributes.position.count, a = new Float32Array(n*3);
+    for (let i = 0; i < n; i++) c.toArray(a, i*3); geo.setAttribute('color', new THREE.BufferAttribute(a, 3)); return geo; };
+  const MODELS = [
+    {len: 4.4, w: 1.76, r: .33, ax: 1.35, belt: .86, lower: [[-2.2, .3], [-2.2, .78], [-1.6, .86], [1.25, .87], [2.15, .77], [2.2, .48], [2.12, .3]],
+      cab: [[-1.56, .85], [-1.05, 1.24], [.55, 1.26], [1.2, .86]], roof: [-1.07, .57, 1.24], posts: [-1.3, -.25, .9]},
+    {len: 5, w: 1.86, r: .38, ax: 1.55, belt: 1.05, lower: [[-2.5, .4], [-2.5, 1.0], [-.62, 1.0], [1.15, 1.06], [2.45, .98], [2.5, .55], [2.4, .4]],
+      cab: [[-.6, 1.0], [-.57, 1.52], [.66, 1.54], [1.12, 1.06]], roof: [-.6, .68, 1.52], posts: [-.58, .05, .92]},
+  ];
+  const paint = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: .35, metalness: .4, envMap: envTex, envMapIntensity: .7});
+  const glassM = new THREE.MeshStandardMaterial({color: 0x24303a, roughness: .1, metalness: .6, envMap: envTex, envMapIntensity: .9});
+  const tyreM = new THREE.MeshStandardMaterial({color: 0x1c1c1e, roughness: .9}), rimM = new THREE.MeshStandardMaterial({color: 0xb8bbbe, roughness: .3, metalness: .75});
+  const lightM = new THREE.MeshStandardMaterial({vertexColors: true, roughness: .3});
+  MODELS.forEach((M, k) => {
+    const rows = fleet.filter(f => !!f[4] === (k === 1)); if (!rows.length) return;
+    const W = M.w;
+    // La carrocería extruida no tiene índice: las cajas del techo y los postes se pasan igual para poder unirlas
+    const posts = M.posts.map(x => new THREE.BoxGeometry(.1, M.roof[2] - M.belt, W - .12).translate(x, (M.roof[2] + M.belt)/2, 0).toNonIndexed());
+    const body = mergeGeometries([ext(M.lower, W), new THREE.BoxGeometry(M.roof[1] - M.roof[0] + .04, .07, W - .18).translate((M.roof[0] + M.roof[1])/2, M.roof[2] + .035, 0).toNonIndexed(), ...posts]);
+    const cab = ext(M.cab, W - .16);
+    const wheel = (x, z) => new THREE.CylinderGeometry(M.r, M.r, .24, 16).rotateX(Math.PI/2).translate(x, M.r, z);
+    const rim = (x, z) => new THREE.CylinderGeometry(M.r*.55, M.r*.55, .26, 12).rotateX(Math.PI/2).translate(x, M.r, z);
+    const at = [[-M.ax, W/2 - .14], [-M.ax, -W/2 + .14], [M.ax, W/2 - .14], [M.ax, -W/2 + .14]];
+    const tyres = mergeGeometries(at.map(([x, z]) => wheel(x, z))), rims = mergeGeometries(at.map(([x, z]) => rim(x, z)));
+    const L2 = M.len/2, ly = M.belt - .16;
+    const lights = mergeGeometries([[L2, W/2 - .28, 0xf4f1e8], [L2, -W/2 + .28, 0xf4f1e8], [-L2, W/2 - .25, 0xb3261e], [-L2, -W/2 + .25, 0xb3261e]]
+      .map(([x, z, hex]) => tint(new THREE.BoxGeometry(.06, .12, .32).translate(x + Math.sign(x)*.01, ly, z), hex)));
+    const parts = [[body, paint], [cab, glassM], [tyres, tyreM], [rims, rimM], [lights, lightM]];
+    parts.forEach(([geo, mat]) => {
+      const m = new THREE.InstancedMesh(geo, mat, rows.length), o = new THREE.Object3D(), c = new THREE.Color();
+      rows.forEach(([u, v, rot, color], i) => { o.position.set(u, 0, v); o.rotation.set(0, rot, 0); o.updateMatrix(); m.setMatrixAt(i, o.matrix); if (mat === paint) m.setColorAt(i, c.set(color)); });
+      m.castShadow = mat !== lightM; m.receiveShadow = true; g.add(m);
+    });
+  });
+}
+function buildEnv(){
+""",
+)
+
+# Carga más ligera: three.js minificado (≈40 % menos) y pedido desde el <head>; en celulares y tabletas el 3D se
+# dibuja a 1.5× en lugar de 2×, las sombras son más chicas y la calle más corta (menos vecinos y árboles).
+sub(
+    '  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",\n',
+    '  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",\n',
+)
+sub(
+    "}}\n</script>\n</head>",
+    '}}\n</script>\n<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js" crossorigin>\n</head>',
+)
+sub("renderer.setPixelRatio(Math.min(devicePixelRatio, 2));", "renderer.setPixelRatio(Math.min(devicePixelRatio, COARSE ? 1.5 : 2));")
+sub("sun.shadow.mapSize.setScalar(COARSE ? 2048 : 4096);", "sun.shadow.mapSize.setScalar(COARSE ? 1024 : 4096);")
+sub("  const L = 140, WALK = 2.4,", "  const L = COARSE ? 90 : 140, WALK = 2.4,")
+
 # Fachada: las caras de muro que dan afuera (no caen dentro de un cuarto techado) llevan aplanado con textura y un
 # zoclo abajo, en lugar del mismo hueso de adentro. El color sale de CASA.facade.color si el lugar lo trae.
 sub(
@@ -2703,6 +2845,134 @@ function envOcclude(){
   envRoofFade();
   if (!envBlocks.length) return;
 """,
+)
+
+# ---------------------------------------------------------------------------
+# Fachada real de cada lugar (CASA.facade, src/lib/designer/facade.ts; la captura la administración mirando la foto
+# de «por fuera»): color y acabado de los muros de afuera (aplanado liso o rugoso, piedra, ladrillo o concreto
+# aparente, con la textura medida en metros para que no se estire), color del zoclo, lado de la calle, qué hay
+# alrededor (ciudad, casas o campo), estacionamiento a la derecha, a la izquierda o ninguno, árboles y letrero.
+
+sub(
+    """const facadeMat = () => facadeM ||= new THREE.MeshStandardMaterial({color: CASA.facade?.color || (CASA.kind === 'casa' ? '#efe8dc' : '#e6e2db'),
+  map: (() => { const t = canvasTex(256, 256, (g, w, h) => speckle(g, w, h, '#f7f6f3', .07, 4200, envRand(CASA.id + '-fachada'), 2)); t.repeat.set(1.5, 1.5); return t; })(), roughness: .95});
+const plinthMat = () => plinthM ||= new THREE.MeshStandardMaterial({color: 0x8d877e, roughness: .9});
+""",
+    r"""const facadeMat = () => facadeM ||= new THREE.MeshStandardMaterial({color: CASA.facade?.color || (CASA.kind === 'casa' ? '#efe8dc' : '#e6e2db'),
+  map: facadeTexture(CASA.facade?.material), roughness: CASA.facade?.material === 'concreto' ? .8 : .95});
+const plinthMat = () => plinthM ||= new THREE.MeshStandardMaterial({color: CASA.facade?.plinth || 0x8d877e, roughness: .9});
+// Textura de la fachada en gris (el color la tiñe) y su tamaño real en metros: [ancho, alto] de un mosaico
+function facadeTexture(material){
+  const rnd = envRand(CASA.id + '-fachada'), S = 512;
+  const brick = (c, w, h) => { c.fillStyle = '#c9c7c3'; c.fillRect(0, 0, w, h); const rows = 13, bw = w/4, bh = h/rows;
+    for (let r = 0; r < rows; r++) for (let k = -1; k < 5; k++){ const x = k*bw + (r % 2 ? bw/2 : 0), t = 228 + Math.floor(rnd()*26);
+      c.fillStyle = `rgb(${t},${t - 4},${t - 8})`; c.fillRect(x + 3, r*bh + 3, bw - 6, bh - 6); } };
+  const stone = (c, w, h) => { c.fillStyle = '#b9b6b0'; c.fillRect(0, 0, w, h); let y = 0;
+    while (y < h){ const rh = 34 + rnd()*46; let x = -rnd()*60; while (x < w){ const rw = 50 + rnd()*90, t = 205 + Math.floor(rnd()*45);
+      c.fillStyle = `rgb(${t},${t - 3},${t - 7})`; c.beginPath(); if (c.roundRect) c.roundRect(x + 4, y + 4, rw - 8, rh - 8, 10); else c.rect(x + 4, y + 4, rw - 8, rh - 8); c.fill(); x += rw; } y += rh; } };
+  const concrete = (c, w, h) => { speckle(c, w, h, '#ebeae7', .05, 6000, rnd, 2); c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = 3;
+    c.strokeRect(1.5, 1.5, w - 3, h - 3); c.fillStyle = 'rgba(0,0,0,.28)';
+    [[.25, .25], [.75, .25], [.25, .75], [.75, .75]].forEach(([a, b]) => { c.beginPath(); c.arc(a*w, b*h, 5, 0, 7); c.fill(); }); };
+  const [draw, size] = {
+    rugoso: [(c, w, h) => speckle(c, w, h, '#f4f3f0', .16, 9000, rnd, 3), [1.5, 1.5]],
+    piedra: [stone, [2, 2]],
+    ladrillo: [brick, [1, 1]],
+    concreto: [concrete, [2.4, 1.2]],
+  }[material] || [(c, w, h) => speckle(c, w, h, '#f7f6f3', .06, 4200, rnd, 2), [2, 2]];
+  const t = canvasTex(S, S, draw); t.repeat.set(1/size[0], 1/size[1]); return t;
+}
+// UV en metros (y la altura real del pedazo de muro): el ladrillo o la piedra quedan del mismo tamaño en todos los muros
+function worldUV(geo, w, h, d, yb){
+  const uv = geo.attributes.uv;
+  for (let f = 0; f < 6; f++){ const [su, sv, v0] = f < 2 ? [d, h, yb] : f < 4 ? [w, d, 0] : [w, h, yb];
+    for (let i = f*4; i < f*4 + 4; i++) uv.setXY(i, uv.getX(i)*su, v0 + uv.getY(i)*sv); }
+  uv.needsUpdate = true;
+}
+""",
+)
+sub(
+    "  o.position.set(wx((x0+x1)/2), (yb+yt)/2, wz((y0+y1)/2)); o.castShadow = o.receiveShadow = true; archUp.add(o);\n  if (ext && yb <= .001){   // zoclo de la fachada\n",
+    "  o.position.set(wx((x0+x1)/2), (yb+yt)/2, wz((y0+y1)/2)); o.castShadow = o.receiveShadow = true; archUp.add(o);\n"
+    "  if (ext && [0, 1, 4, 5].some(i => ext[i])) worldUV(o.geometry, M(x1-x0), yt-yb, M(y1-y0), yb);\n"
+    "  if (ext && yb <= .001){   // zoclo de la fachada\n",
+)
+# Lado de la calle, alrededor, estacionamiento, árboles y letrero
+sub(
+    "  const ew = side === 'E' || side === 'W', hu = M(ew ? y1 - y0 : x1 - x0)/2, hv = M(ew ? x1 - x0 : y1 - y0)/2;\n",
+    "  const F = CASA.facade || {};\n"
+    "  if (/^[NSEW]$/.test(F.street || '')) side = F.street;   // la administración corrige el lado de la calle\n"
+    "  const ew = side === 'E' || side === 'W', hu = M(ew ? y1 - y0 : x1 - x0)/2, hv = M(ew ? x1 - x0 : y1 - y0)/2;\n"
+    "  const homes = F.around ? F.around === 'casas' : casa, field = F.around === 'campo';   // vecinos: casas, locales o nada\n"
+    "  const palmy = F.trees === 'palmeras' ? .85 : F.trees === 'arboles' ? .08 : null, isPalm = def => palmy == null ? def : rnd() < palmy;\n",
+)
+sub(
+    "  const gap = casa ? .4 : 3, setback = casa ? 3 : 1, PARK = casa ? 0 : 17, pu = hu + 1;   // estacionamiento: ancho y orilla\n",
+    "  const gap = casa ? .4 : 3, setback = casa ? 3 : 1, PARK = casa || F.parking === 'no' ? 0 : 17, pu = hu + 1, ps = F.parking === 'izquierda' ? -1 : 1;\n",
+)
+sub(
+    "  row(-L, -(hu + gap), front - setback, -1, false); row(hu + gap + (PARK ? PARK + 2 : 0), L, front - setback, -1, false);\n"
+    "  row(-L, L, front + 2*WALK + ROAD + (casa ? 3 : 1), 1, true);\n"
+    "  row(-L, L, -hv - (casa ? 1 : 5), -1, true);\n",
+    "  if (!field){\n"
+    "    row(-L, -(hu + gap + (PARK && ps < 0 ? PARK + 2 : 0)), front - setback, -1, false); row(hu + gap + (PARK && ps > 0 ? PARK + 2 : 0), L, front - setback, -1, false);\n"
+    "    row(-L, L, front + 2*WALK + ROAD + (homes ? 3 : 1), 1, true);\n"
+    "    row(-L, L, -hv - (casa ? 1 : 5), -1, true);\n"
+    "  }\n",
+)
+sub("  const COLORS = casa ? [", "  const COLORS = homes ? [")
+sub("      const w = casa ? 2*hu*(.85 + rnd()*.3) : 7 + rnd()*9; if (u + w > to) break;\n",
+    "      const w = homes ? (casa ? 2*hu : 9)*(.85 + rnd()*.3) : 7 + rnd()*9; if (u + w > to) break;\n")
+sub("      const d = casa ? 12 + rnd()*4 : 12 + rnd()*8, h = casa ? (rnd() < .2 ? 3 : 5.8 + rnd()*.6) : 3.4 + rnd()*5.6;\n",
+    "      const d = homes ? 12 + rnd()*4 : 12 + rnd()*8, h = homes ? (rnd() < .2 ? 3 : 5.8 + rnd()*.6) : 3.4 + rnd()*5.6;\n")
+sub("      house(u + w/2, edge + dir*d/2, w, d, h, back); u += w + (casa ? .2 : 1.5 + rnd()*2.5);\n",
+    "      house(u + w/2, edge + dir*d/2, w, d, h, back); u += w + (homes ? .2 : 1.5 + rnd()*2.5);\n")
+sub(
+    "    if (Math.abs(u - eu) > 5 && !(PARK && u > pu + 4 && u < pu + PARK - 4)) tree(u, front + .6, .85 + rnd()*.4, !casa || rnd() < .3);\n"
+    "    if (rnd() < .7) tree(u + 3, front + 2*WALK + ROAD - .6, .85 + rnd()*.4, rnd() < .25);\n",
+    "    if (Math.abs(u - eu) > 5 && !(PARK && ps*u > pu + 4 && ps*u < pu + PARK - 4)) tree(u, front + .6, .85 + rnd()*.4, isPalm(!casa || rnd() < .3));\n"
+    "    if (rnd() < .7) tree(u + 3, front + 2*WALK + ROAD - .6, .85 + rnd()*.4, isPalm(rnd() < .25));\n",
+)
+sub(
+    "  for (let k = 0; k < 14; k++) tree((rnd() < .5 ? -1 : 1)*(hu + 6 + rnd()*40), -hv - 2 - rnd()*3, .8 + rnd()*.5, rnd() < .3);\n"
+    "  if (PARK) for (let v = -hv + 3; v < front - 4; v += 9) tree(pu + PARK + 1.2, v, .9 + rnd()*.25, true);\n",
+    "  for (let k = 0; k < 14; k++) tree((rnd() < .5 ? -1 : 1)*(hu + 6 + rnd()*40), -hv - 2 - rnd()*3, .8 + rnd()*.5, isPalm(rnd() < .3));\n"
+    "  if (PARK) for (let v = -hv + 3; v < front - 4; v += 9) tree(ps*(pu + PARK + 1.2), v, .9 + rnd()*.25, isPalm(true));\n"
+    "  // En campo abierto no hay vecinos: más árboles alrededor (lejos del terreno y del estacionamiento)\n"
+    "  if (field) for (let k = 0; k < 46; k++){ const s = rnd() < .5 ? -1 : 1, u = s*(hu + (PARK && s === ps ? PARK + 4 : 4) + rnd()*55), v = -hv - 25 + rnd()*(2*hv + 25 + front);\n"
+    "    if (v < front) tree(u, v, .8 + rnd()*.6, isPalm(rnd() < .35)); }\n",
+)
+sub(
+    """  if (PARK){
+    const pd = front + hv, line = new THREE.MeshStandardMaterial({color: 0xf2efe6, roughness: .7});
+    plane(PARK, pd, new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95}), pu + PARK/2, (front - hv)/2, -.011);
+    for (let v = -hv + 1; v + 2.6 < front - 4; v += 2.6) [[pu + .5, pu + 5.5, Math.PI], [pu + PARK - 5.5, pu + PARK - .5, 0]].forEach(([a, b, rot]) => {
+      plane(b - a, .12, line, (a + b)/2, v, -.006);
+      if (rnd() < .42) carAt((a + b)/2, v + 1.3, rot, CARS[Math.floor(rnd()*CARS.length)]);
+    });
+    [pu + .5, pu + PARK - .5].forEach(u => plane(.12, front - 4 + hv - 1, line, u, (front - 4 - hv + 1)/2, -.006));
+""",
+    """  if (PARK){
+    // at(x): x metros desde la orilla del salón, hacia la derecha (ps = 1) o hacia la izquierda (ps = -1)
+    const pd = front + hv, line = new THREE.MeshStandardMaterial({color: 0xf2efe6, roughness: .7}), at = x => ps*(pu + x);
+    plane(PARK, pd, new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95}), at(PARK/2), (front - hv)/2, -.011);
+    for (let v = -hv + 1; v + 2.6 < front - 4; v += 2.6) [[.5, 5.5, Math.PI], [PARK - 5.5, PARK - .5, 0]].forEach(([a, b, rot]) => {
+      plane(b - a, .12, line, at((a + b)/2), v, -.006);
+      if (rnd() < .42) carAt(at((a + b)/2), v + 1.3, ps > 0 ? rot : Math.PI - rot, CARS[Math.floor(rnd()*CARS.length)]);
+    });
+    [.5, PARK - .5].forEach(x => plane(.12, front - 4 + hv - 1, line, at(x), (front - 4 - hv + 1)/2, -.006));
+""",
+)
+sub(
+    "      const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 6.5, 8), pole); p.position.set(pu + PARK + .3, 3.25, v); p.castShadow = true; g.add(p);\n"
+    "      const hd = new THREE.Mesh(new THREE.BoxGeometry(.9, .14, .3), head); hd.position.set(pu + PARK - .1, 6.45, v); hd.rotation.y = Math.PI/2; g.add(hd);\n"
+    "      const pool = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), poolMat); pool.rotation.x = -Math.PI/2; pool.position.set(pu + PARK - 4, .02, v); pool.visible = false; g.add(pool); envPools.push(pool);\n",
+    "      const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 6.5, 8), pole); p.position.set(at(PARK + .3), 3.25, v); p.castShadow = true; g.add(p);\n"
+    "      const hd = new THREE.Mesh(new THREE.BoxGeometry(.9, .14, .3), head); hd.position.set(at(PARK - .1), 6.45, v); hd.rotation.y = Math.PI/2; g.add(hd);\n"
+    "      const pool = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), poolMat); pool.rotation.x = -Math.PI/2; pool.position.set(at(PARK - 4), .02, v); pool.visible = false; g.add(pool); envPools.push(pool);\n",
+)
+sub(
+    "    const name = String(CASA.title || '').split('·')[0].trim(), tw = Math.min(7.5, Math.max(4, 2*hu*.3)), td = 2.4, y = 2.75;\n",
+    "    const name = F.sign === '-' ? '' : (F.sign || String(CASA.title || '').split('·')[0].trim()), tw = Math.min(7.5, Math.max(4, 2*hu*.3)), td = 2.4, y = 2.75;\n",
 )
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
