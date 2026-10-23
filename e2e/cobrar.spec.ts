@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { E2E } from "../playwright.config";
-import { signIn, signUp, uniqueEmail } from "./helpers";
+import { signIn, signUp, skipGuide, uniqueEmail } from "./helpers";
 
 // Los tres flujos que cobran: registro con código, evento con enlace para el cliente y pago por SPEI.
 test.describe.configure({ mode: "serial" });
@@ -32,8 +32,7 @@ test("crear un evento y compartir el enlace de solo vista", async ({ page, brows
   await expect(page).toHaveTitle(/Boda E2E Ana y Luis/);
 
   // La guía de la primera vez tapa la barra: se cierra si aparece.
-  const skip = page.getByRole("button", { name: "Saltar" });
-  if (await skip.isVisible().catch(() => false)) await skip.click();
+  await skipGuide(page);
   await page.locator('[data-a="share"]').click();
   const linkInput = page.locator("dialog input[readonly], .dlg input[readonly], input[readonly]").last();
   await expect(linkInput).toHaveValue(/\/v\/[a-z0-9]+/);

@@ -63,10 +63,13 @@ export async function createEvent(page: Page, title: string) {
   await skipGuide(page);
 }
 
-/** La guía de la primera vez tapa la barra: se cierra si aparece. */
+/**
+ * La guía de la primera vez tapa la barra: se cierra si aparece. Abre 600 ms después de cargar el diseñador
+ * (`src/designer/guia.js`), así que se le da hasta 3 s en lugar de mirar una sola vez.
+ */
 export async function skipGuide(page: Page) {
   const skip = page.getByRole("button", { name: "Saltar" });
-  if (await skip.isVisible().catch(() => false)) await skip.click();
+  await skip.click({ timeout: 3000 }).catch(() => {});
 }
 
 /** Gira 90° un mueble desde el diseñador (sus funciones son globales de la página) y espera la respuesta del guardado. */
