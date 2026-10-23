@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { preconnect } from "react-dom";
 
 const SRC = "/disenador/salon-demo?embed=1&vista=3d";
 const COARSE = "(pointer: coarse)";
@@ -21,8 +20,6 @@ const onCoarse = (cb: () => void) => {
  * en grande.
  */
 export function Hero3D() {
-  // El 3D baja three.js de jsDelivr: la conexión se abre desde ya, mientras carga la portada
-  preconnect("https://cdn.jsdelivr.net", { crossOrigin: "anonymous" });
   const frame = useRef<HTMLIFrameElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const [load, setLoad] = useState(false);

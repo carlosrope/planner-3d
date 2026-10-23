@@ -5,6 +5,8 @@ import { LEGACY_HOST, SITE_URL } from "./src/lib/site";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // Sin «x-powered-by: Next.js»: no hace falta anunciar con qué está hecha la app.
+  poweredByHeader: false,
   // Las pruebas de punta a punta (Playwright) levantan su propio servidor sin pisar el de desarrollo.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   partialPrefetching: true,
@@ -18,6 +20,9 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       ...securityHeaders(process.env.NODE_ENV !== "production"),
+      // three.js propio (public/vendor/three-0.160.0): la versión va en la ruta y nunca cambia, así que el navegador y
+      // Cloudflare lo guardan un año (Next sirve public/ con max-age=0).
+      { source: "/vendor/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
       // Fuera de buscadores: cuentas, paneles y enlaces privados (el enlace /v/ y la revisión del dueño).
       ...["/v/:path*", "/revisar/:path*", "/admin/:path*", "/eventos/:path*", "/negocio/:path*", "/lugares/:slug/panel", "/olvide", "/restablecer"].map((source) => ({
         source,

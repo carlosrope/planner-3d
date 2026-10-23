@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { contentSecurityPolicy, securityHeaders } from "./security-headers";
 
 describe("cabeceras de seguridad", () => {
-  it("la CSP permite three.js desde jsdelivr y solo pide unsafe-eval en desarrollo", () => {
+  it("la CSP solo deja scripts de la propia app (three.js incluido) y pide unsafe-eval solo en desarrollo", () => {
     const prod = contentSecurityPolicy({ dev: false, embeddable: false });
-    expect(prod).toContain("script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net");
+    expect(prod).toContain("script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com;");
+    expect(prod).not.toContain("jsdelivr");
     expect(prod).not.toContain("unsafe-eval");
     expect(prod).toContain("frame-ancestors 'self'");
     expect(contentSecurityPolicy({ dev: true, embeddable: false })).toContain("'unsafe-eval'");

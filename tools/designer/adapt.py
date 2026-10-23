@@ -2773,13 +2773,19 @@ function buildEnv(){
 
 # Carga más ligera: three.js minificado (≈40 % menos) y pedido desde el <head>; en celulares y tabletas el 3D se
 # dibuja a 1.5× en lugar de 2×, las sombras son más chicas y la calle más corta (menos vecinos y árboles).
+# three.js se sirve desde plantea.com.mx (public/vendor/three-0.160.0, copiado del paquete three@0.160.0 de npm, con
+# su huella sha512 comprobada): si jsDelivr falla, el 3D no se cae, y la CSP ya no tiene que permitir otro sitio.
 sub(
     '  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",\n',
-    '  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",\n',
+    '  "three":"/vendor/three-0.160.0/build/three.module.min.js",\n',
+)
+sub(
+    '  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"\n',
+    '  "three/addons/":"/vendor/three-0.160.0/examples/jsm/"\n',
 )
 sub(
     "}}\n</script>\n</head>",
-    '}}\n</script>\n<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js" crossorigin>\n</head>',
+    '}}\n</script>\n<link rel="modulepreload" href="/vendor/three-0.160.0/build/three.module.min.js">\n</head>',
 )
 sub("renderer.setPixelRatio(Math.min(devicePixelRatio, 2));", "renderer.setPixelRatio(Math.min(devicePixelRatio, COARSE ? 1.5 : 2));")
 sub("sun.shadow.mapSize.setScalar(COARSE ? 2048 : 4096);", "sun.shadow.mapSize.setScalar(COARSE ? 1024 : 4096);")

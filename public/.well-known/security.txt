@@ -1,0 +1,5 @@
+# Si encontraste una falla de seguridad en Plantea, escríbenos aquí. Gracias por avisar en privado.
+Contact: mailto:hola@plantea.com.mx
+Expires: 2027-10-01T06:00:00.000Z
+Preferred-Languages: es, en
+Canonical: https://plantea.com.mx/.well-known/security.txt

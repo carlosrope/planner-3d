@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     ".next-build/**",
     "test-results/**",
     "playwright-report/**",
+    // three.js tal como viene en su paquete de npm (public/vendor/three-0.160.0): no es código nuestro.
+    "public/vendor/**",
   ]),
 ]);
 
