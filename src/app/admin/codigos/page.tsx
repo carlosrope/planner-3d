@@ -136,7 +136,7 @@ async function Codigos({ searchParams }: { searchParams: PageProps<"/admin/codig
             return (
               <li key={c.id} className={`rounded-2xl border p-4 ${freshIds.has(c.id) ? "border-emerald-300 bg-emerald-50/40" : "border-stone-200 bg-white"}`}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <p className="select-all font-mono text-xl font-bold tracking-[0.1em] text-[#b5653a]">{c.code}</p>
+                  <p className="select-all font-mono text-xl font-bold tracking-[0.1em] text-[#a4552d]">{c.code}</p>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PILL[state]}`}>{TRIAL_CODE_STATE_LABELS[state]}</span>
                   <span className="text-sm text-stone-600">
                     {TRIAL_CODE_KIND_LABELS[c.kind]} · {c.days} días

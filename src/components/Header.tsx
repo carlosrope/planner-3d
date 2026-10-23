@@ -19,7 +19,7 @@ async function sessionUser() {
 }
 
 const link = "rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-900";
-const cta = "rounded-xl bg-[#b5653a] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#a4552d]";
+const cta = "rounded-xl bg-[#a4552d] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#8f4a26]";
 const panel = "rounded-xl bg-stone-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-stone-700";
 
 export function Logo({ className = "h-7" }: { className?: string }) {

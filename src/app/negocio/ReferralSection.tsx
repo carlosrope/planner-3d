@@ -56,7 +56,7 @@ export async function ReferralSection({
       </div>
       {!unlimited && allowance.quota ? (
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-100" aria-hidden="true">
-          <div className={`h-full rounded-full ${allowance.left === 0 ? "bg-red-500" : "bg-[#b5653a]"}`} style={{ width: `${pct}%` }} />
+          <div className={`h-full rounded-full ${allowance.left === 0 ? "bg-red-500" : "bg-[#a4552d]"}`} style={{ width: `${pct}%` }} />
         </div>
       ) : null}
 

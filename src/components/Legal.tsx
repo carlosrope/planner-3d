@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 export function Legal({ tag, title, updated, intro, children }: { tag: string; title: string; updated: string; intro: ReactNode; children: ReactNode }) {
   return (
     <main className="mx-auto max-w-3xl px-4 pb-16 pt-8">
-      <p className="text-sm font-semibold uppercase tracking-wider text-[#b5653a]">{tag}</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-[#a4552d]">{tag}</p>
       <h1 className="mt-1 text-3xl font-bold text-stone-900 sm:text-4xl">{title}</h1>
       <p className="mt-2 text-sm text-stone-500">Última actualización: {updated}</p>
       <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-4 text-stone-700">{intro}</div>

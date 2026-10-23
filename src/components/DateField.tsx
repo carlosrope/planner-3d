@@ -89,8 +89,8 @@ export function DateField({
         }}
         className={`flex h-12 w-full items-center justify-between gap-2 rounded-xl border border-stone-300 bg-white px-3 text-left text-base outline-none focus:border-stone-800 ${className}`}
       >
-        <span className={value ? "capitalize text-stone-900" : "text-stone-400"}>{value ? shown.format(new Date(`${value}T12:00:00Z`)) : placeholder}</span>
-        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-[#b5653a]" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <span className={value ? "capitalize text-stone-900" : "text-stone-500"}>{value ? shown.format(new Date(`${value}T12:00:00Z`)) : placeholder}</span>
+        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-[#a4552d]" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <rect x="3.5" y="5" width="17" height="15" rx="3" />
           <path d="M3.5 10h17M8 3v4M16 3v4" strokeLinecap="round" />
         </svg>
@@ -114,7 +114,7 @@ export function DateField({
               ›
             </button>
           </div>
-          <div className="grid grid-cols-7 text-center text-xs font-medium text-stone-400">
+          <div className="grid grid-cols-7 text-center text-xs font-medium text-stone-500">
             {WEEKDAYS.map((w, i) => (
               <span key={i} className="py-1">
                 {w}
@@ -136,11 +136,11 @@ export function DateField({
                   aria-label={shown.format(new Date(`${d}T12:00:00Z`))}
                   className={`flex h-10 items-center justify-center rounded-full text-sm transition-colors ${
                     selected
-                      ? "bg-[#b5653a] font-semibold text-white"
+                      ? "bg-[#a4552d] font-semibold text-white"
                       : off
                         ? "text-stone-300"
                         : isToday
-                          ? "font-semibold text-[#b5653a] ring-1 ring-inset ring-[#b5653a] hover:bg-[#f3ece2]"
+                          ? "font-semibold text-[#a4552d] ring-1 ring-inset ring-[#b5653a] hover:bg-[#f3ece2]"
                           : inMonth(d)
                             ? "text-stone-800 hover:bg-[#f3ece2]"
                             : "text-stone-300 hover:bg-stone-50"
@@ -156,7 +156,7 @@ export function DateField({
               Borrar
             </button>
             {!disabled(today) && (
-              <button type="button" onClick={() => pick(today)} className="rounded-lg px-2 py-1 font-semibold text-[#b5653a] hover:bg-[#f3ece2]">
+              <button type="button" onClick={() => pick(today)} className="rounded-lg px-2 py-1 font-semibold text-[#a4552d] hover:bg-[#f3ece2]">
                 Hoy
               </button>
             )}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CompareSlider } from "./CompareSlider";
 import { PageLink } from "@/components/PageLink";
@@ -70,9 +71,9 @@ export async function Catalogo({ kind, citySlug }: { kind: VenueKind; citySlug?:
         <p className="mt-6 rounded-2xl border border-dashed border-stone-300 p-8 text-center text-stone-500">{copy.empty}</p>
       ) : (
         <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-          {venues.map((v) => (
+          {venues.map((v, i) => (
             <li key={v.id}>
-              <Tarjeta v={v} />
+              <Tarjeta v={v} eager={i === 0} />
             </li>
           ))}
         </ul>
@@ -89,7 +90,8 @@ export async function Catalogo({ kind, citySlug }: { kind: VenueKind; citySlug?:
   );
 }
 
-export function Tarjeta({ v }: { v: CatalogVenue }) {
+/** `eager`: la tarjeta se ve de entrada (la primera), así que su foto se pide desde el principio y con prioridad. */
+export function Tarjeta({ v, eager = false }: { v: CatalogVenue; eager?: boolean }) {
   const slug = v.slug ?? v.id;
   const facts = [
     v.kind === "salon" ? capacityFact(shownCapacities(v.capacityAuto, v.capacityManual, v.capacity), v.capacity) : null,
@@ -106,13 +108,22 @@ export function Tarjeta({ v }: { v: CatalogVenue }) {
           place={v.kind === "salon" ? "Salón" : "Casa"}
           name={v.name}
           illustrative={v.sidesIllustrative}
+          eager={eager}
         />
       ) : (
         <PageLink href={`/lugares/${slug}`} className="block">
           {v.cover ? (
             <div className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-              <img src={`/lugares/${slug}/foto/${v.cover}`} alt={v.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+              <Image
+                src={`/lugares/${slug}/foto/${v.cover}`}
+                alt={v.name}
+                width={1200}
+                height={900}
+                sizes="(min-width: 1024px) 500px, (min-width: 640px) 50vw, 100vw"
+                loading={eager ? "eager" : "lazy"}
+                fetchPriority={eager ? "high" : undefined}
+                className="aspect-[4/3] w-full object-cover"
+              />
               {v.coverIsRender && <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">Vista 3D</span>}
               {!v.coverIsRender && v.coverIsIllustrative && (
                 <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium text-stone-800">Imagen ilustrativa</span>

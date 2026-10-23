@@ -24,7 +24,7 @@ function PayButton({ amount, period, primary }: { amount: number; period: "mes" 
   const { pending } = useFormStatus();
   // El plan recomendado lleva el botón de color; los demás, con borde, para que se note cuál conviene.
   const look = primary
-    ? "bg-[#b5653a] text-white hover:bg-[#a4552d] active:bg-[#93491f]"
+    ? "bg-[#a4552d] text-white hover:bg-[#8f4a26] active:bg-[#93491f]"
     : "border border-stone-900 bg-white text-stone-900 hover:bg-stone-50 active:bg-stone-100";
   return (
     <button disabled={pending} className={`mt-auto flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 font-semibold disabled:opacity-60 ${look}`}>
@@ -66,7 +66,7 @@ export function PlanPicker({ cards }: { cards: PlanCardData[] }) {
                 ) : (
                   <>
                     Anual
-                    <span className={`rounded-full bg-[#b5653a] px-2 py-0.5 text-xs font-semibold text-white ${period === "anio" ? "" : "plan-gratis"}`}>2 meses gratis</span>
+                    <span className={`rounded-full bg-[#a4552d] px-2 py-0.5 text-xs font-semibold text-white ${period === "anio" ? "" : "plan-gratis"}`}>2 meses gratis</span>
                   </>
                 )}
               </button>
@@ -88,7 +88,7 @@ export function PlanPicker({ cards }: { cards: PlanCardData[] }) {
             >
               {(c.current || c.featured) && (
                 <span
-                  className={`absolute -top-2.5 left-4 rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.current ? "bg-stone-900 text-white" : "bg-[#b5653a] text-white"}`}
+                  className={`absolute -top-2.5 left-4 rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.current ? "bg-stone-900 text-white" : "bg-[#a4552d] text-white"}`}
                 >
                   {c.current ? "Tu plan" : "Recomendado"}
                 </span>
@@ -108,7 +108,7 @@ export function PlanPicker({ cards }: { cards: PlanCardData[] }) {
               <ul className="my-4 space-y-1.5 text-sm text-stone-700">
                 {c.points.map((p, j) => (
                   <li key={p} className={`flex gap-2 ${c.lead && j === 0 ? "font-semibold text-stone-900" : ""}`}>
-                    <span aria-hidden="true" className="text-[#b5653a]">
+                    <span aria-hidden="true" className="text-[#a4552d]">
                       ✓
                     </span>
                     {p}

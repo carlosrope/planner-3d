@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { dragVelocity, easeOut, flickTarget } from "@/lib/compare";
 
@@ -18,6 +19,8 @@ export function CompareSlider({
   illustrative,
   className = "aspect-[4/3]",
   rounded = "",
+  sizes = "(min-width: 1024px) 500px, (min-width: 640px) 50vw, 100vw",
+  eager = false,
 }: {
   outside: string;
   inside: string;
@@ -27,6 +30,10 @@ export function CompareSlider({
   illustrative?: boolean;
   className?: string;
   rounded?: string;
+  /** Ancho con que se ve, para que el navegador pida la foto de ese tamaño. */
+  sizes?: string;
+  /** Se ve de entrada (primera tarjeta, ficha): se pide desde el principio y con prioridad. */
+  eager?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [x, setX] = useState(50);
@@ -124,15 +131,25 @@ export function CompareSlider({
       style={{ "--x": `${x}%` } as React.CSSProperties}
       className={`comparar relative w-full cursor-ew-resize touch-pan-y select-none overflow-hidden bg-stone-100 outline-none focus-visible:ring-4 focus-visible:ring-[#f3c9ad] ${inView && !touched ? "comparar-guia" : ""} ${className} ${rounded}`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-      <img src={inside} alt={`${name}, por dentro`} draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-cover" loading="lazy" />
-      {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-      <img
+      <Image
+        src={inside}
+        alt={`${name}, por dentro`}
+        fill
+        sizes={sizes}
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : undefined}
+        draggable={false}
+        className="pointer-events-none object-cover"
+      />
+      <Image
         src={outside}
         alt={`${name}, por fuera`}
+        fill
+        sizes={sizes}
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : undefined}
         draggable={false}
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover [clip-path:inset(0_calc(100%-var(--x))_0_0)]"
-        loading="lazy"
+        className="pointer-events-none object-cover [clip-path:inset(0_calc(100%-var(--x))_0_0)]"
       />
       {!atEdge && <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-[var(--x)] -ml-px w-0.5 bg-white/90 shadow-[0_0_8px_rgba(0,0,0,0.35)]" />}
       {atEdge ? (

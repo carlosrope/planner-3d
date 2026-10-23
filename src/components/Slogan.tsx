@@ -4,7 +4,7 @@ import { SLOGAN } from "@/lib/brand";
 export function Slogan({ className = "" }: { className?: string }) {
   return (
     <p className={`font-display font-extrabold tracking-tight ${className}`}>
-      {SLOGAN.slice(0, -1).join(" ")} <span className="text-[#b5653a]">{SLOGAN[SLOGAN.length - 1]}</span>
+      {SLOGAN.slice(0, -1).join(" ")} <span className="text-[#a4552d]">{SLOGAN[SLOGAN.length - 1]}</span>
     </p>
   );
 }

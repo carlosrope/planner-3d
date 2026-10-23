@@ -45,7 +45,7 @@ function Paso({ label, value, max }: { label: string; value: number; max: number
     <li className="grid grid-cols-[8.5rem_1fr_2.5rem] items-center gap-3 text-sm">
       <span className="text-stone-600">{label}</span>
       <span className="h-3 rounded-full bg-stone-100">
-        <span className="block h-3 rounded-full bg-[#b5653a]" style={{ width: `${width}%` }} />
+        <span className="block h-3 rounded-full bg-[#a4552d]" style={{ width: `${width}%` }} />
       </span>
       <span className="text-right font-semibold">{value}</span>
     </li>

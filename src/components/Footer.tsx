@@ -16,7 +16,7 @@ export function Footer() {
           </p>
           <p className="mt-3 text-sm text-stone-600">
             Hecho por{" "}
-            <a href={PARTNER_SITE} target="_blank" rel="noopener" className="font-semibold text-[#0d8a4f]">
+            <a href={PARTNER_SITE} target="_blank" rel="noopener" className="font-semibold text-[#0b7a45]">
               ProLink365
             </a>
             {" · "}Automatización empresarial con IA · México

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { listCatalog } from "@/lib/dal";
 import { DEMO_SLUGS, TESTIMONIALS } from "@/lib/testimonials";
@@ -20,8 +21,14 @@ export async function EnPlantea() {
               <li key={v.id}>
                 <Link href={`/lugares/${slug}`} className="block overflow-hidden rounded-2xl border border-stone-200 bg-white">
                   {v.cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- foto del lugar servida por la app
-                    <img src={`/lugares/${slug}/foto/${v.cover}`} alt={v.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+                    <Image
+                      src={`/lugares/${slug}/foto/${v.cover}`}
+                      alt={v.name}
+                      width={800}
+                      height={600}
+                      sizes="(min-width: 1024px) 330px, (min-width: 640px) 33vw, 50vw"
+                      className="aspect-[4/3] w-full object-cover"
+                    />
                   ) : (
                     <div className="aspect-[4/3] w-full bg-[#f3ece2]" />
                   )}

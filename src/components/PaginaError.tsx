@@ -27,14 +27,14 @@ export function PaginaError({ error, retry }: { error: unknown; retry: () => voi
     <main className="mx-auto flex max-w-xl flex-col items-center px-4 pb-24 pt-14 text-center sm:pt-20">
       {/* eslint-disable-next-line @next/next/no-img-element -- logo SVG estático */}
       <img src="/marca/plantea-symbol-color.svg" alt="" className="h-16 w-16" />
-      <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-[#b5653a]">Algo salió mal</p>
+      <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-[#a4552d]">Algo salió mal</p>
       <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Esta página no cargó bien</h1>
       <p className="mt-3 text-stone-600">Fue un problema de nuestro lado, no tuyo. Vuelve a intentarlo; si sigue pasando, mándanos un mensaje y lo revisamos.</p>
       <div className="mt-7 grid w-full gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => retry()}
-          className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] font-semibold text-white hover:bg-[#a4552d]"
+          className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] font-semibold text-white hover:bg-[#8f4a26]"
         >
           Intentar de nuevo
         </button>
@@ -46,7 +46,7 @@ export function PaginaError({ error, retry }: { error: unknown; retry: () => voi
       </div>
       <p className="mt-10 text-sm font-medium text-stone-700">Síguenos o escríbenos en redes</p>
       <RedesBotones className="mt-3 w-full sm:w-auto" />
-      {digest ? <p className="mt-8 text-xs text-stone-400">Código del error: {digest}</p> : null}
+      {digest ? <p className="mt-8 text-xs text-stone-500">Código del error: {digest}</p> : null}
     </main>
   );
 }

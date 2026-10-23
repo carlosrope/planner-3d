@@ -26,7 +26,7 @@ export function CodeCard({ info, origin, setting, highlight = false }: { info: C
         <span className="font-semibold text-stone-900">{info.guestName}</span>
         {info.eventDate ? ` · ${day.format(new Date(`${info.eventDate}T12:00:00Z`))}` : ""} · {info.venueName}
       </p>
-      <p className="mt-2 select-all font-mono text-2xl font-bold tracking-[0.12em] text-[#b5653a]">{info.code}</p>
+      <p className="mt-2 select-all font-mono text-2xl font-bold tracking-[0.12em] text-[#a4552d]">{info.code}</p>
       <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
         <a
           href={whatsappShare(message)}

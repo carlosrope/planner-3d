@@ -92,7 +92,7 @@ export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: {
                 <ul className="mt-2 space-y-1 text-sm text-stone-700">
                   {plan.points.map((pt) => (
                     <li key={pt} className="flex gap-2">
-                      <span aria-hidden="true" className="text-[#b5653a]">
+                      <span aria-hidden="true" className="text-[#a4552d]">
                         ✓
                       </span>
                       {pt}
@@ -107,13 +107,13 @@ export function PlanChooser({ openAtStart = false, label = "Crear proyecto" }: {
           <div className="mt-5 grid gap-2">
             {profile.id === "salon" ? (
               <>
-                <Link href="/alta" className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] font-medium text-white active:bg-[#9c5430]">
+                <Link href="/alta" className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] font-medium text-white active:bg-[#9c5430]">
                   Registrar mi salón
                 </Link>
                 <p className="text-center text-xs text-stone-500">Mandas tu plano, en 7 días lo tienes en 3D y lo revisas antes de pagar.</p>
               </>
             ) : (
-              <Link href={pay} className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] font-medium text-white active:bg-[#9c5430]">
+              <Link href={pay} className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] font-medium text-white active:bg-[#9c5430]">
                 Activar mi plan
               </Link>
             )}

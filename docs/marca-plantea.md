@@ -20,11 +20,14 @@ Alrededor del logo se deja libre **un radio de la mesa** (el círculo central) p
 ## 4. Color
 | Nombre | HEX | RGB | Uso |
 |---|---|---|---|
-| Terracota | #b5653a | 181 101 58 | la mesa, botones principales, acentos |
+| Terracota | #b5653a | 181 101 58 | la mesa, el logo, bordes, aros, íconos y títulos grandes |
+| Terracota oscura | #a4552d | 164 85 45 | texto chico y fondo de botones (con letra blanca); al pasar el cursor, #8f4a26 |
 | Tinta | #121815 | 18 24 21 | sillas, palabra, texto |
 | Arena | #f3ece2 | 243 236 226 | fondos suaves, paneles |
 | Hueso | #f7f4ef | 247 244 239 | fondo de la app |
-| Verde ProLink | #0d8a4f | 13 138 79 | solo en "por ProLink365" y enlaces al sitio de ProLink |
+| Verde ProLink | #0d8a4f | 13 138 79 | solo en "por ProLink365" y enlaces al sitio de ProLink (en letra chica, #0b7a45) |
+
+**Contraste (23 oct 2026, revisión de accesibilidad):** el texto chico necesita 4.5:1 (WCAG AA). La terracota #b5653a da 3.9:1 sobre hueso y 4.3:1 con letra blanca encima, así que en texto chico y botones va la terracota oscura (4.9:1 y 5.4:1). Los grises secundarios usan #6b6560 en lugar del stone-500 de Tailwind (globals.css).
 
 **Pares aprobados:** a color sobre blanco, hueso o arena · blanco sobre terracota · blanco sobre tinta · negro sobre blanco. Sobre fotos, la versión blanca en una zona tranquila o dentro de un recuadro arena.
 

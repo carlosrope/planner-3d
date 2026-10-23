@@ -9,8 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function SalonesPage() {
+  // El aviso de carga ocupa la pantalla: así el pie no aparece arriba y luego salta cuando llega el catálogo (CLS).
   return (
-    <Suspense fallback={<p className="p-6 text-stone-500">Cargando salones…</p>}>
+    <Suspense fallback={<p className="min-h-svh p-6 text-stone-500">Cargando salones…</p>}>
       <Catalogo kind="salon" />
     </Suspense>
   );

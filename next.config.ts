@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: lanHosts(),
   // El indicador de desarrollo tapa la barra inferior del editor en el teléfono.
   devIndicators: false,
+  // Fotos de los lugares y de la portada al tamaño de cada pantalla (next/image con sharp, en WebP). Solo esas rutas:
+  // el optimizador pide la foto por dentro y sin cookies, así que una foto de un lugar sin publicar nunca entra a su caché.
+  images: { localPatterns: [{ pathname: "/lugares/*/foto/*" }, { pathname: "/portada/**" }] },
   // Alta de lugares y comprobantes de pago: planos y fotos van en el cuerpo de la acción.
   experimental: { serverActions: { bodySizeLimit: "40mb" } },
   // CSP, X-Frame-Options (salvo /v/ y el 3D público), Referrer-Policy y demás: src/lib/security-headers.ts.

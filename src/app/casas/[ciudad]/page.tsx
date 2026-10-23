@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps<"/casas/[ciudad]">)
 
 export default function CasasCiudadPage({ params }: PageProps<"/casas/[ciudad]">) {
   return (
-    <Suspense fallback={<p className="p-6 text-stone-500">Cargando modelos…</p>}>
+    <Suspense fallback={<p className="min-h-svh p-6 text-stone-500">Cargando modelos…</p>}>
       <Ciudad params={params} />
     </Suspense>
   );

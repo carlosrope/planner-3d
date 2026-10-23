@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function CasasPage() {
   return (
-    <Suspense fallback={<p className="p-6 text-stone-500">Cargando modelos…</p>}>
+    <Suspense fallback={<p className="min-h-svh p-6 text-stone-500">Cargando modelos…</p>}>
       <Catalogo kind="casa" />
     </Suspense>
   );

@@ -49,7 +49,7 @@ export function RedesIconos({ redes = REDES, className = "" }: { redes?: Red[]; 
             target="_blank"
             rel="noopener"
             aria-label={r.label}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-800 transition hover:border-[#b5653a] hover:text-[#b5653a]"
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-800 transition hover:border-[#b5653a] hover:text-[#a4552d]"
           >
             <Icono>{r.icon}</Icono>
           </a>
@@ -69,7 +69,7 @@ export function RedesBotones({ redes = REDES, className = "" }: { redes?: Red[];
             href={r.href}
             target="_blank"
             rel="noopener"
-            className="flex h-12 items-center justify-center gap-2.5 rounded-xl border border-stone-300 bg-white px-5 font-semibold text-stone-900 transition hover:border-[#b5653a] hover:text-[#b5653a]"
+            className="flex h-12 items-center justify-center gap-2.5 rounded-xl border border-stone-300 bg-white px-5 font-semibold text-stone-900 transition hover:border-[#b5653a] hover:text-[#a4552d]"
           >
             <Icono className="h-5 w-5">{r.icon}</Icono>
             {r.label}

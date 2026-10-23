@@ -44,7 +44,7 @@ export function ReferralForm({ venues, venueId, origin, setting }: { venues: { i
           <DateField name="eventDate" min="today" />
         </div>
         {state?.error && <p className="text-sm text-red-600 sm:col-span-2">{state.error}</p>}
-        <button disabled={pending} className="h-12 rounded-xl bg-[#b5653a] font-semibold text-white hover:bg-[#a4552d] disabled:opacity-60 sm:col-span-2">
+        <button disabled={pending} className="h-12 rounded-xl bg-[#a4552d] font-semibold text-white hover:bg-[#8f4a26] disabled:opacity-60 sm:col-span-2">
           {pending ? "Generando…" : "Generar código"}
         </button>
       </form>

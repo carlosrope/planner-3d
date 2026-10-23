@@ -64,13 +64,13 @@ export default function Home() {
           <div className="relative">
             <Slogan className="mb-3 text-base text-stone-900 sm:text-lg" />
             <h1 className="text-[2.1rem] font-bold leading-[1.08] text-stone-900 sm:text-5xl" style={{ textWrap: "balance" }}>
-              Plantea tu evento o tu casa <span className="text-[#b5653a]">en 3D antes de vivirlo.</span>
+              Plantea tu evento o tu casa <span className="text-[#a4552d]">en 3D antes de vivirlo.</span>
             </h1>
             <p className="mt-4 max-w-lg text-lg text-stone-600">
               Acomoda las mesas sobre el salón real, sienta a tus invitados y recórrelo desde el celular. Para salones, planners, familias e inmobiliarias de México.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <PageLink href="/disenador/salon-demo" className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white shadow-lg shadow-[#b5653a]/25 hover:bg-[#a4552d]">
+              <PageLink href="/disenador/salon-demo" className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white shadow-lg shadow-[#b5653a]/25 hover:bg-[#8f4a26]">
                 Mira ahora en 3D
               </PageLink>
               <PageLink href="/disenador/chardonnay" className="flex h-12 items-center justify-center rounded-xl border border-stone-900 bg-white px-5 font-semibold text-stone-900 hover:bg-stone-50">
@@ -79,7 +79,7 @@ export default function Home() {
             </div>
             <p className="mt-3 text-sm text-stone-500">
               Sin cuenta y sin costo: es un salón y una casa de ejemplo. Nada se guarda.{" "}
-              <Link href="/planes" className="font-semibold text-[#b5653a] underline">
+              <Link href="/planes" className="font-semibold text-[#a4552d] underline">
                 Ver planes y precios
               </Link>
             </p>
@@ -102,7 +102,7 @@ export default function Home() {
         <ol className="mt-6 grid gap-4 md:grid-cols-3">
           {PASOS.map((s) => (
             <li key={s.n} className="rounded-2xl border border-stone-200 bg-white p-5">
-              <span className="font-display text-3xl font-bold text-[#b5653a]/35">{s.n}</span>
+              <span aria-hidden="true" className="font-display text-3xl font-bold text-[#b5653a]/35">{s.n}</span>
               <h3 className="mt-2 text-lg font-semibold text-stone-900">{s.t}</h3>
               <p className="mt-1 text-stone-600">{s.p}</p>
             </li>
@@ -170,7 +170,7 @@ export default function Home() {
             <h3 className="text-xl font-semibold">¿Tienes un salón o vendes casas?</h3>
             <p className="mt-1 text-stone-300">Mándanos el plano o un croquis con medidas y en 7 días está en 3D, con su enlace y su QR. Empezar no tiene costo.</p>
           </div>
-          <Link href="/alta" className="inline-flex h-12 shrink-0 items-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white hover:bg-[#a4552d]">
+          <Link href="/alta" className="inline-flex h-12 shrink-0 items-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white hover:bg-[#8f4a26]">
             Registrar mi lugar
           </Link>
         </div>
@@ -184,7 +184,7 @@ export default function Home() {
         </div>
         {/* En el celular, cada enlace en su renglón y con espacio para el dedo; en computadora, una sola línea */}
         <div className="mt-6 flex flex-col items-center text-center sm:hidden">
-          <Link href="/planes" className="inline-block py-2 font-semibold text-[#b5653a] underline underline-offset-4">
+          <Link href="/planes" className="inline-block py-2 font-semibold text-[#a4552d] underline underline-offset-4">
             Ver planes y precios
           </Link>
           <p className="text-sm text-stone-500">

@@ -5,6 +5,9 @@
   --font-display: var(--font-sora), system-ui, sans-serif;
   --color-terra: #b5653a;
   --color-terra-dark: #a4552d;
+  /* Gris de textos secundarios un poco más oscuro que el stone-500 de Tailwind (#79716b): sobre el fondo hueso y la
+     arena llega al contraste AA (5.2:1 y 4.9:1; antes 4.4:1 y 4.1:1). */
+  --color-stone-500: #6b6560;
   --color-sand: #f3ece2;
   --color-ink: #121815;
 }

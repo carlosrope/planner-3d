@@ -64,7 +64,7 @@ export default function NosotrosPage() {
           ]),
         }}
       />
-      <p className="text-sm font-medium uppercase tracking-wider text-[#b5653a]">Quiénes somos</p>
+      <p className="text-sm font-medium uppercase tracking-wider text-[#a4552d]">Quiénes somos</p>
       <h1 className="mt-2 text-3xl font-semibold leading-tight">Plantea es real, y puedes comprobarlo antes de pagar.</h1>
       <p className="mt-3 text-lg text-stone-600">
         Plantea es un software para planear eventos y casas en 3D sobre planos reales: el salón o la casa en plano y en recorrido, con mesas,
@@ -114,7 +114,7 @@ export default function NosotrosPage() {
             ["Lee nuestras reglas.", "El aviso de privacidad y los términos de servicio dicen quién es el responsable y qué incluye cada plan."],
           ].map(([t1, t2], i) => (
             <li key={t1} className="flex gap-4 rounded-2xl border border-stone-200 bg-white p-4">
-              <span className="font-display text-2xl font-bold text-[#b5653a]">{i + 1}</span>
+              <span className="font-display text-2xl font-bold text-[#a4552d]">{i + 1}</span>
               <p className="text-stone-700">
                 <b className="text-stone-900">{t1}</b> {t2}
               </p>
@@ -122,7 +122,7 @@ export default function NosotrosPage() {
           ))}
         </ol>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <PageLink href="/disenador/salon-demo" className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white hover:bg-[#a4552d]">
+          <PageLink href="/disenador/salon-demo" className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white hover:bg-[#8f4a26]">
             Mira ahora en 3D
           </PageLink>
           <a href={whatsapp} target="_blank" rel="noopener" className="flex h-12 items-center justify-center rounded-xl border border-stone-300 bg-white px-5 font-semibold text-stone-900">

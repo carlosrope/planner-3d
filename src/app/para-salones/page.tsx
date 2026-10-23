@@ -45,11 +45,11 @@ export default function ParaSalonesPage() {
   const whatsapp = waLink(CONTACT_WHATSAPP, "Hola, quiero mi salón en 3D en Plantea.");
   return (
     <main className="mx-auto max-w-3xl px-4 pb-16 pt-8">
-      <p className="text-sm font-medium uppercase tracking-wider text-[#b5653a]">Para dueños de salón</p>
+      <p className="text-sm font-medium uppercase tracking-wider text-[#a4552d]">Para dueños de salón</p>
       <h1 className="mt-2 text-3xl font-semibold leading-tight sm:text-4xl">Tu salón en 3D, listo para que te lo renten.</h1>
       <p className="mt-3 text-lg text-stone-600">Nos mandas tu plano y en 7 días tienes tu salón en 3D, con enlace, QR y tu lugar en el catálogo.</p>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <Link href="/alta" className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white hover:bg-[#a4552d]">
+        <Link href="/alta" className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white hover:bg-[#8f4a26]">
           Registrar mi salón
         </Link>
         <PageLink href="/disenador/salon-demo" className="flex h-12 items-center justify-center rounded-xl border border-stone-900 bg-white px-5 font-semibold text-stone-900 hover:bg-stone-50">
@@ -87,7 +87,7 @@ export default function ParaSalonesPage() {
         <ol className="mt-4 space-y-3">
           {PASOS.map((s) => (
             <li key={s.n} className="flex gap-4 rounded-2xl border border-stone-200 bg-white p-4">
-              <span className="font-display text-2xl font-bold text-[#b5653a]">{s.n}</span>
+              <span className="font-display text-2xl font-bold text-[#a4552d]">{s.n}</span>
               <div>
                 <p className="font-semibold">{s.t}</p>
                 <p className="text-sm text-stone-600">{s.p}</p>
@@ -103,7 +103,7 @@ export default function ParaSalonesPage() {
           <span className="text-3xl font-semibold">$790</span> <span className="text-stone-500">al mes · Salón Pro con 10 códigos</span>
         </p>
         <p className="mt-1 text-stone-600">$999 al mes con códigos sin tope. Precios con IVA incluido.</p>
-        <Link href="/planes#salon" className="mt-3 inline-block font-semibold text-[#b5653a] underline">
+        <Link href="/planes#salon" className="mt-3 inline-block font-semibold text-[#a4552d] underline">
           Ver el plan completo
         </Link>
       </section>
@@ -121,7 +121,7 @@ export default function ParaSalonesPage() {
       </section>
 
       <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-        <Link href="/alta" className="flex h-12 items-center justify-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white hover:bg-[#a4552d]">
+        <Link href="/alta" className="flex h-12 items-center justify-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white hover:bg-[#8f4a26]">
           Registrar mi salón
         </Link>
         <a href={whatsapp} target="_blank" rel="noopener" className="flex h-12 items-center justify-center rounded-xl border border-stone-300 bg-white px-5 font-semibold text-stone-900">

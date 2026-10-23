@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -67,11 +68,14 @@ export function Hero3D() {
     <div ref={box} className="relative">
       <div className="relative aspect-[16/15] w-full overflow-hidden rounded-[25px] border border-stone-200 bg-[#efebe4] shadow-2xl shadow-stone-900/15">
         {/* Foto del 3D mientras carga (y si el 3D no puede cargar) */}
-        {/* eslint-disable-next-line @next/next/no-img-element -- captura propia */}
-        <img
+        {/* Es lo más grande de la portada al abrirla (LCP): se pide desde el <head>, del tamaño de la pantalla */}
+        <Image
           src="/portada/salon-3d-portada.webp"
           alt="El Salón Demostración en 3D"
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${ready ? "opacity-0" : "opacity-100"}`}
+          fill
+          preload
+          sizes="(min-width: 768px) 480px, 100vw"
+          className={`object-cover transition-opacity duration-700 ${ready ? "opacity-0" : "opacity-100"}`}
         />
         {load && (
           <iframe
@@ -108,7 +112,7 @@ export function Hero3D() {
               aria-checked={view === v}
               disabled={!ready}
               onClick={() => show(v)}
-              className={`rounded-full px-4 py-1.5 transition-colors disabled:opacity-60 ${view === v ? "bg-[#b5653a] text-white" : "text-stone-700 hover:text-stone-900"}`}
+              className={`rounded-full px-4 py-1.5 transition-colors disabled:opacity-60 ${view === v ? "bg-[#a4552d] text-white" : "text-stone-700 hover:text-stone-900"}`}
             >
               {v.toUpperCase()}
             </button>
@@ -124,7 +128,7 @@ export function Hero3D() {
           <Link
             href="/disenador/salon-demo"
             aria-label="Abrir el Salón Demostración en grande"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-md backdrop-blur hover:text-[#b5653a]"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-md backdrop-blur hover:text-[#a4552d]"
           >
             <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />

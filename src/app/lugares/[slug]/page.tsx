@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: PageProps<"/lugares/[slug]">)
 export default function LugarPage({ params }: PageProps<"/lugares/[slug]">) {
   return (
     <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<p className="min-h-svh text-stone-500">Cargando…</p>}>
         <Ficha params={params} />
       </Suspense>
     </main>
@@ -112,11 +113,21 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
               illustrative={pair.some((p) => p.illustrative)}
               className="aspect-[4/3] sm:aspect-[16/10]"
               rounded="rounded-[25px]"
+              sizes="(min-width: 768px) 736px, 100vw"
+              eager
             />
           ) : (
             <div className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-              <img src={`/lugares/${slug}/foto/${cover.id}`} alt={v.name} className="aspect-[16/10] w-full rounded-2xl object-cover" />
+              <Image
+                src={`/lugares/${slug}/foto/${cover.id}`}
+                alt={v.name}
+                width={1600}
+                height={1000}
+                sizes="(min-width: 768px) 736px, 100vw"
+                loading="eager"
+                fetchPriority="high"
+                className="aspect-[16/10] w-full rounded-2xl object-cover"
+              />
               {cover.kind === "render" && <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">Vista 3D</span>}
               {cover.kind === "foto" && cover.illustrative && (
                 <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-800">Imagen ilustrativa</span>
@@ -127,8 +138,14 @@ async function Ficha({ params }: { params: PageProps<"/lugares/[slug]">["params"
             <ul className="grid grid-cols-4 gap-2">
               {rest.slice(0, 8).map((p) => (
                 <li key={p.id} className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- fotos guardadas en la base, servidas por la app */}
-                  <img src={`/lugares/${slug}/foto/${p.id}`} alt={p.kind === "render" ? "Plano 2D" : ""} className="aspect-square w-full rounded-xl object-cover" loading="lazy" />
+                  <Image
+                    src={`/lugares/${slug}/foto/${p.id}`}
+                    alt={p.kind === "render" ? "Plano 2D" : ""}
+                    width={400}
+                    height={400}
+                    sizes="(min-width: 768px) 180px, 25vw"
+                    className="aspect-square w-full rounded-xl object-cover"
+                  />
                   {p.kind === "render" && <span className="absolute left-1.5 top-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">{p.name.startsWith("vista-3d") ? "3D" : "Plano"}</span>}
                 </li>
               ))}

@@ -25,7 +25,7 @@ const FAQ = [
 export default function PlanesPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-8">
-      <p className="text-sm font-medium uppercase tracking-wider text-[#b5653a]">Planes y precios</p>
+      <p className="text-sm font-medium uppercase tracking-wider text-[#a4552d]">Planes y precios</p>
       <h1 className="mt-2 text-3xl font-semibold">La demo es gratis. Tu espacio real va con plan.</h1>
       <p className="mt-2 text-stone-600">Precios al mes, en pesos, con IVA incluido.</p>
 
@@ -44,7 +44,7 @@ export default function PlanesPage() {
             {p.plans.map((plan) => (
               <div key={plan.name} className={`relative flex flex-col rounded-2xl border bg-white p-5 ${plan.featured ? "border-[#b5653a] ring-1 ring-[#b5653a]" : "border-stone-200"}`}>
                 {plan.featured && plan.name === "Ilimitado" && (
-                  <span className="absolute -top-2.5 left-5 rounded-full bg-[#b5653a] px-2.5 py-0.5 text-xs font-semibold text-white">Recomendado</span>
+                  <span className="absolute -top-2.5 left-5 rounded-full bg-[#a4552d] px-2.5 py-0.5 text-xs font-semibold text-white">Recomendado</span>
                 )}
                 <p className="font-semibold">{plan.name}</p>
                 <p className="mt-1">
@@ -53,7 +53,7 @@ export default function PlanesPage() {
                 <ul className="mt-3 space-y-1.5 text-sm text-stone-700">
                   {plan.points.map((pt) => (
                     <li key={pt} className="flex gap-2">
-                      <span aria-hidden="true" className="text-[#b5653a]">
+                      <span aria-hidden="true" className="text-[#a4552d]">
                         ✓
                       </span>
                       {pt}
@@ -84,7 +84,7 @@ export default function PlanesPage() {
           href={waLink(CONTACT_WHATSAPP, "Hola, quiero una cuenta de Plantea.")}
           target="_blank"
           rel="noopener"
-          className="inline-flex h-12 items-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white hover:bg-[#a4552d]"
+          className="inline-flex h-12 items-center rounded-xl bg-[#a4552d] px-5 font-semibold text-white hover:bg-[#8f4a26]"
         >
           Pedir mi cuenta por WhatsApp
         </a>
