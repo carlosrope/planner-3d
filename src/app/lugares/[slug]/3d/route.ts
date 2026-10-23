@@ -44,6 +44,7 @@ export async function GET(request: Request, ctx: RouteContext<"/lugares/[slug]/3
         backHref: review ? `/revisar/${review}` : `/lugares/${key}`,
       },
       captura,
+      embeddable: true,
     },
   );
 }

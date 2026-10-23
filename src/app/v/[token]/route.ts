@@ -38,5 +38,5 @@ export async function GET(request: Request, ctx: RouteContext<"/v/[token]">) {
     description,
     url: `${origin}/v/${token}${tour ? "?visita=1" : ""}`,
     siteName: brand.name || undefined,
-  }, { lang: org?.language });
+  }, { lang: org?.language, embeddable: true });
 }

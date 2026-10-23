@@ -3,17 +3,21 @@
  *
  * - CSP básica: todo de la propia app (three.js también: public/vendor/three-0.160.0) y Cloudflare Web Analytics
  *   (visitas sin cookies: el script de static.cloudflareinsights.com y su envío a cloudflareinsights.com).
- *   'unsafe-inline' en scripts porque el diseñador lleva sus datos en <script> en línea; 'unsafe-eval' solo en
- *   desarrollo (lo pide Next para recargar en caliente).
+ *   En las páginas de Next queda 'unsafe-inline' en scripts: Next mete en línea los datos de React de cada visita y
+ *   solo les pone nonce si la página se genera entera en cada visita (sin el prerender parcial que la hace rápida).
+ *   El diseñador (disenador.html, que arma Plantea completo) no lo necesita: designerResponse le pone un nonce nuevo a
+ *   cada <script> y manda su propia CSP con ese nonce, así que ahí solo corre lo que puso Plantea. 'unsafe-eval' solo
+ *   en desarrollo (lo pide Next para recargar en caliente).
  * - X-Frame-Options SAMEORIGIN en toda la app (la portada automática abre el 3D en un iframe propio), salvo el
  *   enlace de solo vista /v/… y el 3D público /lugares/…/3d, que un salón puede incrustar en su página.
  */
 type Header = { key: string; value: string };
 
-export function contentSecurityPolicy({ dev, embeddable }: { dev: boolean; embeddable: boolean }): string {
+/** Con `nonce`, los scripts en línea solo corren si traen ese nonce (diseñador); sin él, 'unsafe-inline' (Next). */
+export function contentSecurityPolicy({ dev, embeddable, nonce }: { dev: boolean; embeddable: boolean; nonce?: string }): string {
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
-    "script-src": ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com", ...(dev ? ["'unsafe-eval'"] : [])],
+    "script-src": ["'self'", nonce ? `'nonce-${nonce}'` : "'unsafe-inline'", "https://static.cloudflareinsights.com", ...(dev ? ["'unsafe-eval'"] : [])],
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:"],
     "font-src": ["'self'", "data:"],
@@ -38,19 +42,23 @@ const common = (dev: boolean): Header[] => [
   ...(dev ? [] : [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]),
 ];
 
-/** Rutas que se pueden incrustar en otra página (iframe): enlace de solo vista y 3D público del lugar. */
+/** Rutas del diseñador que se pueden incrustar en otra página (iframe): enlace de solo vista y 3D público del lugar. */
 export const EMBEDDABLE_SOURCES = ["/v/:path*", "/lugares/:slug/3d"];
+/** Rutas del diseñador que no se incrustan: la demo y el evento de una cuenta. */
+export const DESIGNER_SOURCES = ["/disenador/:path*", "/eventos/:id"];
 
+/**
+ * Las páginas de Next llevan aquí su CSP. Las del diseñador (incrustables o no) reciben la suya, con nonce, de
+ * designerResponse; aquí solo llevan lo demás, para que el navegador no tenga dos políticas que cumplir.
+ */
 export function securityHeaders(dev: boolean) {
   return [
     {
-      // Todo menos las rutas incrustables (lookahead negativo de path-to-regexp).
-      source: "/((?!v/|lugares/[^/]+/3d(?:$|\\?)).*)",
+      // Todo menos las rutas del diseñador (lookahead negativo de path-to-regexp).
+      source: "/((?!v/|lugares/[^/]+/3d(?:$|\\?)|disenador/|eventos/[^/]+(?:$|\\?)).*)",
       headers: [...common(dev), { key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Content-Security-Policy", value: contentSecurityPolicy({ dev, embeddable: false }) }],
     },
-    ...EMBEDDABLE_SOURCES.map((source) => ({
-      source,
-      headers: [...common(dev), { key: "Content-Security-Policy", value: contentSecurityPolicy({ dev, embeddable: true }) }],
-    })),
+    ...DESIGNER_SOURCES.map((source) => ({ source, headers: [...common(dev), { key: "X-Frame-Options", value: "SAMEORIGIN" }] })),
+    ...EMBEDDABLE_SOURCES.map((source) => ({ source, headers: common(dev) })),
   ];
 }

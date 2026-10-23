@@ -1,7 +1,9 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { CONTACT_WHATSAPP } from "../brand";
+import { contentSecurityPolicy } from "../security-headers";
 import { SHARE_IMAGE } from "../site";
 import type { Facade } from "./facade";
 import { withoutVendors, type DesignerPlan, type PropertyDetails } from "./types";
@@ -147,7 +149,17 @@ export async function designerResponse(
   host?: HostData,
   /** Vista previa del enlace. Sin `image` se usa la imagen general de Plantea; `canonical` solo en páginas públicas. */
   meta?: { image?: string; imageWidth?: number; imageHeight?: number; description?: string; url?: string; canonical?: string; siteName?: string },
-  options?: { demo?: boolean; venue?: VenueNotice; eventKind?: string; captura?: boolean; lang?: string | null; guideSeen?: boolean; embed?: boolean },
+  options?: {
+    demo?: boolean;
+    venue?: VenueNotice;
+    eventKind?: string;
+    captura?: boolean;
+    lang?: string | null;
+    guideSeen?: boolean;
+    embed?: boolean;
+    /** Otra página puede mostrarlo en un iframe (enlace de solo vista y 3D público del lugar). */
+    embeddable?: boolean;
+  },
 ) {
   const html = await file("disenador.html");
   let head = inline(`window.__CASA__ = ${json(plan)};`);
@@ -213,7 +225,12 @@ export async function designerResponse(
   );
   // Los datos van antes del primer <script> porque el diseñador los lee al cargar.
   const at = page.indexOf("<script");
-  return new Response(page.slice(0, at) + head + page.slice(at), {
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+  // Cada <script> (los datos, los archivos de arriba, el importmap y el 3D) lleva el nonce de esta respuesta, y la CSP
+  // solo deja correr esos: un script que alguien lograra meter en un nombre o un comentario no se ejecuta.
+  const nonce = randomBytes(16).toString("base64");
+  const body = (page.slice(0, at) + head + page.slice(at)).replace(/<script(?=[\s>])/g, `<script nonce="${nonce}"`);
+  const csp = contentSecurityPolicy({ dev: process.env.NODE_ENV !== "production", embeddable: !!options?.embeddable, nonce });
+  return new Response(body, {
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": csp },
   });
 }

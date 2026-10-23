@@ -343,6 +343,9 @@
   }
 
   function bindPanel(f, upd) {
+    // Sin onclick="…" en el HTML (la CSP del diseñador solo deja correr scripts con su nonce): los clics van aquí.
+    document.querySelectorAll('#panel [data-sel-furn]').forEach(r => r.onclick = () => select({ kind: 'furn', id: r.dataset.selFurn }));
+    document.querySelectorAll('#panel [data-open-panel]').forEach(b => b.onclick = () => select({ kind: 'ext', panel: b.dataset.openPanel }));
     if (V?.isVendor(f)) return V.bindPanel(f, upd);
     document.querySelectorAll('#panel [data-wtable]').forEach(cb => cb.onchange = () => mutate(() => {
       const id = cb.dataset.wtable;
@@ -379,7 +382,7 @@
       ${free.length ? `<select id="xSeatGuest" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff">
         <option value="">＋ ${t('Seat a guest without a table…', 'Sentar a un invitado sin mesa…')}</option>
         ${free.map(g => `<option value="${g.id}">${esc(g.name)}${g.group ? ` · ${esc(g.group)}` : ''}</option>`).join('')}</select>` : ''}
-      <div class="actions"><button class="btn" onclick="select({kind:'ext',panel:'guests'})">${t('Open guest list', 'Abrir lista de invitados')}</button></div>
+      <div class="actions"><button class="btn" data-open-panel="guests">${t('Open guest list', 'Abrir lista de invitados')}</button></div>
       ${view}</section>`;
   }
 

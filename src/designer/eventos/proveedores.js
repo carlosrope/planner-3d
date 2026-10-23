@@ -228,7 +228,7 @@ window.__PROVEEDORES__ = function vendors(K) {
     }
     const vs = whose(state, f);
     if (!vs.length) return '';
-    return `<section><h3>${t('Vendor', 'Proveedor')}</h3><table>${vs.map(v => `<tr class="click" onclick="select({kind:'furn',id:'${v.id}'})">
+    return `<section><h3>${t('Vendor', 'Proveedor')}</h3><table>${vs.map(v => `<tr class="click" data-sel-furn="${v.id}">
       <td><span class="sw" style="background:${v.color}"></span>${esc(nm(v.name))}</td><td class="r">${v.arrive ? t('arrives', 'llega') + ' ' + v.arrive : ''}</td></tr>`).join('')}</table></section>`;
   }
 
