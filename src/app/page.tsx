@@ -5,10 +5,11 @@ import { FadeImages } from "@/components/FadeImages";
 import { Hero3D } from "@/components/Hero3D";
 import { LoopVideo } from "@/components/LoopVideo";
 import { PageLink } from "@/components/PageLink";
+import { RedesBotones } from "@/components/Redes";
 import { Slogan } from "@/components/Slogan";
 import { jsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/site";
 
-// Portada de Plantea: qué es, pruébalo sin cuenta, cómo funciona, para quién y cómo entra un salón.
+// Portada de Plantea: qué es, pruébalo sin cuenta, cómo funciona, para quién, cómo entra un salón y sus redes.
 
 const PASOS = [
   { n: "01", t: "Elige el lugar", p: "Un salón o una casa real del catálogo, ya en 3D. Si es tuyo, nos mandas el plano y lo convertimos." },
@@ -172,6 +173,14 @@ export default function Home() {
           <Link href="/alta" className="inline-flex h-12 shrink-0 items-center rounded-xl bg-[#b5653a] px-5 font-semibold text-white hover:bg-[#a4552d]">
             Registrar mi lugar
           </Link>
+        </div>
+        {/* Redes de Plantea: los videos del contenido (fallas de logística que se evitan desde el plano) y los salones nuevos */}
+        <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 text-center sm:p-8">
+          <h3 className="text-xl font-semibold text-stone-900">Que tu fiesta salga como la planeaste</h3>
+          <p className="mx-auto mt-1 max-w-xl text-stone-600">
+            Síguenos: salones en 3D, ideas de montaje y los errores de logística que se evitan desde el plano.
+          </p>
+          <RedesBotones className="mt-5" />
         </div>
         {/* En el celular, cada enlace en su renglón y con espacio para el dedo; en computadora, una sola línea */}
         <div className="mt-6 flex flex-col items-center text-center sm:hidden">

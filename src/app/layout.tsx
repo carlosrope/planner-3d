@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Sora } from "next/font/google";
 import { ErrorReporter } from "@/components/ErrorReporter";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
@@ -8,11 +7,8 @@ import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/site";
 import { Suspense } from "react";
+import { dmSans, sora } from "./fonts";
 import "./globals.css";
-
-// Tipografías de la marca (docs/marca-plantea.md): Sora para títulos, DM Sans para texto.
-const sora = Sora({ variable: "--font-sora", subsets: ["latin"], weight: ["500", "600", "700", "800"] });
-const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
   // Canónicas y Open Graph siempre con plantea.com.mx, aunque la app también responda en Railway.
