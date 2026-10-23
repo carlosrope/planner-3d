@@ -2509,6 +2509,85 @@ sub(
     "  updateSel();\n  envOcclude();\n  renderer.render(scene, camera);\n",
 )
 
+# Noche: el salón grande tenía una sola luz (alumbraba ~7 m) y afuera todo quedaba negro. Ahora los cuartos grandes
+# llevan una cuadrícula de luces de techo (cada ~6 m), hay luz de luna azulada y charcos de luz bajo los postes. Las
+# luces de los cuartos solo existen de noche (de día no se cuentan: el 3D no se hace más lento).
+sub(
+    """    if (r.at && !r.outdoor){
+      const lamp = new THREE.Mesh(new THREE.CylinderGeometry(.22, .22, .02, 32), new THREE.MeshStandardMaterial({color:'#fff', emissive:'#fff2d6', emissiveIntensity:.3}));
+      lamp.position.set(wx(r.at[0]), H - .012, wz(r.at[1])); lamp.visible = top >= H; lampG.add(lamp);
+      const pl = new THREE.PointLight(0xffd9a8, 0, 7, 1.6); pl.position.set(wx(r.at[0]), H - .25, wz(r.at[1])); lampG.add(pl);
+    }
+""",
+    """    if (r.at && !r.outdoor) lampSpots(r).forEach(([x, y], i, all) => {
+      const lamp = new THREE.Mesh(LAMP_GEO, lampMat());
+      lamp.position.set(wx(x), H - .012, wz(y)); lamp.visible = top >= H; lampG.add(lamp);
+      // En los cuartos grandes, una luz sí y otra no (con más alcance); en los chicos, la de siempre
+      if (all.length > 1 && i % 2) return;
+      const pl = all.length > 1 ? new THREE.PointLight(0xffd9a8, 0, 13, 1.25) : new THREE.PointLight(0xffd9a8, 0, 7, 1.6);
+      pl.userData.big = all.length > 1; pl.position.set(wx(x), H - .25, wz(y)); pl.visible = false; lampG.add(pl);
+    });
+""",
+)
+sub(
+    "function buildArch(){\n",
+    """const LAMP_GEO = new THREE.CylinderGeometry(.22, .22, .02, 32);
+let lampMatShared = null;
+const lampMat = () => lampMatShared ||= new THREE.MeshStandardMaterial({color:'#fff', emissive:'#fff2d6', emissiveIntensity:.3});
+// Dónde van las luces de techo de un cuarto: los chicos, una al centro; los grandes (salones), una cada ~6 m
+function lampSpots(r){
+  const q = r.poly; let a = 0, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  q.forEach(([x, y], i) => { const [u, v] = q[(i + 1) % q.length]; a += x*v - u*y; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
+  if (Math.abs(a)/2e6 < 45) return [r.at];
+  const inside = (px, py) => { let c = false; for (let i = 0, j = q.length - 1; i < q.length; j = i++){ const [xi, yi] = q[i], [xj, yj] = q[j];
+    if ((yi > py) !== (yj > py) && px < (xj - xi)*(py - yi)/(yj - yi) + xi) c = !c; } return c; };
+  const nx = Math.max(2, Math.round((x1 - x0)/6000)), ny = Math.max(2, Math.round((y1 - y0)/6000)), out = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++){ const x = x0 + (i + .5)*(x1 - x0)/nx, y = y0 + (j + .5)*(y1 - y0)/ny; if (inside(x, y)) out.push([x, y]); }
+  return out.length ? out : [r.at];
+}
+function buildArch(){
+""",
+)
+sub(
+    "  sun.intensity = opt.night ? .05 : 1.4 + Math.sin(Math.PI*t)*1.6;\n  hemi.intensity = opt.night ? .12 : 1.1;\n",
+    "  if (opt.night) sun.color.set(0xb4c6ea);   // luna\n"
+    "  sun.intensity = opt.night ? .55 : 1.4 + Math.sin(Math.PI*t)*1.6;\n"
+    "  hemi.intensity = opt.night ? .5 : 1.1;\n"
+    "  hemi.color.set(opt.night ? 0x93a6cc : 0xfff8ee); hemi.groundColor.set(opt.night ? 0x3a342c : 0xb9a88f);\n",
+)
+sub(
+    "  lampG.children.forEach(o => { if (o.isPointLight) o.intensity = opt.night ? 6 : 0; else o.material.emissiveIntensity = opt.night ? 2 : .3; });\n"
+    "  renderer.toneMappingExposure = opt.night ? 1.25 : 1.05;\n",
+    "  lampG.children.forEach(o => { if (o.isPointLight){ o.visible = opt.night; o.intensity = opt.night ? (o.userData.big ? 14 : 6) : 0; } else o.material.emissiveIntensity = opt.night ? 2 : .3; });\n"
+    "  renderer.toneMappingExposure = opt.night ? 1.3 : 1.05;\n",
+)
+# Charcos de luz bajo los postes (solo de noche)
+sub(
+    "    const hd = new THREE.Mesh(new THREE.BoxGeometry(.9, .14, .3), head); hd.position.set(u, 6.45, front + WALK + .1); g.add(hd); }\n",
+    "    const hd = new THREE.Mesh(new THREE.BoxGeometry(.9, .14, .3), head); hd.position.set(u, 6.45, front + WALK + .1); g.add(hd);\n"
+    "    const pool = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), poolMat); pool.rotation.x = -Math.PI/2; pool.position.set(u, .13, front + WALK + .6); pool.visible = false; g.add(pool); envPools.push(pool); }\n",
+)
+sub(
+    "  envLamps.push(head);\n",
+    "  envLamps.push(head);\n"
+    "  const poolMat = new THREE.MeshBasicMaterial({map: canvasTex(128, 128, (c, w, h) => { const gr = c.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);\n"
+    "    gr.addColorStop(0, 'rgba(255,214,150,.55)'); gr.addColorStop(.5, 'rgba(255,200,130,.18)'); gr.addColorStop(1, 'rgba(255,200,130,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h); }),\n"
+    "    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending});\n",
+)
+sub(
+    "const envLit = [], envLamps = [], envBlocks = [];\n",
+    "const envLit = [], envLamps = [], envBlocks = [], envPools = [];\n",
+)
+sub(
+    "  envLamps.forEach(m => { m.emissiveIntensity = night ? 2.4 : 0; });\n",
+    "  envLamps.forEach(m => { m.emissiveIntensity = night ? 2.4 : 0; });\n"
+    "  envPools.forEach(p => { p.visible = night; });\n",
+)
+sub(
+    "  ground.material.color.set(night ? 0x4a4f58 : 0xffffff);\n",
+    "  ground.material.color.set(night ? 0x737b8a : 0xffffff);\n",
+)
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")
