@@ -2588,6 +2588,123 @@ sub(
     "  ground.material.color.set(night ? 0x737b8a : 0xffffff);\n",
 )
 
+# Estacionamiento a la derecha del salón (visto desde la calle) y toldo con el letrero del salón en la entrada.
+# Los vecinos de ese lado se recorren y en la banqueta no hay árboles frente a la entrada del estacionamiento.
+sub(
+    "  const gap = casa ? .4 : 3, setback = casa ? 3 : 1;\n",
+    "  const gap = casa ? .4 : 3, setback = casa ? 3 : 1, PARK = casa ? 0 : 17, pu = hu + 1;   // estacionamiento: ancho y orilla\n",
+)
+sub(
+    "  row(-L, -(hu + gap), front - setback, -1, false); row(hu + gap, L, front - setback, -1, false);\n",
+    "  row(-L, -(hu + gap), front - setback, -1, false); row(hu + gap + (PARK ? PARK + 2 : 0), L, front - setback, -1, false);\n",
+)
+sub(
+    "    if (Math.abs(u - eu) > 5) tree(u, front + .6, .85 + rnd()*.4);\n",
+    "    if (Math.abs(u - eu) > 5 && !(PARK && u > pu + 4 && u < pu + PARK - 4)) tree(u, front + .6, .85 + rnd()*.4);\n",
+)
+sub(
+    "  // Cielo con horizonte (de día y de noche) y bruma a lo lejos, para que la orilla del piso no se vea\n",
+    r"""  const carAt = (u, v, rot, color) => { const car = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.3, .72, 1.8), new THREE.MeshStandardMaterial({color, roughness: .45, metalness: .2})); body.position.y = .62;
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.3, .58, 1.62), glass); cab.position.set(-.2, 1.27, 0);
+    const wh = new THREE.Mesh(new THREE.BoxGeometry(3.4, .5, 1.7), tyre); wh.position.y = .25;
+    car.add(body, cab, wh); car.traverse(q => { q.castShadow = true; }); car.position.set(u, 0, v); car.rotation.y = rot; g.add(car); };
+  // Estacionamiento a la derecha del salón: dos filas de cajones pintados con un pasillo al centro y unos coches
+  if (PARK){
+    const pd = front + hv, line = new THREE.MeshStandardMaterial({color: 0xf2efe6, roughness: .7});
+    plane(PARK, pd, new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95}), pu + PARK/2, (front - hv)/2, -.011);
+    for (let v = -hv + 1; v + 2.6 < front - 4; v += 2.6) [[pu + .5, pu + 5.5, Math.PI], [pu + PARK - 5.5, pu + PARK - .5, 0]].forEach(([a, b, rot]) => {
+      plane(b - a, .12, line, (a + b)/2, v, -.006);
+      if (rnd() < .42) carAt((a + b)/2, v + 1.3, rot, CARS[Math.floor(rnd()*CARS.length)]);
+    });
+    [pu + .5, pu + PARK - .5].forEach(u => plane(.12, front - 4 + hv - 1, line, u, (front - 4 - hv + 1)/2, -.006));
+    // Postes del estacionamiento, en la orilla de afuera, con su charco de luz de noche
+    for (let v = -hv + 6; v < front - 6; v += 14){
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 6.5, 8), pole); p.position.set(pu + PARK + .3, 3.25, v); p.castShadow = true; g.add(p);
+      const hd = new THREE.Mesh(new THREE.BoxGeometry(.9, .14, .3), head); hd.position.set(pu + PARK - .1, 6.45, v); hd.rotation.y = Math.PI/2; g.add(hd);
+      const pool = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), poolMat); pool.rotation.x = -Math.PI/2; pool.position.set(pu + PARK - 4, .02, v); pool.visible = false; g.add(pool); envPools.push(pool);
+    }
+  }
+  // Toldo en la entrada del salón, con su nombre en el frente (de noche se ilumina)
+  if (!casa){
+    const name = String(CASA.title || '').split('·')[0].trim(), tw = Math.min(7.5, Math.max(4, 2*hu*.3)), td = 2.4, y = 2.75;
+    const dark = new THREE.MeshStandardMaterial({color: 0x2f2b27, roughness: .6});
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(tw, .14, td), dark); roof.position.set(eu, y + .07, hv + td/2); roof.castShadow = true; g.add(roof);
+    [-1, 1].forEach(s => { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, y, 10), pole); p.position.set(eu + s*(tw/2 - .2), y/2, hv + td - .15); p.castShadow = true; g.add(p); });
+    if (name){
+      const sign = canvasTex(1024, 128, (c, w, h) => { c.fillStyle = '#2f2b27'; c.fillRect(0, 0, w, h); c.fillStyle = '#f4efe6'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        let fs = 78; const font = () => { c.font = `600 ${fs}px system-ui, -apple-system, Segoe UI, sans-serif`; }; font();
+        while (c.measureText(name).width > w - 90 && fs > 30){ fs -= 4; font(); } c.fillText(name, w/2, h/2 + 3); });
+      const sm = new THREE.MeshStandardMaterial({map: sign, roughness: .6, emissive: 0xffffff, emissiveMap: sign, emissiveIntensity: 0});
+      const f = new THREE.Mesh(new THREE.BoxGeometry(tw, tw/8, .08), [dark, dark, dark, dark, sm, dark]); f.position.set(eu, y + .14 + tw/16, hv + td - .04); f.castShadow = true; g.add(f); envLit.push(sm);
+    }
+  }
+  // Cielo con horizonte (de día y de noche) y bruma a lo lejos, para que la orilla del piso no se vea
+""",
+)
+
+# Fachada: las caras de muro que dan afuera (no caen dentro de un cuarto techado) llevan aplanado con textura y un
+# zoclo abajo, en lugar del mismo hueso de adentro. El color sale de CASA.facade.color si el lugar lo trae.
+sub(
+    "  const o = new THREE.Mesh(new THREE.BoxGeometry(M(x1-x0), yt-yb, M(y1-y0)), m || [wallMat, wallMat, capMat, wallMat, wallMat, wallMat]);\n"
+    "  o.position.set(wx((x0+x1)/2), (yb+yt)/2, wz((y0+y1)/2)); o.castShadow = o.receiveShadow = true; archUp.add(o);\n",
+    "  const ext = m ? null : outsideFaces(x0, y0, x1, y1);\n"
+    "  const o = new THREE.Mesh(new THREE.BoxGeometry(M(x1-x0), yt-yb, M(y1-y0)), m || [0, 1, 2, 3, 4, 5].map(i => i === 2 ? capMat : ext[i] ? facadeMat() : wallMat));\n"
+    "  o.position.set(wx((x0+x1)/2), (yb+yt)/2, wz((y0+y1)/2)); o.castShadow = o.receiveShadow = true; archUp.add(o);\n"
+    "  if (ext && yb <= .001){   // zoclo de la fachada\n"
+    "    const W = M(x1-x0), D = M(y1-y0), ph = Math.min(.45, yt);\n"
+    "    [[0, [.012, ph, D], W/2, 0], [1, [.012, ph, D], -W/2, 0], [4, [W, ph, .012], 0, D/2], [5, [W, ph, .012], 0, -D/2]].forEach(([i, size, ox, oz]) => {\n"
+    "      if (!ext[i]) return; const p = new THREE.Mesh(new THREE.BoxGeometry(...size), plinthMat()); p.position.set(o.position.x + ox, ph/2, o.position.z + oz); p.receiveShadow = true; archUp.add(p); });\n"
+    "  }\n",
+)
+sub(
+    "function wallBox([x0, y0, x1, y1], yb, yt, m){\n",
+    """let facadeM = null, plinthM = null;
+const facadeMat = () => facadeM ||= new THREE.MeshStandardMaterial({color: CASA.facade?.color || (CASA.kind === 'casa' ? '#efe8dc' : '#e6e2db'),
+  map: (() => { const t = canvasTex(256, 256, (g, w, h) => speckle(g, w, h, '#f7f6f3', .07, 4200, envRand(CASA.id + '-fachada'), 2)); t.repeat.set(1.5, 1.5); return t; })(), roughness: .95});
+const plinthMat = () => plinthM ||= new THREE.MeshStandardMaterial({color: 0x8d877e, roughness: .9});
+// Caras de un muro que dan afuera: el punto a 15 cm de la cara no cae dentro de ningún cuarto techado
+function outsideFaces(x0, y0, x1, y1){
+  const mx = (x0 + x1)/2, my = (y0 + y1)/2, d = 150, out = (x, y) => !ROOMS.some(r => !r.outdoor && !r.void && inPoly([x, y], r.poly));
+  return {0: out(x1 + d, my), 1: out(x0 - d, my), 4: out(mx, y1 + d), 5: out(mx, y0 - d)};
+}
+function wallBox([x0, y0, x1, y1], yb, yt, m){
+""",
+)
+
+# Techo: aparece suave cuando la cámara baja casi a nivel de la calle (desde arriba se ve adentro, como siempre) y
+# se quita si la cámara entra al lugar.
+sub(
+    "  scene.fog = new THREE.Fog(0xeef1ee, Math.max(70, 40*S3), Math.max(230, 115*S3));\n  return g;\n",
+    "  scene.fog = new THREE.Fog(0xeef1ee, Math.max(70, 40*S3), Math.max(230, 115*S3));\n  scene.add(buildRoof());\n  return g;\n",
+)
+sub(
+    "function envOcclude(){\n  if (!envBlocks.length) return;\n",
+    """let envRoof = null, roofMat = null, envRoofOn = false;
+function buildRoof(){
+  roofMat = new THREE.MeshStandardMaterial({color: 0xbcb6ac, roughness: .95, transparent: true, opacity: 0, depthWrite: false});
+  const r = new THREE.Group();
+  ROOMS.forEach(rm => { if (rm.outdoor || rm.void) return;
+    const geo = new THREE.ExtrudeGeometry(shapeOf(rm.poly), {depth: .16, bevelEnabled: false}); geo.rotateX(-Math.PI/2);
+    const m = new THREE.Mesh(geo, roofMat); m.position.y = H + .01; r.add(m); });
+  r.visible = false; return envRoof = r;
+}
+function envRoofFade(){
+  if (!envRoof) return;
+  const t = orbit.target, d = Math.max(camera.position.distanceTo(t), .001), el = Math.asin(Math.max(-1, Math.min(1, (camera.position.y - t.y)/d)));
+  const inside = ROOMS.some(r => !r.outdoor && !r.void && inPoly([camera.position.x*1000 + OX, camera.position.z*1000 + OY], r.poly));
+  const want = opt.mode === 'orbit' && el < .32 && !inside ? 1 : 0;
+  roofMat.opacity += (want - roofMat.opacity)*.12; envRoof.visible = roofMat.opacity > .02; roofMat.depthWrite = roofMat.opacity > .9;
+  // Con el techo puesto, los nombres de los cuartos (que quedan adentro) se esconden; vuelven al quitarse
+  const on = roofMat.opacity > .5;
+  if (on !== envRoofOn){ envRoofOn = on; if (opt.mode === 'orbit' && !anim) showLabels(opt.labels && !on); }
+}
+function envOcclude(){
+  envRoofFade();
+  if (!envBlocks.length) return;
+""",
+)
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

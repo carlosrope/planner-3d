@@ -69,7 +69,7 @@ export function Hero3D() {
         {/* Foto del 3D mientras carga (y si el 3D no puede cargar) */}
         {/* eslint-disable-next-line @next/next/no-img-element -- captura propia */}
         <img
-          src="/portada/espacios-salon-3d.jpg"
+          src="/portada/salon-3d-portada.jpg"
           alt="El Salón Demostración en 3D"
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${ready ? "opacity-0" : "opacity-100"}`}
         />

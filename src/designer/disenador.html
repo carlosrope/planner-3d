@@ -2529,10 +2529,25 @@ function buildFurniture(f){
 
 /* ======================= 建筑 ======================= */
 function clearGroup(g){ g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); g.clear(); }
+let facadeM = null, plinthM = null;
+const facadeMat = () => facadeM ||= new THREE.MeshStandardMaterial({color: CASA.facade?.color || (CASA.kind === 'casa' ? '#efe8dc' : '#e6e2db'),
+  map: (() => { const t = canvasTex(256, 256, (g, w, h) => speckle(g, w, h, '#f7f6f3', .07, 4200, envRand(CASA.id + '-fachada'), 2)); t.repeat.set(1.5, 1.5); return t; })(), roughness: .95});
+const plinthMat = () => plinthM ||= new THREE.MeshStandardMaterial({color: 0x8d877e, roughness: .9});
+// Caras de un muro que dan afuera: el punto a 15 cm de la cara no cae dentro de ningún cuarto techado
+function outsideFaces(x0, y0, x1, y1){
+  const mx = (x0 + x1)/2, my = (y0 + y1)/2, d = 150, out = (x, y) => !ROOMS.some(r => !r.outdoor && !r.void && inPoly([x, y], r.poly));
+  return {0: out(x1 + d, my), 1: out(x0 - d, my), 4: out(mx, y1 + d), 5: out(mx, y0 - d)};
+}
 function wallBox([x0, y0, x1, y1], yb, yt, m){
   if (yt - yb <= .001) return;
-  const o = new THREE.Mesh(new THREE.BoxGeometry(M(x1-x0), yt-yb, M(y1-y0)), m || [wallMat, wallMat, capMat, wallMat, wallMat, wallMat]);
+  const ext = m ? null : outsideFaces(x0, y0, x1, y1);
+  const o = new THREE.Mesh(new THREE.BoxGeometry(M(x1-x0), yt-yb, M(y1-y0)), m || [0, 1, 2, 3, 4, 5].map(i => i === 2 ? capMat : ext[i] ? facadeMat() : wallMat));
   o.position.set(wx((x0+x1)/2), (yb+yt)/2, wz((y0+y1)/2)); o.castShadow = o.receiveShadow = true; archUp.add(o);
+  if (ext && yb <= .001){   // zoclo de la fachada
+    const W = M(x1-x0), D = M(y1-y0), ph = Math.min(.45, yt);
+    [[0, [.012, ph, D], W/2, 0], [1, [.012, ph, D], -W/2, 0], [4, [W, ph, .012], 0, D/2], [5, [W, ph, .012], 0, -D/2]].forEach(([i, size, ox, oz]) => {
+      if (!ext[i]) return; const p = new THREE.Mesh(new THREE.BoxGeometry(...size), plinthMat()); p.position.set(o.position.x + ox, ph/2, o.position.z + oz); p.receiveShadow = true; archUp.add(p); });
+  }
   // 漫游辅助：墙体棱线 + 踢脚线，让相邻墙面、墙角一眼可分（仅漫游模式显示）
   const ln = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry), edgeMat); ln.position.copy(o.position); ln.userData.walkOnly = true; ln.visible = opt.mode === 'walk'; archUp.add(ln);
   if (yb <= .001){
@@ -2783,8 +2798,8 @@ function buildEnv(){
       house(u + w/2, edge + dir*d/2, w, d, h, back); u += w + (casa ? .2 : 1.5 + rnd()*2.5);
     }
   };
-  const gap = casa ? .4 : 3, setback = casa ? 3 : 1;
-  row(-L, -(hu + gap), front - setback, -1, false); row(hu + gap, L, front - setback, -1, false);
+  const gap = casa ? .4 : 3, setback = casa ? 3 : 1, PARK = casa ? 0 : 17, pu = hu + 1;   // estacionamiento: ancho y orilla
+  row(-L, -(hu + gap), front - setback, -1, false); row(hu + gap + (PARK ? PARK + 2 : 0), L, front - setback, -1, false);
   row(-L, L, front + 2*WALK + ROAD + (casa ? 3 : 1), 1, true);
   row(-L, L, -hv - (casa ? 1 : 5), -1, true);
   // Árboles en las banquetas (sin tapar la entrada) y en los patios
@@ -2796,7 +2811,7 @@ function buildEnv(){
     o.position.set(u, 3.5*s, v); o.scale.set(s*(.9 + rnd()*.3), s*(.8 + rnd()*.4), s*(.9 + rnd()*.3)); o.updateMatrix(); crown.setMatrixAt(n, o.matrix);
     crown.setColorAt(n, col.setHSL(.24 + rnd()*.07, .32 + rnd()*.16, .28 + rnd()*.12)); n++; };
   for (let u = -L + 4; u < L; u += 8 + rnd()*3){
-    if (Math.abs(u - eu) > 5) tree(u, front + .6, .85 + rnd()*.4);
+    if (Math.abs(u - eu) > 5 && !(PARK && u > pu + 4 && u < pu + PARK - 4)) tree(u, front + .6, .85 + rnd()*.4);
     if (rnd() < .7) tree(u + 3, front + 2*WALK + ROAD - .6, .85 + rnd()*.4);
   }
   for (let k = 0; k < 14; k++) tree((rnd() < .5 ? -1 : 1)*(hu + 6 + rnd()*40), -hv - 2 - rnd()*3, .8 + rnd()*.5);
@@ -2823,17 +2838,73 @@ function buildEnv(){
     car.add(body, cab, wh); car.traverse(q => { q.castShadow = true; });
     car.position.set(u, 0, front + WALK + (far ? ROAD - 1.4 : 1.4)); if (far) car.rotation.y = Math.PI; g.add(car);
   }
+  const carAt = (u, v, rot, color) => { const car = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.3, .72, 1.8), new THREE.MeshStandardMaterial({color, roughness: .45, metalness: .2})); body.position.y = .62;
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.3, .58, 1.62), glass); cab.position.set(-.2, 1.27, 0);
+    const wh = new THREE.Mesh(new THREE.BoxGeometry(3.4, .5, 1.7), tyre); wh.position.y = .25;
+    car.add(body, cab, wh); car.traverse(q => { q.castShadow = true; }); car.position.set(u, 0, v); car.rotation.y = rot; g.add(car); };
+  // Estacionamiento a la derecha del salón: dos filas de cajones pintados con un pasillo al centro y unos coches
+  if (PARK){
+    const pd = front + hv, line = new THREE.MeshStandardMaterial({color: 0xf2efe6, roughness: .7});
+    plane(PARK, pd, new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95}), pu + PARK/2, (front - hv)/2, -.011);
+    for (let v = -hv + 1; v + 2.6 < front - 4; v += 2.6) [[pu + .5, pu + 5.5, Math.PI], [pu + PARK - 5.5, pu + PARK - .5, 0]].forEach(([a, b, rot]) => {
+      plane(b - a, .12, line, (a + b)/2, v, -.006);
+      if (rnd() < .42) carAt((a + b)/2, v + 1.3, rot, CARS[Math.floor(rnd()*CARS.length)]);
+    });
+    [pu + .5, pu + PARK - .5].forEach(u => plane(.12, front - 4 + hv - 1, line, u, (front - 4 - hv + 1)/2, -.006));
+    // Postes del estacionamiento, en la orilla de afuera, con su charco de luz de noche
+    for (let v = -hv + 6; v < front - 6; v += 14){
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 6.5, 8), pole); p.position.set(pu + PARK + .3, 3.25, v); p.castShadow = true; g.add(p);
+      const hd = new THREE.Mesh(new THREE.BoxGeometry(.9, .14, .3), head); hd.position.set(pu + PARK - .1, 6.45, v); hd.rotation.y = Math.PI/2; g.add(hd);
+      const pool = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), poolMat); pool.rotation.x = -Math.PI/2; pool.position.set(pu + PARK - 4, .02, v); pool.visible = false; g.add(pool); envPools.push(pool);
+    }
+  }
+  // Toldo en la entrada del salón, con su nombre en el frente (de noche se ilumina)
+  if (!casa){
+    const name = String(CASA.title || '').split('·')[0].trim(), tw = Math.min(7.5, Math.max(4, 2*hu*.3)), td = 2.4, y = 2.75;
+    const dark = new THREE.MeshStandardMaterial({color: 0x2f2b27, roughness: .6});
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(tw, .14, td), dark); roof.position.set(eu, y + .07, hv + td/2); roof.castShadow = true; g.add(roof);
+    [-1, 1].forEach(s => { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, y, 10), pole); p.position.set(eu + s*(tw/2 - .2), y/2, hv + td - .15); p.castShadow = true; g.add(p); });
+    if (name){
+      const sign = canvasTex(1024, 128, (c, w, h) => { c.fillStyle = '#2f2b27'; c.fillRect(0, 0, w, h); c.fillStyle = '#f4efe6'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        let fs = 78; const font = () => { c.font = `600 ${fs}px system-ui, -apple-system, Segoe UI, sans-serif`; }; font();
+        while (c.measureText(name).width > w - 90 && fs > 30){ fs -= 4; font(); } c.fillText(name, w/2, h/2 + 3); });
+      const sm = new THREE.MeshStandardMaterial({map: sign, roughness: .6, emissive: 0xffffff, emissiveMap: sign, emissiveIntensity: 0});
+      const f = new THREE.Mesh(new THREE.BoxGeometry(tw, tw/8, .08), [dark, dark, dark, dark, sm, dark]); f.position.set(eu, y + .14 + tw/16, hv + td - .04); f.castShadow = true; g.add(f); envLit.push(sm);
+    }
+  }
   // Cielo con horizonte (de día y de noche) y bruma a lo lejos, para que la orilla del piso no se vea
   const sky = (top, mid, low) => { const t = canvasTex(4, 256, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h);
     gr.addColorStop(0, top); gr.addColorStop(.38, mid); gr.addColorStop(.5, low); gr.addColorStop(1, low); c.fillStyle = gr; c.fillRect(0, 0, w, h); });
     t.mapping = THREE.EquirectangularReflectionMapping; return t; };
   envSky = sky('#8db6d6', '#cadceb', '#eef1ee'); envSkyNight = sky('#0b1020', '#172036', '#232a3a');
   scene.fog = new THREE.Fog(0xeef1ee, Math.max(70, 40*S3), Math.max(230, 115*S3));
+  scene.add(buildRoof());
   return g;
 }
 // Si un vecino queda entre la cámara y el lugar (al bajar la cámara o girar), se esconde mientras estorba
 const envRay = new THREE.Ray(), envHit = new THREE.Vector3();
+let envRoof = null, roofMat = null, envRoofOn = false;
+function buildRoof(){
+  roofMat = new THREE.MeshStandardMaterial({color: 0xbcb6ac, roughness: .95, transparent: true, opacity: 0, depthWrite: false});
+  const r = new THREE.Group();
+  ROOMS.forEach(rm => { if (rm.outdoor || rm.void) return;
+    const geo = new THREE.ExtrudeGeometry(shapeOf(rm.poly), {depth: .16, bevelEnabled: false}); geo.rotateX(-Math.PI/2);
+    const m = new THREE.Mesh(geo, roofMat); m.position.y = H + .01; r.add(m); });
+  r.visible = false; return envRoof = r;
+}
+function envRoofFade(){
+  if (!envRoof) return;
+  const t = orbit.target, d = Math.max(camera.position.distanceTo(t), .001), el = Math.asin(Math.max(-1, Math.min(1, (camera.position.y - t.y)/d)));
+  const inside = ROOMS.some(r => !r.outdoor && !r.void && inPoly([camera.position.x*1000 + OX, camera.position.z*1000 + OY], r.poly));
+  const want = opt.mode === 'orbit' && el < .32 && !inside ? 1 : 0;
+  roofMat.opacity += (want - roofMat.opacity)*.12; envRoof.visible = roofMat.opacity > .02; roofMat.depthWrite = roofMat.opacity > .9;
+  // Con el techo puesto, los nombres de los cuartos (que quedan adentro) se esconden; vuelven al quitarse
+  const on = roofMat.opacity > .5;
+  if (on !== envRoofOn){ envRoofOn = on; if (opt.mode === 'orbit' && !anim) showLabels(opt.labels && !on); }
+}
 function envOcclude(){
+  envRoofFade();
   if (!envBlocks.length) return;
   if (!envBlocks[0].userData.box){ scene.updateMatrixWorld(); envBlocks.forEach(b => { b.userData.box = new THREE.Box3().setFromObject(b); }); }
   const orbiting = opt.mode === 'orbit', t = orbit.target, dist = camera.position.distanceTo(t);
