@@ -6,7 +6,6 @@ import { z } from "zod";
 import {
   adminAddVenueFiles,
   adminSetVenueCapacities,
-  adminSetVenueFacade,
   adminCreateTrialCodes,
   adminSetTrialCodeDisabled,
   adminMarkSuggestion,
@@ -28,7 +27,6 @@ import { normalizeWhatsapp } from "@/lib/whatsapp";
 import { endOfDay } from "@/lib/dates";
 import { TRIAL_CODE_BATCH_MAX, TRIAL_CODE_DAYS, TRIAL_CODE_KINDS } from "@/lib/trial-codes";
 import { TEMPLATES } from "@/lib/designer/starter";
-import { facadeFromForm } from "@/lib/designer/facade";
 
 // Acciones de la administración de Plantea. Todas piden requireAdmin.
 
@@ -275,15 +273,6 @@ export async function toggleTrialCode(formData: FormData): Promise<void> {
   await adminSetTrialCodeDisabled(parsed.data.codeId, parsed.data.disabled === "1", admin);
   revalidatePath("/admin/codigos");
   revalidatePath("/admin/rastro");
-}
-
-/** Fachada y entorno del 3D, capturados mirando la foto de «por fuera» (facade.ts). «Quitar» vuelve a lo de siempre. */
-export async function updateVenueFacade(formData: FormData): Promise<void> {
-  await requireAdmin();
-  const venueId = id.safeParse(formData.get("venueId"));
-  if (!venueId.success) return;
-  await adminSetVenueFacade(venueId.data, formData.get("clear") ? null : facadeFromForm(formData));
-  revalidate(venueId.data);
 }
 
 /** Aforo por montaje que corrige la administración (vacío = el calculado del plano). */

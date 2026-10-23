@@ -24,7 +24,6 @@ import {
   venueFile,
   venueInquiry,
 } from "./db/schema";
-import type { Facade } from "./designer/facade";
 import type { DesignerPlan } from "./designer/types";
 import { setupCapacities, type SetupCapacities } from "./designer/capacity";
 import {
@@ -1403,8 +1402,6 @@ export async function adminGetVenue(id: string) {
       createdAt: venue.createdAt,
       deletedAt: venue.deletedAt,
       ownerName,
-      // Solo la fachada del plano (el plano completo pesa): la sección «Fachada y entorno del 3D»
-      facade: sql<Facade | null>`${venue.plan} -> 'facade'`,
     })
     .from(venue)
     .leftJoin(organization, eq(organization.id, venue.ownerOrgId))
@@ -1473,21 +1470,8 @@ export async function adminSetVenueCapacities(id: string, manual: Partial<SetupC
   await db.update(venue).set({ capacityManual: Object.keys(clean).length ? clean : null }).where(eq(venue.id, id));
 }
 
-/** La administración captura la fachada y el entorno del 3D (facade.ts); null la quita. Solo si el lugar ya tiene plano. */
-export async function adminSetVenueFacade(id: string, facade: Facade | null) {
-  await db
-    .update(venue)
-    .set({ plan: facade ? sql`jsonb_set(${venue.plan}, '{facade}', ${JSON.stringify(facade)}::jsonb)` : sql`${venue.plan} - 'facade'` })
-    .where(and(eq(venue.id, id), isNotNull(venue.plan)));
-}
-
 /** La administración carga el plano del diseñador (JSON de tools/cad-import): el lugar pasa a "por confirmar". */
 export async function adminSetVenuePlan(id: string, plan: DesignerPlan) {
-  // La fachada se captura aparte (adminSetVenueFacade): si el plano nuevo no trae una, se queda la que ya tenía.
-  if (!plan.facade) {
-    const [before] = await db.select({ plan: venue.plan }).from(venue).where(eq(venue.id, id));
-    if (before?.plan?.facade) plan = { ...plan, facade: before.plan.facade };
-  }
   const [row] = await db
     .update(venue)
     .set({
