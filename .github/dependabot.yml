@@ -1,0 +1,36 @@
+# Dependabot: actualizaciones de paquetes una vez por semana, juntas en un solo PR para no llenar el repo de PRs.
+# Las de seguridad llegan aparte en cuanto salen (hay que tener activados los avisos y las actualizaciones de seguridad
+# en GitHub → Settings → Code security). Ningún PR se publica solo: Railway despliega únicamente lo que llega a main.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Mazatlan
+    # Una versión recién salida espera 3 días antes de proponerse (si viniera alterada, suele descubrirse en ese tiempo).
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 5
+    groups:
+      parches-y-menores:
+        update-types: [patch, minor]
+    ignore:
+      # Saltos grandes que piden trabajo a mano: se hacen cuando se decida, no por PR automático.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: "Dependencias"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "GitHub Actions"
