@@ -1801,9 +1801,9 @@ function init(){
   sun.castShadow = true; sun.shadow.mapSize.setScalar(COARSE ? 2048 : 4096);   // 平板 GPU 用小一点的阴影贴图
   Object.assign(sun.shadow.camera, {left:-11*S3, right:11*S3, top:11*S3, bottom:-11*S3, near:1, far:60*S3});
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
-  ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), new THREE.MeshStandardMaterial({color:0xf2eee7, roughness:1}));
-  ground.rotation.x = -Math.PI/2; ground.position.y = -0.015; ground.receiveShadow = true;
-  scene.add(hemi, sun, sun.target, ground);
+  ground = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({color:0xf2eee7, roughness:1}));
+  ground.rotation.x = -Math.PI/2; ground.position.y = -0.03; ground.receiveShadow = true;
+  scene.add(hemi, sun, sun.target, ground, buildEnv());
 
   const pm = new THREE.PMREMGenerator(renderer); envTex = pm.fromScene(new RoomEnvironment(), .04).texture; pm.dispose();
   glassMat = new THREE.MeshPhysicalMaterial({color:0xcfe6ef, roughness:.05, transparent:true, opacity:.28, depthWrite:false, side:THREE.DoubleSide});
@@ -2683,6 +2683,151 @@ function applyGrow(){
   lampG.visible = grow > .99;
 }
 
+/* ======================= Entorno: calle, banquetas, vecinos y árboles ======================= */
+let envSky = null, envSkyNight = null;
+const envLit = [], envLamps = [], envBlocks = [];
+// Azar con semilla (el id del lugar): el mismo lugar siempre tiene los mismos vecinos
+function envRand(seed){
+  let a = 0; for (const ch of String(seed)) a = (a*31 + ch.charCodeAt(0)) | 0;
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0)/4294967296; };
+}
+function canvasTex(w, h, draw){
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); return t;
+}
+const texRep = (t, x, y) => { const c = t.clone(); c.repeat.set(x, y); c.needsUpdate = true; return c; };
+function speckle(g, w, h, base, amp, n, rnd, size = 2){
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < n; i++){ const v = (rnd()*2 - 1)*amp; g.fillStyle = v > 0 ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${-v})`; g.fillRect(rnd()*w, rnd()*h, size, size); }
+}
+// Dos tramos de fachada (2 × 3.6 m de ancho, un piso de 3 m) con su ventana; la máscara enciende una de las dos de noche
+function facadeTex(rnd){
+  const bays = (c, glow) => { for (let i = 0; i < 2; i++){ const x = i*256 + 64, y = 46, w = 128, h = 98;
+    if (glow){ if (i === 0) { c.fillStyle = '#ffe1ae'; c.fillRect(x + 6, y + 6, w - 12, h - 12); } continue; }
+    c.fillStyle = '#dcdcd8'; c.fillRect(x, y, w, h); const gr = c.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, '#5d6b77'); gr.addColorStop(1, '#3a434c');
+    c.fillStyle = gr; c.fillRect(x + 6, y + 6, w - 12, h - 12); c.fillStyle = '#dcdcd8'; c.fillRect(x + w/2 - 3, y + 6, 6, h - 12); c.fillRect(x - 6, y + h, w + 12, 7); } };
+  return { map: canvasTex(512, 214, (c, w, h) => { speckle(c, w, h, '#f6f5f2', .05, 2600, rnd, 2); bays(c, false); }),
+    glow: canvasTex(512, 214, (c, w, h) => { c.fillStyle = '#000'; c.fillRect(0, 0, w, h); bays(c, true); }) };
+}
+function buildEnv(){
+  const rnd = envRand(CASA.id || 'plantea'), g = new THREE.Group(), casa = CASA.kind === 'casa';
+  // Terreno: muros y cuartos (también patio, cochera y jardín) de la planta
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const grow = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+  WALLS.forEach(w => { grow(w[0], w[1]); grow(w[2], w[3]); }); ROOMS.forEach(r => r.poly.forEach(([x, y]) => grow(x, y)));
+  // La calle va del lado de la flecha de la entrada (de afuera hacia adentro); sin flecha, abajo del plano
+  const m = /M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*([VH])\s*(-?[\d.]+)/.exec(ENTRY?.d || '');
+  let side = 'S', ex = (x0 + x1)/2, ey = y1;
+  if (m){ const ax = +m[1], ay = +m[2], bx = m[3] === 'H' ? +m[4] : ax, by = m[3] === 'V' ? +m[4] : ay, ox = ax - bx, oy = ay - by;
+    side = Math.abs(oy) >= Math.abs(ox) ? (oy > 0 ? 'S' : 'N') : (ox > 0 ? 'E' : 'W'); ex = ax; ey = ay; }
+  const ew = side === 'E' || side === 'W', hu = M(ew ? y1 - y0 : x1 - x0)/2, hv = M(ew ? x1 - x0 : y1 - y0)/2;
+  const th = {S: 0, N: Math.PI, E: Math.PI/2, W: -Math.PI/2}[side], cs = Math.cos(th), sn = Math.sin(th);
+  g.position.set(wx((x0 + x1)/2), 0, wz((y0 + y1)/2)); g.rotation.y = th;
+  const dx = wx(ex) - g.position.x, dz = wz(ey) - g.position.z, eu = cs*dx - sn*dz;   // la entrada, a lo largo de la calle
+  const L = 140, WALK = 2.4, ROAD = 9, front = hv + (casa ? 0 : 4);                    // los salones tienen un frente para estacionar
+  const plane = (w, d, mat, u, v, y) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat); p.rotation.x = -Math.PI/2; p.position.set(u, y, v); p.receiveShadow = true; g.add(p); };
+  const slab = (w, d, h, mat, u, v, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); b.position.set(u, y + h/2, v); b.receiveShadow = true; g.add(b); };
+  const tiles = (base, px) => canvasTex(256, 256, (c, w, h) => { speckle(c, w, h, base, .05, 2500, rnd, 2); c.strokeStyle = 'rgba(0,0,0,.11)'; c.lineWidth = 3;
+    for (let i = 0; i <= w; i += px){ c.beginPath(); c.moveTo(i, 0); c.lineTo(i, h); c.stroke(); c.beginPath(); c.moveTo(0, i); c.lineTo(w, i); c.stroke(); } });
+  // Piso de afuera: pasto seco con manchas (antes, beige liso)
+  const grass = canvasTex(256, 256, (c, w, h) => { speckle(c, w, h, '#a9ae88', .10, 5200, rnd, 3);
+    for (let i = 0; i < 46; i++){ c.fillStyle = rnd() < .55 ? 'rgba(112,124,82,.20)' : 'rgba(200,188,150,.22)'; c.beginPath(); c.arc(rnd()*w, rnd()*h, 8 + rnd()*28, 0, 7); c.fill(); } });
+  ground.material.map = texRep(grass, 90, 90); ground.material.needsUpdate = true;
+  // Terreno del lugar (concreto), banquetas, calle con línea punteada y la banqueta de enfrente
+  const paving = tiles('#d3cdc1', 128), walk = tiles('#dcd7cd', 128), asphalt = canvasTex(256, 256, (c, w, h) => speckle(c, w, h, '#585a5d', .07, 7000, rnd, 2));
+  const lotW = 2*hu + 4, lotD = front + hv + 2;
+  plane(lotW, lotD, new THREE.MeshStandardMaterial({map: texRep(paving, lotW/2.4, lotD/2.4), roughness: .95}), 0, (front - hv - 2)/2, -.01);
+  const walkMat = new THREE.MeshStandardMaterial({map: texRep(walk, 2*L/2.4, 1), roughness: .9});
+  slab(2*L, WALK, .14, walkMat, 0, front + WALK/2, -.03);
+  plane(2*L, ROAD, new THREE.MeshStandardMaterial({map: texRep(asphalt, 2*L/6, ROAD/6), roughness: .95}), 0, front + WALK + ROAD/2, -.015);
+  const dash = new THREE.MeshStandardMaterial({color: 0xece8dc, roughness: .7});
+  for (let u = -L; u < L; u += 6) plane(3, .15, dash, u + 1.5, front + WALK + ROAD/2, -.01);
+  slab(2*L, WALK, .14, walkMat, 0, front + WALK + ROAD + WALK/2, -.03);
+  // Vecinos: a los lados del terreno, enfrente y atrás
+  const COLORS = casa ? ['#efe6d6', '#e7d3b8', '#dde4e1', '#f1e8da', '#e8d8c2', '#d8e1e7', '#ead9cf']
+    : ['#e8d8c4', '#d9a98a', '#efe5d3', '#c8d6d1', '#e4c991', '#d7cfc4', '#bfcad6', '#e9d3c7'];
+  const fac = facadeTex(rnd), stucco = canvasTex(128, 128, (c, w, h) => speckle(c, w, h, '#f4f3f0', .06, 1800, rnd, 2));
+  const roof = new THREE.MeshStandardMaterial({color: 0x9d978d, roughness: 1}), sides = {};
+  const house = (u, v, w, d, h, back) => {
+    const col = COLORS[Math.floor(rnd()*COLORS.length)], bays = Math.max(1, Math.round(w/3.6)/2), floors = Math.max(1, Math.round(h/3));
+    const fm = new THREE.MeshStandardMaterial({color: col, map: texRep(fac.map, bays, floors), emissive: 0xffc27a, emissiveMap: texRep(fac.glow, bays, floors), emissiveIntensity: 0, roughness: .92});
+    envLit.push(fm);
+    const sm = sides[col] ||= new THREE.MeshStandardMaterial({color: col, map: stucco, roughness: .95});
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [sm, sm, roof, roof, fm, fm]);   // ventanas al frente y atrás
+    b.position.set(u, h/2, v); if (back) b.rotation.y = Math.PI; b.castShadow = b.receiveShadow = true; g.add(b); envBlocks.push(b);
+  };
+  // Una fila de construcciones: edge = la orilla que da a la calle; dir = hacia dónde crecen (+1 hacia +v, -1 hacia -v)
+  const row = (from, to, edge, dir, back) => {
+    let u = from;
+    while (u < to){
+      const w = casa ? 2*hu*(.85 + rnd()*.3) : 7 + rnd()*9; if (u + w > to) break;
+      const d = casa ? 12 + rnd()*4 : 12 + rnd()*8, h = casa ? (rnd() < .2 ? 3 : 5.8 + rnd()*.6) : 3.4 + rnd()*5.6;
+      house(u + w/2, edge + dir*d/2, w, d, h, back); u += w + (casa ? .2 : 1.5 + rnd()*2.5);
+    }
+  };
+  const gap = casa ? .4 : 3, setback = casa ? 3 : 1;
+  row(-L, -(hu + gap), front - setback, -1, false); row(hu + gap, L, front - setback, -1, false);
+  row(-L, L, front + 2*WALK + ROAD + (casa ? 3 : 1), 1, true);
+  row(-L, L, -hv - (casa ? 1 : 5), -1, true);
+  // Árboles en las banquetas (sin tapar la entrada) y en los patios
+  const N = 90, trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(.12, .17, 2.4, 6), new THREE.MeshStandardMaterial({color: 0x6d5844, roughness: 1}), N);
+  const crown = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.7, 1), new THREE.MeshStandardMaterial({color: 0xffffff, roughness: .95, flatShading: true}), N);
+  const o = new THREE.Object3D(), col = new THREE.Color(); let n = 0;
+  const tree = (u, v, s) => { if (n >= N) return;
+    o.position.set(u, 1.2*s, v); o.scale.setScalar(s); o.rotation.set(0, rnd()*6, 0); o.updateMatrix(); trunk.setMatrixAt(n, o.matrix);
+    o.position.set(u, 3.5*s, v); o.scale.set(s*(.9 + rnd()*.3), s*(.8 + rnd()*.4), s*(.9 + rnd()*.3)); o.updateMatrix(); crown.setMatrixAt(n, o.matrix);
+    crown.setColorAt(n, col.setHSL(.24 + rnd()*.07, .32 + rnd()*.16, .28 + rnd()*.12)); n++; };
+  for (let u = -L + 4; u < L; u += 8 + rnd()*3){
+    if (Math.abs(u - eu) > 5) tree(u, front + .6, .85 + rnd()*.4);
+    if (rnd() < .7) tree(u + 3, front + 2*WALK + ROAD - .6, .85 + rnd()*.4);
+  }
+  for (let k = 0; k < 14; k++) tree((rnd() < .5 ? -1 : 1)*(hu + 6 + rnd()*40), -hv - 2 - rnd()*3, .8 + rnd()*.5);
+  trunk.count = crown.count = n; trunk.castShadow = crown.castShadow = true; if (crown.instanceColor) crown.instanceColor.needsUpdate = true;
+  g.add(trunk, crown);
+  // Postes de luz (se encienden de noche) y unos coches estacionados
+  const pole = new THREE.MeshStandardMaterial({color: 0x6b6e72, roughness: .6, metalness: .3}), head = new THREE.MeshStandardMaterial({color: 0xf3efe6, emissive: 0xffd9a0, emissiveIntensity: 0});
+  envLamps.push(head);
+  for (let u = -L + 10; u < L; u += 24){ if (Math.abs(u - eu) < 5) continue;
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 6.5, 8), pole); p.position.set(u, 3.25, front + WALK - .35); p.castShadow = true; g.add(p);
+    const hd = new THREE.Mesh(new THREE.BoxGeometry(.9, .14, .3), head); hd.position.set(u, 6.45, front + WALK + .1); g.add(hd); }
+  const CARS = [0xb5653a, 0x2f4858, 0xd9d4ca, 0x3d3a34, 0x8a9ba8, 0x6f2f2a, 0xe8e6e1];
+  const glass = new THREE.MeshStandardMaterial({color: 0x2b3238, roughness: .2, metalness: .3}), tyre = new THREE.MeshStandardMaterial({color: 0x222222, roughness: .9});
+  for (let k = 0; k < 7; k++){
+    let u = -L*.5 + rnd()*L; if (Math.abs(u - eu) < 6) u += 14;
+    const car = new THREE.Group(), far = rnd() < .5;
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.3, .72, 1.8), new THREE.MeshStandardMaterial({color: CARS[k % CARS.length], roughness: .45, metalness: .2})); body.position.y = .62;
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.3, .58, 1.62), glass); cab.position.set(-.2, 1.27, 0);
+    const wh = new THREE.Mesh(new THREE.BoxGeometry(3.4, .5, 1.7), tyre); wh.position.y = .25;
+    car.add(body, cab, wh); car.traverse(q => { q.castShadow = true; });
+    car.position.set(u, 0, front + WALK + (far ? ROAD - 1.4 : 1.4)); if (far) car.rotation.y = Math.PI; g.add(car);
+  }
+  // Cielo con horizonte (de día y de noche) y bruma a lo lejos, para que la orilla del piso no se vea
+  const sky = (top, mid, low) => { const t = canvasTex(4, 256, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, top); gr.addColorStop(.38, mid); gr.addColorStop(.5, low); gr.addColorStop(1, low); c.fillStyle = gr; c.fillRect(0, 0, w, h); });
+    t.mapping = THREE.EquirectangularReflectionMapping; return t; };
+  envSky = sky('#8db6d6', '#cadceb', '#eef1ee'); envSkyNight = sky('#0b1020', '#172036', '#232a3a');
+  scene.fog = new THREE.Fog(0xeef1ee, Math.max(70, 40*S3), Math.max(230, 115*S3));
+  return g;
+}
+// Si un vecino queda entre la cámara y el lugar (al bajar la cámara o girar), se esconde mientras estorba
+const envRay = new THREE.Ray(), envHit = new THREE.Vector3();
+function envOcclude(){
+  if (!envBlocks.length) return;
+  if (!envBlocks[0].userData.box){ scene.updateMatrixWorld(); envBlocks.forEach(b => { b.userData.box = new THREE.Box3().setFromObject(b); }); }
+  const orbiting = opt.mode === 'orbit', t = orbit.target, dist = camera.position.distanceTo(t);
+  envRay.origin.copy(camera.position); envRay.direction.copy(t).sub(camera.position).normalize();
+  envBlocks.forEach(b => { const box = b.userData.box;
+    b.visible = !orbiting || !(box.containsPoint(camera.position) || (envRay.intersectBox(box, envHit) && envHit.distanceTo(camera.position) < dist)); });
+}
+function envLight(night){
+  scene.background = (night ? envSkyNight : envSky) || new THREE.Color(night ? 0x1c2130 : 0xf7f4ee);
+  scene.fog?.color.set(night ? 0x232a3a : 0xeef1ee);
+  ground.material.color.set(night ? 0x4a4f58 : 0xffffff);
+  envLit.forEach(m => { m.emissiveIntensity = night ? .9 : 0; });
+  envLamps.forEach(m => { m.emissiveIntensity = night ? 2.4 : 0; });
+}
+
 /* ======================= 日照 / 夜景 ======================= */
 function applyLight(){
   const t = (opt.hour - 6) / 12, az = Math.PI * (.15 + t*.7), el = Math.sin(Math.PI*t) * 1.05 + .15, warm = 1 - Math.sin(Math.PI*t);
@@ -2690,8 +2835,7 @@ function applyLight(){
   sun.color.setHSL(.09, .5 + warm*.4, .92 - warm*.12);
   sun.intensity = opt.night ? .05 : 1.4 + Math.sin(Math.PI*t)*1.6;
   hemi.intensity = opt.night ? .12 : 1.1;
-  scene.background = new THREE.Color(opt.night ? 0x1c2130 : 0xf7f4ee);
-  ground.material.color.set(opt.night ? 0x2a2e38 : 0xf2eee7);
+  envLight(opt.night);
   lampG.children.forEach(o => { if (o.isPointLight) o.intensity = opt.night ? 6 : 0; else o.material.emissiveIntensity = opt.night ? 2 : .3; });
   renderer.toneMappingExposure = opt.night ? 1.25 : 1.05;
   envK = opt.night ? .15 : 1; matCache.forEach(m => { if (m.envMap) m.envMapIntensity = m.userData.env*envK; });
@@ -3865,6 +4009,7 @@ function loop(){
   doors.forEach(d => { const tg = d.open ? d.a1 : d.a0; d.cur += (tg - d.cur) * Math.min(1, dt*6); d.pivot.rotation.y = d.cur; });
   slides.forEach(sl => { const tg = sl.open ? sl.to : 0; sl.cur += (tg - sl.cur) * Math.min(1, dt*5); sl.groups.forEach(q => { q.g.position[q.axis] = q.base + sl.cur; }); });
   updateSel();
+  envOcclude();
   renderer.render(scene, camera);
   if (rec) recFrame(now);
   labelRenderer.render(scene, camera);
