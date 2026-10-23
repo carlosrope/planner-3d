@@ -88,7 +88,9 @@
   #demoAviso button{flex-shrink:0;width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:#fff;
     font-size:20px;line-height:1;cursor:pointer;opacity:.75}
   #demoAviso button:active{opacity:1}
-  @media (max-width:520px){#demoAviso{flex-wrap:wrap;padding:12px}#demoAviso p{flex-basis:100%}#demoAviso .acciones{flex:1}#demoAviso a{flex:1}}`;
+  @media (max-width:520px){#demoAviso{flex-wrap:wrap;padding:12px}#demoAviso p{flex-basis:100%;padding-right:30px}
+    #demoAviso .acciones{flex:1}#demoAviso a{flex:1}
+    #demoAviso button{position:absolute;top:6px;right:6px}}`;
   document.head.appendChild(css);
 
   const el = document.createElement('div');

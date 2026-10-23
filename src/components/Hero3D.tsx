@@ -16,19 +16,17 @@ const onCoarse = (cb: () => void) => {
  * Portada: el Salón Demostración de verdad, en 3D (el mismo diseñador, incrustado con ?embed=1, ver
  * src/designer/embed.js). Gira solo hasta que la persona lo toca; se gira arrastrando, se acerca con la rueda (tras
  * un clic) o pellizcando, y cambia entre el plano 2D y el 3D con los botones de arriba. Mientras carga se ve una foto
- * del 3D. En pantallas táctiles el primer toque «activa» el 3D (antes, deslizar el dedo baja la página) y «Listo»
- * lo suelta otra vez. Solo se mira: los muebles no se seleccionan ni se mueven; para editar está el botón de abrirlo
- * en grande.
+ * del 3D. Con el dedo, deslizar de lado lo gira y deslizar hacia arriba o abajo baja la página (embed.js); antes había
+ * que tocarlo primero para «activarlo», y quien deslizaba directo sentía que no giraba. Solo se mira: los muebles no se
+ * seleccionan ni se mueven; para editar está el botón de abrirlo en grande.
  */
 export function Hero3D() {
   const frame = useRef<HTMLIFrameElement>(null);
-  const box = useRef<HTMLDivElement>(null);
   const [load, setLoad] = useState(false);
   const [ready, setReady] = useState(false);
   const [view, setView] = useState<"2d" | "3d">("3d");
   // Pantalla táctil (en el servidor se supone que no)
   const touch = useSyncExternalStore(onCoarse, () => matchMedia(COARSE).matches, () => false);
-  const [active, setActive] = useState(false);
   const [used, setUsed] = useState(false);
 
   useEffect(() => {
@@ -49,15 +47,6 @@ export function Hero3D() {
     return () => removeEventListener("message", onMsg);
   }, []);
 
-  // Al salir de la pantalla, el 3D se suelta (en el celular vuelve a dejar bajar la página con el dedo)
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => !e.isIntersecting && setActive(false), { threshold: 0.15 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
   const show = (v: "2d" | "3d") => {
     setView(v);
     setUsed(true);
@@ -65,7 +54,7 @@ export function Hero3D() {
   };
 
   return (
-    <div ref={box} className="relative">
+    <div className="relative">
       <div className="relative aspect-[16/15] w-full overflow-hidden rounded-[25px] border border-stone-200 bg-[#efebe4] shadow-2xl shadow-stone-900/15">
         {/* Foto del 3D mientras carga (y si el 3D no puede cargar) */}
         {/* Es lo más grande de la portada al abrirla (LCP): se pide desde el <head>, del tamaño de la pantalla */}
@@ -87,21 +76,6 @@ export function Hero3D() {
           />
         )}
 
-        {/* En pantallas táctiles: tocar para mover el 3D; mientras no, el dedo baja la página */}
-        {touch && ready && !active && (
-          <button
-            type="button"
-            onClick={() => {
-              setActive(true);
-              setUsed(true);
-            }}
-            className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-stone-900/35 via-transparent to-transparent pb-5"
-            aria-label="Tocar para mover el salón en 3D"
-          >
-            <span className="rounded-full bg-stone-900/85 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur">Toca para girarlo y acercarlo</span>
-          </button>
-        )}
-
         {/* 2D / 3D */}
         <div role="radiogroup" aria-label="Vista" className="absolute left-3 top-3 grid grid-cols-2 rounded-full bg-white/90 p-1 text-sm font-semibold shadow-md backdrop-blur">
           {(["2d", "3d"] as const).map((v) => (
@@ -120,11 +94,6 @@ export function Hero3D() {
         </div>
 
         <div className="absolute right-3 top-3 flex items-center gap-2">
-          {touch && active && (
-            <button type="button" onClick={() => setActive(false)} className="rounded-full bg-stone-900/85 px-3 py-1.5 text-sm font-semibold text-white shadow-md backdrop-blur">
-              Listo
-            </button>
-          )}
           <Link
             href="/disenador/salon-demo"
             aria-label="Abrir el Salón Demostración en grande"
@@ -137,8 +106,10 @@ export function Hero3D() {
         </div>
 
         {ready && !used && (
-          <span className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/80 px-3 py-1.5 text-xs font-medium text-white shadow-md backdrop-blur max-sm:hidden">
-            Arrastra para girar · haz clic y usa la rueda para acercar
+          <span
+            className={`pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/80 px-3 py-1.5 text-xs font-medium text-white shadow-md backdrop-blur ${touch ? "" : "max-sm:hidden"}`}
+          >
+            {touch ? "Desliza de lado para girarlo" : "Arrastra para girar · haz clic y usa la rueda para acercar"}
           </span>
         )}
       </div>

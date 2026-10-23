@@ -1,8 +1,11 @@
 // Diseñador incrustado en la portada de plantea.com.mx (/disenador/[lugar]?embed=1&vista=3d, lo abre
 // src/components/Hero3D.tsx): solo el lugar, sin barras ni paneles. La página de afuera cambia entre 2D y 3D con
 // postMessage. La rueda del mouse no acerca hasta que la persona hace clic adentro: así, al bajar por la portada,
-// la página sigue bajando en lugar de quedarse acercando el 3D. Solo se mira: con la clase «embed» el diseñador no
-// deja seleccionar, mover ni borrar nada, ni abrir puertas (tools/designer/adapt.py, «viewOnly»).
+// la página sigue bajando en lugar de quedarse acercando el 3D. Con el dedo pasa lo mismo: deslizar de lado gira el 3D
+// (o mueve el plano) y deslizar hacia arriba o abajo baja la página (touch-action: pan-y, y overscroll-behavior: auto
+// para que el desplazamiento pase a la portada; el diseñador en grande lo trae en none); pellizcar acerca. Solo se
+// mira: con la clase «embed» el diseñador no deja seleccionar, mover ni borrar nada, ni abrir puertas
+// (tools/designer/adapt.py, «viewOnly»).
 (function () {
   document.documentElement.classList.add('embed');
   const css = document.createElement('style');
@@ -10,7 +13,9 @@
   html.embed header,html.embed aside,html.embed footer,html.embed #fab,html.embed #hint3d,html.embed #hint,html.embed .pl-ayuda,
   html.embed #demoAviso,html.embed #walkHud,html.embed .drawerBack{display:none!important}
   html.embed body{display:block!important;height:100%;overflow:hidden;background:#efebe4}
-  html.embed main#stage{position:fixed!important;inset:0!important;width:100%!important;height:100%!important}`;
+  html.embed main#stage{position:fixed!important;inset:0!important;width:100%!important;height:100%!important}
+  html.embed #stage canvas,html.embed #stage svg{touch-action:pan-y!important}
+  html.embed,html.embed body{overscroll-behavior:auto!important}`;
   (document.head || document.documentElement).appendChild(css);
 
   const say = msg => { try { parent.postMessage({ plantea: 'embed', ...msg }, location.origin); } catch { /* sin página de afuera */ } };

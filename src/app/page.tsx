@@ -61,10 +61,15 @@ export default function Home() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -right-24 -top-24 h-[420px] w-[420px] rounded-[48%_52%_40%_60%/55%_45%_55%_45%] bg-[#f3ece2]" aria-hidden="true" />
         <div className="mx-auto grid max-w-5xl items-center gap-8 px-4 pb-12 pt-10 md:grid-cols-[1.05fr_1fr] md:pb-16 md:pt-16">
-          <div className="relative">
+          <div className="relative [container-type:inline-size]">
             <Slogan className="mb-3 text-base text-stone-900 sm:text-lg" />
-            <h1 className="text-[2.1rem] font-bold leading-[1.08] text-stone-900 sm:text-5xl" style={{ textWrap: "balance" }}>
-              Plantea tu evento o tu casa <span className="text-[#a4552d]">en 3D antes de vivirlo.</span>
+            {/* Dos renglones (pedido del usuario, 23 oct): «Plantea tu evento o casa en 3D» y «antes de vivirlo.». El primero
+                no se parte: la letra se ajusta al ancho de la columna (cqi), hasta 48 px. */}
+            <h1 className="text-[min(3rem,6.6cqi)] font-bold leading-[1.1] text-stone-900">
+              <span className="block whitespace-nowrap">
+                Plantea tu evento o casa <span className="text-[#a4552d]">en 3D</span>
+              </span>
+              <span className="block text-[#a4552d]">antes de vivirlo.</span>
             </h1>
             <p className="mt-4 max-w-lg text-lg text-stone-600">
               Acomoda las mesas sobre el salón real, sienta a tus invitados y recórrelo desde el celular. Para salones, planners y familias, y para quien vende, construye o amuebla una casa en México.
@@ -77,12 +82,6 @@ export default function Home() {
                 Probar con una casa
               </PageLink>
             </div>
-            <p className="mt-3 text-sm text-stone-500">
-              Sin cuenta y sin costo: es un salón y una casa de ejemplo. Nada se guarda.{" "}
-              <Link href="/planes" className="font-semibold text-[#a4552d] underline">
-                Ver planes y precios
-              </Link>
-            </p>
           </div>
           <div className="relative">
             {/* El Salón Demostración en 3D de verdad: se gira, se acerca y cambia entre 2D y 3D ahí mismo */}
