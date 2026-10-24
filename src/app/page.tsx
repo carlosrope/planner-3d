@@ -63,13 +63,11 @@ export default function Home() {
         <div className="mx-auto grid max-w-5xl items-center gap-8 px-4 pb-12 pt-10 md:grid-cols-[1.05fr_1fr] md:pb-16 md:pt-16">
           <div className="relative [container-type:inline-size]">
             <Slogan className="mb-3 text-base text-stone-900 sm:text-lg" />
-            {/* Dos renglones (pedido del usuario, 23 oct): «Plantea tu evento o casa en 3D» y «antes de vivirlo.». El primero
-                no se parte: la letra se ajusta al ancho de la columna (cqi), hasta 48 px. */}
-            <h1 className="text-[min(3rem,6.6cqi)] font-bold leading-[1.1] text-stone-900">
-              <span className="block whitespace-nowrap">
-                Plantea tu evento o casa <span className="text-[#a4552d]">en 3D</span>
-              </span>
-              <span className="block text-[#a4552d]">antes de vivirlo.</span>
+            {/* Dos renglones (pedido del usuario, 24 oct): «Plantea tu evento o casa» y «en 3D antes de vivirlo.». Ninguno se
+                parte: la letra se ajusta al ancho de la columna (cqi), hasta 48 px. */}
+            <h1 className="text-[min(3rem,8.2cqi)] font-bold leading-[1.1] text-stone-900">
+              <span className="block whitespace-nowrap">Plantea tu evento o casa</span>
+              <span className="block whitespace-nowrap text-[#a4552d]">en 3D antes de vivirlo.</span>
             </h1>
             <p className="mt-4 max-w-lg text-lg text-stone-600">
               Acomoda las mesas sobre el salón real, sienta a tus invitados y recórrelo desde el celular. Para salones, planners y familias, y para quien vende, construye o amuebla una casa en México.

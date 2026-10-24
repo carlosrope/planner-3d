@@ -5,13 +5,14 @@ import { ALL_SECTIONS, ORG_KINDS, ORG_KIND_LABELS, PLANS, PLAN_LABELS, SECTIONS,
 import { AdminNav } from "../AdminNav";
 import { updateOrgPlan } from "../actions";
 import { dayOf, formatDate } from "@/lib/dates";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Cuentas" };
 
 export default function AdminCuentasPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Cuentas />
       </Suspense>
     </main>

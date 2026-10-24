@@ -15,6 +15,7 @@ import { InquiryForm } from "./InquiryForm";
 import { SHARE_IMAGE, SITE_URL, breadcrumbJsonLd, jsonLd, venueJsonLd } from "@/lib/site";
 import { venueMeta } from "@/lib/seo-text";
 import { slugify } from "@/lib/slug";
+import { EsqueletoFicha } from "@/components/Esqueleto";
 
 export async function generateMetadata({ params }: PageProps<"/lugares/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -41,7 +42,7 @@ export async function generateMetadata({ params }: PageProps<"/lugares/[slug]">)
 export default function LugarPage({ params }: PageProps<"/lugares/[slug]">) {
   return (
     <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="min-h-svh text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoFicha />}>
         <Ficha params={params} />
       </Suspense>
     </main>

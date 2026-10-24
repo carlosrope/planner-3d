@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Catalogo } from "@/components/Catalogo";
+import { CATALOG_COPY, Catalogo } from "@/components/Catalogo";
+import { EsqueletoCatalogo } from "@/components/Esqueleto";
 
 export const metadata: Metadata = {
   title: "Modelos de casa en 3D",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function CasasPage() {
   return (
-    <Suspense fallback={<p className="min-h-svh p-6 text-stone-500">Cargando modelos…</p>}>
+    <Suspense fallback={<EsqueletoCatalogo title={CATALOG_COPY.casa.title} intro={CATALOG_COPY.casa.intro} />}>
       <Catalogo kind="casa" />
     </Suspense>
   );

@@ -3,13 +3,20 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getPublicVenue } from "@/lib/dal";
 import { PrintButton } from "./PrintButton";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Letrero con QR" };
 
 /** Hoja para imprimir (tamaño carta o A4) con el QR del 3D del lugar. */
 export default function LetreroPage({ params }: PageProps<"/lugares/[slug]/letrero">) {
   return (
-    <Suspense fallback={<p className="p-6 text-stone-500">Cargando…</p>}>
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-xl p-6">
+          <EsqueletoLista filas={1} />
+        </div>
+      }
+    >
       <Letrero params={params} />
     </Suspense>
   );

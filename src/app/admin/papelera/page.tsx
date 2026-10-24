@@ -6,13 +6,14 @@ import { VENUE_KIND_LABELS, trashDaysLeft } from "@/lib/domain";
 import { formatDate } from "@/lib/dates";
 import { AdminNav } from "../AdminNav";
 import { restoreEventAdmin, trashVenue } from "../actions";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Papelera" };
 
 export default function AdminPapeleraPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Papelera />
       </Suspense>
     </main>

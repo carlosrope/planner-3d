@@ -14,13 +14,14 @@ import { SaveButton } from "../../SaveButton";
 import { addFiles, deleteFile, setFileView, trashVenue, updateVenueCapacities, updateVenueData, updateVenueState, uploadVenuePlan } from "../../actions";
 import { CAPACITY_SETUPS, shownCapacities } from "@/lib/designer/capacity";
 import { CopyField } from "@/app/lugares/[slug]/panel/CopyField";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Lugar" };
 
 export default function AdminLugarPage({ params }: PageProps<"/admin/lugares/[id]">) {
   return (
     <main className="mx-auto max-w-4xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Lugar params={params} />
       </Suspense>
     </main>

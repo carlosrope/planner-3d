@@ -5,13 +5,14 @@ import { adminListActivity, requireAdmin } from "@/lib/dal";
 import { formatInstant } from "@/lib/dates";
 import { ORG_KIND_LABELS, PLAN_LABELS, planDaysLeft } from "@/lib/domain";
 import { AdminNav } from "../AdminNav";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Actividad" };
 
 export default function AdminActividadPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Actividad />
       </Suspense>
     </main>

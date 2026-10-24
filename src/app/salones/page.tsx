@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Catalogo } from "@/components/Catalogo";
+import { CATALOG_COPY, Catalogo } from "@/components/Catalogo";
+import { EsqueletoCatalogo } from "@/components/Esqueleto";
 
 export const metadata: Metadata = {
   title: "Salones de eventos en 3D",
@@ -9,9 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default function SalonesPage() {
-  // El aviso de carga ocupa la pantalla: así el pie no aparece arriba y luego salta cuando llega el catálogo (CLS).
   return (
-    <Suspense fallback={<p className="min-h-svh p-6 text-stone-500">Cargando salones…</p>}>
+    <Suspense fallback={<EsqueletoCatalogo title={CATALOG_COPY.salon.title} intro={CATALOG_COPY.salon.intro} />}>
       <Catalogo kind="salon" />
     </Suspense>
   );

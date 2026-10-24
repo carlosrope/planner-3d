@@ -4,13 +4,14 @@ import { Suspense } from "react";
 import { getVenueBasics } from "@/lib/dal";
 import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Lugar registrado" };
 
 export default function GraciasPage({ searchParams }: PageProps<"/alta/gracias">) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center px-6 py-12">
-      <Suspense fallback={<p className="text-stone-500">Un momento…</p>}>
+      <Suspense fallback={<EsqueletoLista filas={1} />}>
         <Gracias searchParams={searchParams} />
       </Suspense>
     </main>

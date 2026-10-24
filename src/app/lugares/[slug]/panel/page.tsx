@@ -11,13 +11,14 @@ import { ReferralSection } from "@/app/negocio/ReferralSection";
 import { CopyField } from "./CopyField";
 import { AccessForms, SeenButton } from "./PanelForms";
 import { formatDay, formatInstant } from "@/lib/dates";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Panel del lugar" };
 
 export default function PanelPage({ params }: PageProps<"/lugares/[slug]/panel">) {
   return (
     <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Panel params={params} />
       </Suspense>
     </main>

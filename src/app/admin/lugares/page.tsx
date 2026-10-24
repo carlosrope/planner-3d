@@ -5,13 +5,14 @@ import { adminListVenues, requireAdmin } from "@/lib/dal";
 import { VENUE_KIND_LABELS, VENUE_STATUS_LABELS } from "@/lib/domain";
 import { AdminNav } from "../AdminNav";
 import { formatInstant } from "@/lib/dates";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Lugares" };
 
 export default function AdminLugaresPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Lugares />
       </Suspense>
     </main>

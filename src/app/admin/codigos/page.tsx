@@ -18,13 +18,14 @@ import { AdminNav } from "../AdminNav";
 import { SaveButton } from "../SaveButton";
 import { createTrialCodes, toggleTrialCode } from "../actions";
 import { CopyList, ShareCode } from "./CopyButtons";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Códigos de mes gratis" };
 
 export default function AdminCodigosPage({ searchParams }: PageProps<"/admin/codigos">) {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Codigos searchParams={searchParams} />
       </Suspense>
     </main>

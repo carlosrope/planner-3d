@@ -13,13 +13,14 @@ import { restoreEventAction, trashEventAction } from "./actions";
 import { StatusSelect } from "./StatusSelect";
 import { NewEventForm } from "./NewEventForm";
 import { SamplesLink, Welcome } from "./Welcome";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Proyectos" };
 
 export default function EventosPage({ searchParams }: PageProps<"/eventos">) {
   return (
     <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando tus proyectos…</p>}>
+      <Suspense fallback={<EsqueletoLista label="Cargando tus proyectos…" />}>
         <EventosContent searchParams={searchParams} />
       </Suspense>
     </main>

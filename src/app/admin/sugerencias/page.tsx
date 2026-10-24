@@ -4,13 +4,14 @@ import { adminListSuggestions, requireAdmin } from "@/lib/dal";
 import { formatInstant } from "@/lib/dates";
 import { AdminNav } from "../AdminNav";
 import { markSuggestion } from "../actions";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Sugerencias" };
 
 export default function AdminSugerenciasPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Sugerencias />
       </Suspense>
     </main>

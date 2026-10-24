@@ -162,3 +162,23 @@ button {
     animation: none;
   }
 }
+
+/* Esqueletos de carga (components/Esqueleto.tsx): un brillo recorre cada bloque; con «reducir movimiento», quieto. */
+.hueso {
+  background: linear-gradient(100deg, #ebe5db 30%, #f6f2ec 50%, #ebe5db 70%);
+  background-size: 300% 100%;
+  animation: hueso 1.4s ease-in-out infinite;
+}
+@keyframes hueso {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hueso {
+    animation: none;
+  }
+}

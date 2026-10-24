@@ -8,13 +8,14 @@ import { VENUE_STATUS_LABELS } from "@/lib/domain";
 import { CONTACT_WHATSAPP } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 import { ReviewForms } from "./ReviewForms";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Revisa tu lugar" };
 
 export default function RevisarPage({ params }: PageProps<"/revisar/[token]">) {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Revision params={params} />
       </Suspense>
     </main>

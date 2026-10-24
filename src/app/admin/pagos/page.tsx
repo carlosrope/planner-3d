@@ -5,13 +5,14 @@ import { PAYMENT_PERIOD_LABELS, PAYMENT_STATUS_LABELS, PLAN_LABELS, TIER_LABELS 
 import { AdminNav } from "../AdminNav";
 import { resolvePayment } from "../actions";
 import { formatDate } from "@/lib/dates";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Pagos" };
 
 export default function AdminPagosPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Pagos />
       </Suspense>
     </main>

@@ -6,6 +6,7 @@ import { isLitePlan, isPlan, type Plan } from "@/lib/domain";
 import { BrandForm } from "./BrandForm";
 import { PlanSection } from "./PlanSection";
 import { ReferralSection } from "./ReferralSection";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Mi negocio" };
 
@@ -13,7 +14,7 @@ export default function NegocioPage({ searchParams }: PageProps<"/negocio">) {
   return (
     <main className="mx-auto max-w-xl px-4 pb-16 pt-6">
       <h1 className="mb-5 text-2xl font-semibold">Mi negocio</h1>
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista titulo={false} filas={3} />}>
         <NegocioContent searchParams={searchParams} />
       </Suspense>
     </main>

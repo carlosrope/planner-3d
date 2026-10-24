@@ -5,13 +5,14 @@ import { adminListAudit, requireAdmin } from "@/lib/dal";
 import { formatInstant } from "@/lib/dates";
 import { AUDIT_ACTION_LABELS, PLAN_LABELS, VENUE_STATUS_LABELS, isPlan, isVenueStatus } from "@/lib/domain";
 import { AdminNav } from "../AdminNav";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Rastro" };
 
 export default function AdminRastroPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Rastro />
       </Suspense>
     </main>

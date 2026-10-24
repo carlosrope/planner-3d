@@ -9,7 +9,8 @@ import { capacityFact, shownCapacities } from "@/lib/designer/capacity";
 import { banquetRange, cityMeta } from "@/lib/seo-text";
 import { breadcrumbJsonLd, itemListJsonLd, jsonLd } from "@/lib/site";
 
-const COPY: Record<VenueKind, { title: string; intro: string; empty: string; base: string; cta: string }> = {
+/** Títulos y textos del catálogo (también los usa su esqueleto de carga). */
+export const CATALOG_COPY: Record<VenueKind, { title: string; intro: string; empty: string; base: string; cta: string }> = {
   salon: {
     title: "Salones de eventos en 3D",
     intro: "Recorre cada salón en 3D, prueba cómo quedan las mesas y pide informes directo al salón.",
@@ -28,7 +29,7 @@ const COPY: Record<VenueKind, { title: string; intro: string; empty: string; bas
 
 /** Catálogo público de un tipo de lugar, en todas las ciudades o en una (slug). */
 export async function Catalogo({ kind, citySlug }: { kind: VenueKind; citySlug?: string }) {
-  const copy = COPY[kind];
+  const copy = CATALOG_COPY[kind];
   const [venues, cities] = await Promise.all([listCatalog(kind, citySlug), listCatalogCities(kind)]);
   const cityName = citySlug ? (cities.find((c) => c.slug === citySlug)?.city ?? cityFromSlug(citySlug)) : null;
   const shown = venues.map((v) => ({ v, caps: shownCapacities(v.capacityAuto, v.capacityManual, v.capacity) }));

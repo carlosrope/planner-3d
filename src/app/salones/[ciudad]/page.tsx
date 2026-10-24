@@ -5,6 +5,7 @@ import { cityFromSlug } from "@/lib/slug";
 import { listCatalog, listCatalogCities } from "@/lib/dal";
 import { shownCapacities } from "@/lib/designer/capacity";
 import { banquetRange, cityMeta } from "@/lib/seo-text";
+import { EsqueletoCatalogo } from "@/components/Esqueleto";
 
 export async function generateMetadata({ params }: PageProps<"/salones/[ciudad]">): Promise<Metadata> {
   const { ciudad } = await params;
@@ -24,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/salones/[ciudad]"
 
 export default function SalonesCiudadPage({ params }: PageProps<"/salones/[ciudad]">) {
   return (
-    <Suspense fallback={<p className="min-h-svh p-6 text-stone-500">Cargando salones…</p>}>
+    <Suspense fallback={<EsqueletoCatalogo />}>
       <Ciudad params={params} />
     </Suspense>
   );

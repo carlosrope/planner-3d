@@ -4,13 +4,14 @@ import { Suspense } from "react";
 import { PageLink } from "@/components/PageLink";
 import { listOwnedVenues, requireOrg, requireUser } from "@/lib/dal";
 import { VENUE_KIND_LABELS, VENUE_STATUS_LABELS, isOwnerKind } from "@/lib/domain";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Mis lugares" };
 
 export default function LugaresPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando tus lugares…</p>}>
+      <Suspense fallback={<EsqueletoLista label="Cargando tus lugares…" />}>
         <Lugares />
       </Suspense>
     </main>

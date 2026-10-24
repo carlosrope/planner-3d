@@ -8,13 +8,14 @@ import { AUDIT_ACTION_LABELS } from "@/lib/domain";
 import { pilotAlerts, pilotHealth } from "@/lib/pilot";
 import { DEMO_SLUGS } from "@/lib/testimonials";
 import { AdminNav } from "./AdminNav";
+import { EsqueletoLista } from "@/components/Esqueleto";
 
 export const metadata: Metadata = { title: "Administración · Resumen" };
 
 export default function AdminResumenPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-6">
-      <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+      <Suspense fallback={<EsqueletoLista />}>
         <Resumen />
       </Suspense>
     </main>

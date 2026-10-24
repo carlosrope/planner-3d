@@ -5,6 +5,7 @@ import { getCurrentUser, requireOrg } from "@/lib/dal";
 import { isOwnerKind } from "@/lib/domain";
 import { PRICES_URL } from "@/lib/brand";
 import { AltaForm } from "./AltaForm";
+import { EsqueletoFormulario } from "@/components/Esqueleto";
 
 export const metadata: Metadata = {
   title: "Registra tu lugar",
@@ -35,7 +36,7 @@ export default function AltaPage() {
         .
       </p>
       <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-4 sm:p-5">
-        <Suspense fallback={<p className="text-stone-500">Cargando…</p>}>
+        <Suspense fallback={<EsqueletoFormulario />}>
           <AltaContent />
         </Suspense>
       </section>
