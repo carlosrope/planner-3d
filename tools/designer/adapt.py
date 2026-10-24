@@ -3044,6 +3044,136 @@ sub(
     "new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95})",
     "new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1})",
 )
+# El asfalto del estacionamiento quedaba 1 mm ABAJO del piso del terreno (−0.011 contra −0.010) y de lejos todo el
+# frente del salón salía rayado. Ahora va 4 mm arriba del piso y sus cajones 4 mm arriba del asfalto: con eso alcanza
+# también donde el polygonOffset no aplica (la profundidad logarítmica de los equipos de 16 bits, más abajo).
+sub("at(PARK/2), (front - hv)/2, -.011);", "at(PARK/2), (front - hv)/2, -.006);")
+sub("      plane(b - a, .12, line, at((a + b)/2), v, -.006);\n", "      plane(b - a, .12, line, at((a + b)/2), v, -.002);\n")
+sub(
+    "    [.5, PARK - .5].forEach(x => plane(.12, front - 4 + hv - 1, line, at(x), (front - 4 - hv + 1)/2, -.006));\n",
+    "    [.5, PARK - .5].forEach(x => plane(.12, front - 4 + hv - 1, line, at(x), (front - 4 - hv + 1)/2, -.002));\n",
+)
+
+# Muebles con dos partes en el mismo plano (la franja de arriba del ropero y su tapa, la cubierta del comedor, la orilla
+# del tapete, la estufa, el tocador, la regadera): esas caras se tapan a ratos al girar en CUALQUIER equipo y a cualquier
+# distancia, porque están exactamente a 0 mm. Al armar cada mueble se buscan las partes (sin giro raro) con una cara en
+# el mismo plano que otra parte anterior y que se enciman; la que se agregó después crece 2 mm por lado en ese eje (4 mm
+# si ya había otra encima), así queda encima de verdad. A la vista no se nota y donde nada coincide no cambia nada.
+# Sirve para todo el catálogo, también para los muebles que todavía no están en los lugares de muestra.
+sub(
+    "function buildFurniture(f){\n",
+    "const SEP = .002;\n"
+    "function separaCoplanares(g){\n"
+    "  const parts = [], A = ['x', 'y', 'z'];\n"
+    "  g.children.forEach(o => {\n"
+    "    if (o.isGroup) return separaCoplanares(o);           // las partes de un subgrupo, en su propio marco\n"
+    "    if (!o.isMesh || !o.geometry?.attributes.position) return;\n"
+    "    o.updateMatrix(); const e = o.matrix.elements, ax = [];\n"
+    "    for (let c = 0; c < 3; c++){                       // cada eje de la parte tiene que caer en un eje del mueble\n"
+    "      const col = [e[c*4], e[c*4 + 1], e[c*4 + 2]], n = Math.hypot(...col), big = col.map(v => Math.abs(v) > n*1e-4);\n"
+    "      if (big.filter(Boolean).length !== 1) return; ax.push(big.indexOf(true));\n"
+    "    }\n"
+    "    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();\n"
+    "    parts.push({o, ax, b: o.geometry.boundingBox.clone().applyMatrix4(o.matrix), rank: [0, 0, 0], dir: [1, 1, 1]});\n"
+    "  });\n"
+    "  for (let j = 1; j < parts.length; j++){\n"
+    "    const B = parts[j];\n"
+    "    for (let i = 0; i < j; i++){\n"
+    "      const P = parts[i];\n"
+    "      for (let a = 0; a < 3; a++){\n"
+    "        const k = A[a], [u, w] = A.filter((_, n) => n !== a);\n"
+    "        if (Math.min(P.b.max[u], B.b.max[u]) - Math.max(P.b.min[u], B.b.min[u]) <= .002) continue;\n"
+    "        if (Math.min(P.b.max[w], B.b.max[w]) - Math.max(P.b.min[w], B.b.min[w]) <= .002) continue;\n"
+    "        const hi = Math.abs(P.b.max[k] - B.b.max[k]) < .0005, lo = Math.abs(P.b.min[k] - B.b.min[k]) < .0005;\n"
+    "        if (hi || lo){ B.rank[a] = Math.max(B.rank[a], Math.min(P.rank[a] + 1, 3)); B.dir[a] = hi ? 1 : -1; }\n"
+    "      }\n"
+    "    }\n"
+    "    if (!B.rank.some(Boolean)) continue;\n"
+    "    const size = B.b.getSize(new THREE.Vector3()), c0 = B.b.getCenter(new THREE.Vector3());\n"
+    "    B.rank.forEach((r, a) => {\n"
+    "      if (!r) return; const s = size.getComponent(a), l = B.ax.indexOf(a);\n"
+    "      if (s > 1e-5) B.o.scale.setComponent(l, B.o.scale.getComponent(l)*(s + 2*r*SEP)/s);\n"
+    "      else c0.setComponent(a, c0.getComponent(a) + r*SEP*B.dir[a]);   // una cara sin grueso: se recorre hacia afuera\n"
+    "    });\n"
+    "    B.o.updateMatrix(); const nb = B.o.geometry.boundingBox.clone().applyMatrix4(B.o.matrix);\n"
+    "    B.o.position.add(c0.sub(nb.getCenter(new THREE.Vector3())));   // crece parejo, desde su centro\n"
+    "  }\n"
+    "}\n"
+    "function buildFurniture(f){\n",
+)
+sub(
+    "  g.position.set(wx(f.cx), 0, wz(f.cy));\n  g.rotation.y = -f.rot * Math.PI/180;",
+    "  separaCoplanares(g);\n  g.position.set(wx(f.cx), 0, wz(f.cy));\n  g.rotation.y = -f.rot * Math.PI/180;",
+)
+
+# Coches: los postes de la cabina tocaban con sus tapas el mismo plano que el cristal (abajo, en la línea de la cintura,
+# y arriba, bajo el techo). Empiezan 3 cm arriba de la cintura (el cristal de la pickup baja de 1.06 a 1.00) y terminan
+# 1 cm abajo del techo; no se nota y ya no coincide nada.
+sub(
+    "    const posts = M.posts.map(x => new THREE.BoxGeometry(.1, M.roof[2] - M.belt, W - .12).translate(x, (M.roof[2] + M.belt)/2, 0).toNonIndexed());\n",
+    "    const posts = M.posts.map(x => new THREE.BoxGeometry(.1, M.roof[2] - M.belt - .04, W - .12).translate(x, (M.roof[2] + M.belt)/2 + .01, 0).toNonIndexed());\n",
+)
+# Puertas: abierta, la hoja tocaba con sus cantos el mismo plano que la punta de un muro (del lado de la bisagra) o que
+# la tira de la punta de otro muro (del lado de la manija). Ahora deja 2 mm de holgura en cada canto, como una puerta de
+# verdad.
+sub(
+    "    const leaf = box(L, dh, .04, mat(d.entry ? '#6b4f3a' : '#efe6d8', {roughness:.5}), L/2);\n",
+    "    const leaf = box(L - .004, dh, .04, mat(d.entry ? '#6b4f3a' : '#efe6d8', {roughness:.5}), L/2);\n",
+)
+
+# Planta alta (Chardonnay): los muros de la planta de abajo que se ven por el hueco de la doble altura terminaban justo
+# a la altura del piso de arriba y salían como rayas que parpadeaban en los pisos de los cuartos de arriba. Ahora
+# terminan 5 mm antes; por el hueco no se nota.
+sub(
+    "    BELOW.walls.forEach(w => archUp.add(box(M(w[2]-w[0]), w[4] === 'low' ? 1 : Hb, M(w[3]-w[1]), wallMat, wx((w[0]+w[2])/2), -Hb, wz((w[1]+w[3])/2))));\n",
+    "    BELOW.walls.forEach(w => archUp.add(box(M(w[2]-w[0]), w[4] === 'low' ? 1 : Hb - .005, M(w[3]-w[1]), wallMat, wx((w[0]+w[2])/2), -Hb, wz((w[1]+w[3])/2))));\n",
+)
+# Vecinos: la fila de atrás empezaba en el mismo punto que las de los lados (al final de la calle) y, con una planta más
+# chica que la de abajo, sus construcciones se juntaban en el mismo plano. Empieza medio metro después.
+sub("    row(-L, L, -hv - (casa ? 1 : 5), -1, true);\n", "    row(-L + .5, L, -hv - (casa ? 1 : 5), -1, true);\n")
+# Pisos de cuartos que se enciman (en los planos que vienen de AutoCAD quedan tiras de unos cm entre dos cuartos, como la
+# recámara 2 y el baño 2 de Chardonnay): sin orden se tapan a ratos al girar. Cada piso se dibuja encima de los que se
+# enciman con él y ya estaban (polygonOffset hacia la cámara, de 1 a 3 pasos); donde nada coincide no cambia nada.
+sub(
+    "function buildArch(){\n  clearGroup(archFloor);",
+    "const pisosHechos = [], pisoMats = {};\n"
+    "function pisoEncima(m, r){\n"
+    "  const xs = r.poly.map(p => p[0]), ys = r.poly.map(p => p[1]), b = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];\n"
+    "  let rank = 1;\n"
+    "  pisosHechos.forEach(p => { if (p.m !== m && Math.min(b[2], p.b[2]) > Math.max(b[0], p.b[0]) && Math.min(b[3], p.b[3]) > Math.max(b[1], p.b[1])) rank = Math.max(rank, Math.min(p.rank + 1, 3)); });\n"
+    "  pisosHechos.push({b, m, rank});\n"
+    "  return pisoMats[m.uuid + rank] ||= Object.assign(m.clone(), {polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -2*rank});\n"
+    "}\n"
+    "function buildArch(){\n  pisosHechos.length = 0; clearGroup(archFloor);",
+)
+sub(
+    "    const fl = new THREE.Mesh(geo, bay ? [m, mat('#e9e4da')] : m);\n",
+    "    const fl = new THREE.Mesh(geo, bay ? [m, mat('#e9e4da')] : pisoEncima(m, r));\n",
+)
+# Muros y fachada pierden cuando otra cosa cae en su mismo plano (un clóset empotrado al ras del muro, un marco, el piso
+# de arriba sobre la punta de un muro): se dibujan un paso atrás (polygonOffset hacia afuera). No cambia nada más.
+sub(
+    "const facadeMat = () => facadeM ||= new THREE.MeshStandardMaterial({",
+    "const MURO = {polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 2};\n"
+    "const facadeMat = () => facadeM ||= new THREE.MeshStandardMaterial({...MURO, ",
+)
+sub("wallMat = mat('#f4f1eb', {roughness:.92});", "wallMat = mat('#f4f1eb', {roughness:.92, ...MURO});")
+
+# Equipos con búfer de profundidad de 16 bits (algunos celulares y tabletas): ahí la precisión es 256 veces menor que en
+# una computadora y, aun con el plano cercano que se ajusta, casi todo parpadearía (al caminar adentro, de varios cm). En
+# esos equipos el 3D usa profundidad logarítmica, que reparte la precisión a lo largo de la distancia. En los de 24 bits
+# o más (casi todos) se queda la normal, que es más rápida.
+sub(
+    "  try { renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true}); }\n",
+    "  try {\n"
+    "    renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});\n"
+    "    const gl = renderer.getContext();\n"
+    "    if (gl.getParameter(gl.DEPTH_BITS) < 24){\n"
+    "      renderer.dispose(); renderer.forceContextLoss();\n"
+    "      renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true, logarithmicDepthBuffer:true});\n"
+    "    }\n"
+    "  }\n",
+)
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")

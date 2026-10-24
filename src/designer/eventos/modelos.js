@@ -588,7 +588,8 @@
     [[.6, .009], [.72, .009], [.9, .015]].forEach(([y, r]) => R([-xb(y), y, zb(y)], [xb(y), y, zb(y)], r));
     [-.075, 0, .075].forEach(x => R([x, .6, zb(.6)], [x, .72, zb(.72)], .006));
     fr.box(.36, .026, .36, 0, seat - .026, -.005);
-    cu.box(.352, .034, .345, 0, seat, 0); cu.box(.33, .016, .322, 0, seat + .034, .002);
+    // Cojín 4 mm más angosto: con .352 su costado quedaba a 0.4 mm de las facetas de las patas y parpadeaba al girar
+    cu.box(.348, .034, .345, 0, seat, 0); cu.box(.33, .016, .322, 0, seat + .034, .002);
     return { frame: fr.merge(), cushion: cu.merge() };
   }
   // Silla de novios estilo Luis XVI con respaldo de medallón

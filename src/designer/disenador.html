@@ -1792,7 +1792,14 @@ const doors = [], slides = [], keys = {};
 /* ======================= 初始化 ======================= */
 function init(){
   if (inited) return; inited = true;
-  try { renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true}); }
+  try {
+    renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+    const gl = renderer.getContext();
+    if (gl.getParameter(gl.DEPTH_BITS) < 24){
+      renderer.dispose(); renderer.forceContextLoss();
+      renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true, logarithmicDepthBuffer:true});
+    }
+  }
   catch { inited = false; const err = new Error('WebGL no disponible'); err.sinWebGL = true; throw err; }
   renderer.setPixelRatio(Math.min(devicePixelRatio, COARSE ? 1.5 : 2));
   renderer.setSize(SW(), SH());
@@ -1823,7 +1830,7 @@ function init(){
 
   const pm = new THREE.PMREMGenerator(renderer); envTex = pm.fromScene(new RoomEnvironment(), .04).texture; pm.dispose();
   glassMat = new THREE.MeshPhysicalMaterial({color:0xcfe6ef, roughness:.05, transparent:true, opacity:.28, depthWrite:false, side:THREE.DoubleSide});
-  wallMat = mat('#f4f1eb', {roughness:.92}); capMat = mat('#34312d', {roughness:.9}); frameMat = mat('#5d6166', {roughness:.5, metalness:.4});
+  wallMat = mat('#f4f1eb', {roughness:.92, ...MURO}); capMat = mat('#34312d', {roughness:.9}); frameMat = mat('#5d6166', {roughness:.5, metalness:.4});
 
   archFloor = new THREE.Group(); archUp = new THREE.Group(); furnG = new THREE.Group(); labelG = new THREE.Group(); lampG = new THREE.Group();
   scene.add(archFloor, archUp, furnG, labelG, lampG);
@@ -2054,6 +2061,43 @@ const plate = (g, r, x, y, z) => g.add(lathe([[0, 0], [r*.6, 0], [r*.72, .008], 
 let KIT3D = null;
 const kit3d = R => ({...(KIT3D ||= {THREE, M, H, mat, fabric, woodM, metal, chrome, hwMat, glowMat, darker, lighter, box, rbox, cyl,
   lathe, rod, tube, blob, ring, rrect, shell, mesh, sh, rot, legs, vase, plate, mergeGeometries}), R});
+const SEP = .002;
+function separaCoplanares(g){
+  const parts = [], A = ['x', 'y', 'z'];
+  g.children.forEach(o => {
+    if (o.isGroup) return separaCoplanares(o);           // las partes de un subgrupo, en su propio marco
+    if (!o.isMesh || !o.geometry?.attributes.position) return;
+    o.updateMatrix(); const e = o.matrix.elements, ax = [];
+    for (let c = 0; c < 3; c++){                       // cada eje de la parte tiene que caer en un eje del mueble
+      const col = [e[c*4], e[c*4 + 1], e[c*4 + 2]], n = Math.hypot(...col), big = col.map(v => Math.abs(v) > n*1e-4);
+      if (big.filter(Boolean).length !== 1) return; ax.push(big.indexOf(true));
+    }
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    parts.push({o, ax, b: o.geometry.boundingBox.clone().applyMatrix4(o.matrix), rank: [0, 0, 0], dir: [1, 1, 1]});
+  });
+  for (let j = 1; j < parts.length; j++){
+    const B = parts[j];
+    for (let i = 0; i < j; i++){
+      const P = parts[i];
+      for (let a = 0; a < 3; a++){
+        const k = A[a], [u, w] = A.filter((_, n) => n !== a);
+        if (Math.min(P.b.max[u], B.b.max[u]) - Math.max(P.b.min[u], B.b.min[u]) <= .002) continue;
+        if (Math.min(P.b.max[w], B.b.max[w]) - Math.max(P.b.min[w], B.b.min[w]) <= .002) continue;
+        const hi = Math.abs(P.b.max[k] - B.b.max[k]) < .0005, lo = Math.abs(P.b.min[k] - B.b.min[k]) < .0005;
+        if (hi || lo){ B.rank[a] = Math.max(B.rank[a], Math.min(P.rank[a] + 1, 3)); B.dir[a] = hi ? 1 : -1; }
+      }
+    }
+    if (!B.rank.some(Boolean)) continue;
+    const size = B.b.getSize(new THREE.Vector3()), c0 = B.b.getCenter(new THREE.Vector3());
+    B.rank.forEach((r, a) => {
+      if (!r) return; const s = size.getComponent(a), l = B.ax.indexOf(a);
+      if (s > 1e-5) B.o.scale.setComponent(l, B.o.scale.getComponent(l)*(s + 2*r*SEP)/s);
+      else c0.setComponent(a, c0.getComponent(a) + r*SEP*B.dir[a]);   // una cara sin grueso: se recorre hacia afuera
+    });
+    B.o.updateMatrix(); const nb = B.o.geometry.boundingBox.clone().applyMatrix4(B.o.matrix);
+    B.o.position.add(c0.sub(nb.getCenter(new THREE.Vector3())));   // crece parejo, desde su centro
+  }
+}
 function buildFurniture(f){
   const g = new THREE.Group(), w = M(f.w), d = M(f.d), c = f.color || '#ddd', bz = -d/2, R = rng(Math.round(f.w*7 + f.d*13 + f.cx + f.cy));
   const ext = EXT?.build3d[f.type];
@@ -2537,6 +2581,7 @@ function buildFurniture(f){
     }
     default: g.add(box(w, .8, d, c));
   }
+  separaCoplanares(g);
   g.position.set(wx(f.cx), 0, wz(f.cy));
   g.rotation.y = -f.rot * Math.PI/180;       // 平面顺时针旋转 → 绕 Y 轴负向
   g.userData.fid = f.id;
@@ -2546,7 +2591,8 @@ function buildFurniture(f){
 /* ======================= 建筑 ======================= */
 function clearGroup(g){ g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); g.clear(); }
 let facadeM = null, plinthM = null;
-const facadeMat = () => facadeM ||= new THREE.MeshStandardMaterial({color: CASA.facade?.color || (CASA.kind === 'casa' ? '#efe8dc' : '#e6e2db'),
+const MURO = {polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 2};
+const facadeMat = () => facadeM ||= new THREE.MeshStandardMaterial({...MURO, color: CASA.facade?.color || (CASA.kind === 'casa' ? '#efe8dc' : '#e6e2db'),
   map: facadeTexture(CASA.facade?.material), roughness: CASA.facade?.material === 'concreto' ? .8 : .95});
 const plinthMat = () => plinthM ||= new THREE.MeshStandardMaterial({color: CASA.facade?.plinth || 0x8d877e, roughness: .9});
 // Textura de la fachada en gris (el color la tiñe) y su tamaño real en metros: [ancho, alto] de un mosaico
@@ -2617,15 +2663,23 @@ function lampSpots(r){
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++){ const x = x0 + (i + .5)*(x1 - x0)/nx, y = y0 + (j + .5)*(y1 - y0)/ny; if (inside(x, y)) out.push([x, y]); }
   return out.length ? out : [r.at];
 }
+const pisosHechos = [], pisoMats = {};
+function pisoEncima(m, r){
+  const xs = r.poly.map(p => p[0]), ys = r.poly.map(p => p[1]), b = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  let rank = 1;
+  pisosHechos.forEach(p => { if (p.m !== m && Math.min(b[2], p.b[2]) > Math.max(b[0], p.b[0]) && Math.min(b[3], p.b[3]) > Math.max(b[1], p.b[1])) rank = Math.max(rank, Math.min(p.rank + 1, 3)); });
+  pisosHechos.push({b, m, rank});
+  return pisoMats[m.uuid + rank] ||= Object.assign(m.clone(), {polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -2*rank});
+}
 function buildArch(){
-  clearGroup(archFloor); clearGroup(archUp); lampG.clear(); doors.length = 0; slides.length = 0; colliders = [];
+  pisosHechos.length = 0; clearGroup(archFloor); clearGroup(archUp); lampG.clear(); doors.length = 0; slides.length = 0; colliders = [];
   const top = opt.cut;
   ROOMS.forEach(r => {
     if (r.void) return;   // doble altura: sin piso
     const m = floorMat(state.rooms[r.id].mat), bay = r.bay === true;
     const geo = bay ? new THREE.ExtrudeGeometry(shapeOf(r.poly), {depth:.45, bevelEnabled:false}) : new THREE.ShapeGeometry(shapeOf(r.poly));
     geo.rotateX(-Math.PI/2);
-    const fl = new THREE.Mesh(geo, bay ? [m, mat('#e9e4da')] : m);
+    const fl = new THREE.Mesh(geo, bay ? [m, mat('#e9e4da')] : pisoEncima(m, r));
     fl.receiveShadow = true; fl.userData.room = r.id;
     if (bay){ fl.castShadow = true; archUp.add(fl); } else archFloor.add(fl);
     // 天花：法线朝下，只在室内仰视时可见
@@ -2671,7 +2725,7 @@ function buildArch(){
   DOORS.forEach(d => {
     const pivot = new THREE.Group(), L = M(d.len), dh = Math.min(2.05, top);
     pivot.position.set(wx(d.h[0]), 0, wz(d.h[1]));
-    const leaf = box(L, dh, .04, mat(d.entry ? '#6b4f3a' : '#efe6d8', {roughness:.5}), L/2);
+    const leaf = box(L - .004, dh, .04, mat(d.entry ? '#6b4f3a' : '#efe6d8', {roughness:.5}), L/2);
     const knob = new THREE.Mesh(new THREE.SphereGeometry(.03, 12, 8), metal()); knob.position.set(L - .07, Math.min(1, dh - .05), 0); knob.scale.z = 2.2;
     pivot.add(leaf, knob);
     const ang = v => Math.atan2(-v[1], v[0]), door = {pivot, a0:ang(d.c), a1:ang(d.o), open:true};
@@ -2700,7 +2754,7 @@ function buildArch(){
       const geo = new THREE.ShapeGeometry(shapeOf(r.poly)); geo.rotateX(-Math.PI/2);
       const fl = new THREE.Mesh(geo, floorMat(r.mat)); fl.position.y = -Hb; fl.receiveShadow = true; archFloor.add(fl);
     });
-    BELOW.walls.forEach(w => archUp.add(box(M(w[2]-w[0]), w[4] === 'low' ? 1 : Hb, M(w[3]-w[1]), wallMat, wx((w[0]+w[2])/2), -Hb, wz((w[1]+w[3])/2))));
+    BELOW.walls.forEach(w => archUp.add(box(M(w[2]-w[0]), w[4] === 'low' ? 1 : Hb - .005, M(w[3]-w[1]), wallMat, wx((w[0]+w[2])/2), -Hb, wz((w[1]+w[3])/2))));
   }
   SLIDES.forEach(({rect:[x0, y0, x1, y1], v}) => {
     const L = M(v ? y1-y0 : x1-x0), ph = Math.min(v ? 2.4 : 2.1, top), pl = L*.55;
@@ -2828,7 +2882,7 @@ function buildCars(g, fleet){
     const rows = fleet.filter(f => !!f[4] === (k === 1)); if (!rows.length) return;
     const W = M.w;
     // La carrocería extruida no tiene índice: las cajas del techo y los postes se pasan igual para poder unirlas
-    const posts = M.posts.map(x => new THREE.BoxGeometry(.1, M.roof[2] - M.belt, W - .12).translate(x, (M.roof[2] + M.belt)/2, 0).toNonIndexed());
+    const posts = M.posts.map(x => new THREE.BoxGeometry(.1, M.roof[2] - M.belt - .04, W - .12).translate(x, (M.roof[2] + M.belt)/2 + .01, 0).toNonIndexed());
     const body = mergeGeometries([ext(M.lower, W), new THREE.BoxGeometry(M.roof[1] - M.roof[0] + .04, .07, W - .18).translate((M.roof[0] + M.roof[1])/2, M.roof[2] + .035, 0).toNonIndexed(), ...posts]);
     const cab = ext(M.cab, W - .16);
     const wheel = (x, z) => new THREE.CylinderGeometry(M.r, M.r, .24, 16).rotateX(Math.PI/2).translate(x, M.r, z);
@@ -2910,7 +2964,7 @@ function buildEnv(){
   if (!field){
     row(-L, -(hu + gap + (PARK && ps < 0 ? PARK + 2 : 0)), front - setback, -1, false); row(hu + gap + (PARK && ps > 0 ? PARK + 2 : 0), L, front - setback, -1, false);
     row(-L, L, front + 2*WALK + ROAD + (homes ? 3 : 1), 1, true);
-    row(-L, L, -hv - (casa ? 1 : 5), -1, true);
+    row(-L + .5, L, -hv - (casa ? 1 : 5), -1, true);
   }
   // Árboles en las banquetas (sin tapar la entrada) y en los patios
   const trees = [];   // [u, v, escala, palmera]
@@ -2946,12 +3000,12 @@ function buildEnv(){
   if (PARK){
     // at(x): x metros desde la orilla del salón, hacia la derecha (ps = 1) o hacia la izquierda (ps = -1)
     const pd = front + hv, line = new THREE.MeshStandardMaterial({color: 0xf2efe6, roughness: .7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), at = x => ps*(pu + x);
-    plane(PARK, pd, new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1}), at(PARK/2), (front - hv)/2, -.011);
+    plane(PARK, pd, new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1}), at(PARK/2), (front - hv)/2, -.006);
     for (let v = -hv + 1; v + 2.6 < front - 4; v += 2.6) [[.5, 5.5, Math.PI], [PARK - 5.5, PARK - .5, 0]].forEach(([a, b, rot]) => {
-      plane(b - a, .12, line, at((a + b)/2), v, -.006);
+      plane(b - a, .12, line, at((a + b)/2), v, -.002);
       if (rnd() < .42) carAt(at((a + b)/2), v + 1.3, ps > 0 ? rot : Math.PI - rot, CARS[Math.floor(rnd()*CARS.length)]);
     });
-    [.5, PARK - .5].forEach(x => plane(.12, front - 4 + hv - 1, line, at(x), (front - 4 - hv + 1)/2, -.006));
+    [.5, PARK - .5].forEach(x => plane(.12, front - 4 + hv - 1, line, at(x), (front - 4 - hv + 1)/2, -.002));
     // Postes del estacionamiento, en la orilla de afuera, con su charco de luz de noche
     for (let v = -hv + 6; v < front - 6; v += 14){
       const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 6.5, 8), pole); p.position.set(at(PARK + .3), 3.25, v); p.castShadow = true; g.add(p);
