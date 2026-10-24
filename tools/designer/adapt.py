@@ -2981,6 +2981,40 @@ sub(
     "    const name = F.sign === '-' ? '' : (F.sign || String(CASA.title || '').split('·')[0].trim()), tw = Math.min(7.5, Math.max(4, 2*hu*.3)), td = 2.4, y = 2.75;\n",
 )
 
+# Sin WebGL (aceleración por hardware apagada, navegador sin tarjeta gráfica o con WebGL bloqueado) no hay 3D. Antes
+# three.js tronaba al crear el renderer, setView se quedaba a medias (página «ocupada» y marcada en 3D) y el error
+# llegaba a Sentry («Error creating WebGL context», 24 oct 2026, del 3D de la portada en un Chrome de Linux). Ahora
+# init() avisa con un error marcado, setView se queda en el plano 2D y lo dice (en la portada incrustada se queda la
+# foto, sin aviso); cualquier otra falla al entrar al 3D deja la página usable y sigue llegando a Sentry.
+sub(
+    "  renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});\n",
+    "  try { renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true}); }\n"
+    "  catch { inited = false; const err = new Error('WebGL no disponible'); err.sinWebGL = true; throw err; }\n",
+)
+sub(
+    "  if (m === '3d'){ if (ui.tool !== 'select') setTool('select'); ui.mA = null; document.body.classList.add('m3d'); await window.View3D.enter(); window.View3D.flashHint?.(); }\n",
+    "  if (m === '3d'){\n"
+    "    if (ui.tool !== 'select') setTool('select'); ui.mA = null; document.body.classList.add('m3d');\n"
+    "    try { await window.View3D.enter(); window.View3D.flashHint?.(); }\n"
+    "    catch (e) {\n"
+    "      viewMode = '2d'; document.body.classList.remove('m3d'); applyView();\n"
+    "      switching = false; document.body.classList.remove('busy');\n"
+    "      if (!e?.sinWebGL) throw e;\n"
+    "      if (!document.documentElement.classList.contains('embed')) {\n"
+    "        const msg = tr('此浏览器无法显示 3D（WebGL 已关闭或不可用），可继续使用 2D 平面图。', 'This browser cannot show 3D (WebGL is off or unavailable). You can keep using the 2D plan.',\n"
+    "          'Este navegador no puede mostrar el 3D (WebGL está apagado o no disponible). Puedes seguir en el plano 2D.');\n"
+    "        window.plAlert ? window.plAlert(msg) : alert(msg);\n"
+    "      }\n"
+    "      return;\n"
+    "    }\n"
+    "  }\n",
+)
+
+# Lo que se pide al 3D justo después de setView('3d') (recorrido guiado y «ver desde esta mesa») solo corre si el 3D sí
+# se abrió, igual que flyToRoom: sin WebGL, setView se queda en 2D y estas llamadas tronaban.
+sub("  viewFrom: (x, y, tx, ty) => sitAt([x, y], [tx, ty]),\n", "  viewFrom: (x, y, tx, ty) => active && sitAt([x, y], [tx, ty]),\n")
+sub("  tour: () => startTour(),", "  tour: () => active && startTour(),")
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")

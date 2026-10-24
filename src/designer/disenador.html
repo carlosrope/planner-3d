@@ -1577,7 +1577,21 @@ async function setView(m){
   if (!window.View3D) return toast(tr('3D 引擎仍在加载或加载失败（需要联网加载 three.js）', '3D engine is still loading or failed to load (three.js needs a network connection)'));
   switching = true; document.body.classList.add('busy');
   viewMode = m;
-  if (m === '3d'){ if (ui.tool !== 'select') setTool('select'); ui.mA = null; document.body.classList.add('m3d'); await window.View3D.enter(); window.View3D.flashHint?.(); }
+  if (m === '3d'){
+    if (ui.tool !== 'select') setTool('select'); ui.mA = null; document.body.classList.add('m3d');
+    try { await window.View3D.enter(); window.View3D.flashHint?.(); }
+    catch (e) {
+      viewMode = '2d'; document.body.classList.remove('m3d'); applyView();
+      switching = false; document.body.classList.remove('busy');
+      if (!e?.sinWebGL) throw e;
+      if (!document.documentElement.classList.contains('embed')) {
+        const msg = tr('此浏览器无法显示 3D（WebGL 已关闭或不可用），可继续使用 2D 平面图。', 'This browser cannot show 3D (WebGL is off or unavailable). You can keep using the 2D plan.',
+          'Este navegador no puede mostrar el 3D (WebGL está apagado o no disponible). Puedes seguir en el plano 2D.');
+        window.plAlert ? window.plAlert(msg) : alert(msg);
+      }
+      return;
+    }
+  }
   else { document.body.classList.remove('m3d'); await window.View3D.exit(); applyView(); }
   $('#tip').textContent = TIPS()[m];
   switching = false; document.body.classList.remove('busy');
@@ -1778,7 +1792,8 @@ const doors = [], slides = [], keys = {};
 /* ======================= 初始化 ======================= */
 function init(){
   if (inited) return; inited = true;
-  renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+  try { renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true}); }
+  catch { inited = false; const err = new Error('WebGL no disponible'); err.sinWebGL = true; throw err; }
   renderer.setPixelRatio(Math.min(devicePixelRatio, COARSE ? 1.5 : 2));
   renderer.setSize(SW(), SH());
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -4203,8 +4218,8 @@ function relang(){ syncWalkTexts(); if (inited) buildLabels(); }
 window.View3D = {
   flashHint,enter, exit, relang, sync:() => sync(), shot, groundAt,
   snap: () => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', .9); },
-  viewFrom: (x, y, tx, ty) => sitAt([x, y], [tx, ty]),
-  tour: () => startTour(), flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk',
+  viewFrom: (x, y, tx, ty) => active && sitAt([x, y], [tx, ty]),
+  tour: () => active && startTour(), flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk',
   spin: on => { if (!orbit) return; orbit.autoRotate = !!on; orbit.autoRotateSpeed = .7;
     if (on) orbit.addEventListener('start', () => { orbit.autoRotate = false; }, {once: true}); }};
 </script>
