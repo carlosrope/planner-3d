@@ -99,7 +99,7 @@ export default function Home() {
         <ol className="mt-6 grid gap-4 md:grid-cols-3">
           {PASOS.map((s) => (
             <li key={s.n} className="rounded-2xl border border-stone-200 bg-white p-5">
-              <span aria-hidden="true" className="font-display text-3xl font-bold text-[#b5653a]/35">{s.n}</span>
+              <span aria-hidden="true" className="font-display text-3xl font-bold text-[#b5653a]/80">{s.n}</span>
               <h3 className="mt-2 text-lg font-semibold text-stone-900">{s.t}</h3>
               <p className="mt-1 text-stone-600">{s.p}</p>
             </li>
