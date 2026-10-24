@@ -19,11 +19,12 @@ export const metadata: Metadata = {
     locale: "es_MX",
     siteName: "Plantea",
     // Imagen con el slogan «Plantéalo. Míralo. Vívelo.» (fuente en herramientas/marca-plantea/og, fuera del repo).
-    images: [{ url: "/og/plantea.jpg", width: 1200, height: 630, alt: "Plantea: Plantéalo. Míralo. Vívelo. Tu evento o tu casa en 3D" }],
+    images: [{ url: "/og/plantea.jpg", width: 1200, height: 630, alt: "Plantea: Plantéalo. Míralo. Vívelo. Tu evento o casa en 3D" }],
   },
   twitter: { card: "summary_large_image" },
-  title: { default: "Plantea · tu evento o tu casa en 3D", template: "%s · Plantea" },
-  description: "Plantea tu evento o tu casa en 3D antes de vivirlo: planos 2D y recorridos 3D de salones y casas reales de México, desde el celular.",
+  title: { default: "Plantea · tu evento o casa en 3D", template: "%s · Plantea" },
+  description:
+    "Plantea tu evento o casa en 3D antes de vivirlo: planos 2D y recorridos 3D de salones de eventos y de casas para enseñarlas, venderlas o amueblarlas, desde el celular.",
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "48x48" }, { url: "/favicon.svg", type: "image/svg+xml" }],
     apple: "/apple-touch-icon.png",

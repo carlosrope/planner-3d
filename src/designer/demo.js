@@ -63,10 +63,10 @@
   } else {
     texto = salon
       ? 'Este es un salón de ejemplo. ¿Quieres el tuyo en 3D para tus eventos?'
-      : 'Esta es una casa de ejemplo. ¿Quieres tus modelos en 3D para venderlos?';
+      : 'Esta es una casa de ejemplo. ¿Quieres la tuya en 3D para enseñarla, venderla o amueblarla?';
     const mensaje = encodeURIComponent(
       salon ? 'Hola, vi el salón de ejemplo en Plantea y quiero el mío en 3D.'
-            : 'Hola, vi la casa de ejemplo en Plantea y quiero mis modelos en 3D.',
+            : 'Hola, vi la casa de ejemplo en Plantea y quiero poner una casa en 3D.',
     );
     botones =
       `<a class="wa" href="https://wa.me/${escape(D.whatsapp)}?text=${mensaje}" target="_blank" rel="noopener">Escríbenos</a>` +

@@ -12,7 +12,7 @@ export function Footer() {
           <img src="/marca/plantea-horizontal-color.svg" alt="Plantea" className="h-7 w-auto" />
           <Slogan className="mt-3 text-lg text-stone-900" />
           <p className="mt-1 max-w-md text-sm text-stone-600">
-            Plantea tu evento o tu casa en 3D antes de vivirlo. Salones y casas reales de México, desde el celular.
+            Plantea tu evento o casa en 3D antes de vivirlo. Para salones, planners y familias, y para quien vende, construye o amuebla una casa en México.
           </p>
           <p className="mt-3 text-sm text-stone-600">
             Hecho por{" "}
