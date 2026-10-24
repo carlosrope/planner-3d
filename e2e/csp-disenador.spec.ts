@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { skipGuide } from "./helpers";
 
 // El diseñador manda su propia CSP con un nonce nuevo en cada respuesta (src/lib/designer/page.ts): solo corren los
 // <script> que puso Plantea. Aquí se comprueba que todo lo suyo lleva el nonce, que la CSP no trae 'unsafe-inline' en
@@ -38,6 +39,8 @@ for (const url of ["/disenador/salon-demo", "/lugares/salon-demostracion/3d"]) {
 test("los botones que antes eran onclick siguen funcionando con la CSP", async ({ page }) => {
   await page.goto("/disenador/salon-demo");
   await page.waitForFunction(() => typeof (window as unknown as { select?: unknown }).select === "function");
+  // La guía de la primera vez abre un momento después y tapa el panel (en CI, el clic esperaba hasta agotar el tiempo).
+  await skipGuide(page);
 
   // Mesa → «Abrir lista de invitados»
   await page.evaluate("select({kind: 'furn', id: state.furniture.find(f => f.type === 'rtable').id})");
