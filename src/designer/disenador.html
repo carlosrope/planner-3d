@@ -2881,7 +2881,7 @@ function buildEnv(){
   const walkMat = new THREE.MeshStandardMaterial({map: texRep(walk, 2*L/2.4, 1), roughness: .9});
   slab(2*L, WALK, .14, walkMat, 0, front + WALK/2, -.03);
   plane(2*L, ROAD, new THREE.MeshStandardMaterial({map: texRep(asphalt, 2*L/6, ROAD/6), roughness: .95}), 0, front + WALK + ROAD/2, -.015);
-  const dash = new THREE.MeshStandardMaterial({color: 0xece8dc, roughness: .7});
+  const dash = new THREE.MeshStandardMaterial({color: 0xece8dc, roughness: .7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2});
   for (let u = -L; u < L; u += 6) plane(3, .15, dash, u + 1.5, front + WALK + ROAD/2, -.01);
   slab(2*L, WALK, .14, walkMat, 0, front + WALK + ROAD + WALK/2, -.03);
   // Vecinos: a los lados del terreno, enfrente y atrás
@@ -2945,8 +2945,8 @@ function buildEnv(){
   // Estacionamiento a la derecha del salón: dos filas de cajones pintados con un pasillo al centro y unos coches
   if (PARK){
     // at(x): x metros desde la orilla del salón, hacia la derecha (ps = 1) o hacia la izquierda (ps = -1)
-    const pd = front + hv, line = new THREE.MeshStandardMaterial({color: 0xf2efe6, roughness: .7}), at = x => ps*(pu + x);
-    plane(PARK, pd, new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95}), at(PARK/2), (front - hv)/2, -.011);
+    const pd = front + hv, line = new THREE.MeshStandardMaterial({color: 0xf2efe6, roughness: .7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), at = x => ps*(pu + x);
+    plane(PARK, pd, new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1}), at(PARK/2), (front - hv)/2, -.011);
     for (let v = -hv + 1; v + 2.6 < front - 4; v += 2.6) [[.5, 5.5, Math.PI], [PARK - 5.5, PARK - .5, 0]].forEach(([a, b, rot]) => {
       plane(b - a, .12, line, at((a + b)/2), v, -.006);
       if (rnd() < .42) carAt(at((a + b)/2), v + 1.3, ps > 0 ? rot : Math.PI - rot, CARS[Math.floor(rnd()*CARS.length)]);
@@ -3082,6 +3082,10 @@ const topWhole = () => fitPose(new THREE.Vector3(0, 1, 1e-4));
 const shownWhole = () => SW()/view.s >= (WALL_BOX.x1 - WALL_BOX.x0)*.75 && SH()/view.s >= (WALL_BOX.y1 - WALL_BOX.y0)*.75;
 const curPose = () => pose(orbit.target.clone(), camera.position.clone());
 // 以目标点为中心做球坐标插值：镜头沿弧线倾斜环绕，而不是直线穿越
+function fitNear(){
+  const want = opt.mode === 'walk' ? .05 : THREE.MathUtils.clamp(camera.position.distanceTo(orbit.target)*.015, .05, 1);
+  if (Math.abs(want - camera.near) > want*.05){ camera.near = want; camera.updateProjectionMatrix(); }
+}
 function camTween(A, B, e){
   const t = A.t.clone().lerp(B.t, e);
   const sa = new THREE.Spherical().setFromVector3(A.p.clone().sub(A.t)), sb = new THREE.Spherical().setFromVector3(B.p.clone().sub(B.t));
@@ -4205,7 +4209,7 @@ function loop(){
   doors.forEach(d => { const tg = d.open ? d.a1 : d.a0; d.cur += (tg - d.cur) * Math.min(1, dt*6); d.pivot.rotation.y = d.cur; });
   slides.forEach(sl => { const tg = sl.open ? sl.to : 0; sl.cur += (tg - sl.cur) * Math.min(1, dt*5); sl.groups.forEach(q => { q.g.position[q.axis] = q.base + sl.cur; }); });
   updateSel();
-  envOcclude();
+  envOcclude(); fitNear();
   renderer.render(scene, camera);
   if (rec) recFrame(now);
   labelRenderer.render(scene, camera);

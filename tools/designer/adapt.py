@@ -3015,6 +3015,36 @@ sub(
 sub("  viewFrom: (x, y, tx, ty) => sitAt([x, y], [tx, ty]),\n", "  viewFrom: (x, y, tx, ty) => active && sitAt([x, y], [tx, ty]),\n")
 sub("  tour: () => startTour(),", "  tour: () => active && startTour(),")
 
+# Parpadeo al girar el 3D (z-fighting, 24 oct 2026, visto por el usuario en la portada): el plano cercano de la cámara
+# estaba fijo en 5 cm, y desde lejos (la portada mira desde ~77 m) el 3D no distinguía superficies a menos de ~7 mm.
+# La calle y sus rayas, el estacionamiento y sus cajones y el piso del terreno están a 1–5 mm uno del otro: al girar,
+# se tapaban a ratos y las rayas salían cortadas, con los cortes en otro lugar en cada cuadro. Ahora (1) fuera del
+# recorrido el plano cercano crece con la distancia a lo que se mira (1.5 %, entre 5 cm y 1 m; en el recorrido sigue
+# en 5 cm), lo que da ~0.3 mm de precisión a 77 m, y (2) las rayas y el asfalto del estacionamiento se dibujan siempre
+# encima del piso que tienen abajo (polygonOffset), sin depender de la distancia.
+sub(
+    "function camTween(A, B, e){\n",
+    "function fitNear(){\n"
+    "  const want = opt.mode === 'walk' ? .05 : THREE.MathUtils.clamp(camera.position.distanceTo(orbit.target)*.015, .05, 1);\n"
+    "  if (Math.abs(want - camera.near) > want*.05){ camera.near = want; camera.updateProjectionMatrix(); }\n"
+    "}\n"
+    "function camTween(A, B, e){\n",
+)
+sub("  envOcclude();\n  renderer.render(scene, camera);\n", "  envOcclude(); fitNear();\n  renderer.render(scene, camera);\n")
+ENCIMA = "polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2"
+sub(
+    "  const dash = new THREE.MeshStandardMaterial({color: 0xece8dc, roughness: .7});\n",
+    f"  const dash = new THREE.MeshStandardMaterial({{color: 0xece8dc, roughness: .7, {ENCIMA}}});\n",
+)
+sub(
+    "line = new THREE.MeshStandardMaterial({color: 0xf2efe6, roughness: .7})",
+    f"line = new THREE.MeshStandardMaterial({{color: 0xf2efe6, roughness: .7, {ENCIMA}}})",
+)
+sub(
+    "new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95})",
+    "new THREE.MeshStandardMaterial({map: texRep(asphalt, PARK/6, pd/6), color: 0xdcdcdc, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1})",
+)
+
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(s, encoding="utf-8")
 print(f"Escrito {OUT.relative_to(ROOT)} ({len(s) // 1024} KB)")
